@@ -21,7 +21,7 @@ local controls = {}
 local font = {}
 local scale, W, H = 1, 1024, 768
 local panel, gallery_menu = nil, nil
-local gallery_scroll, preset_selected = 0, 0
+local gallery_scroll, gallery_item_scroll, preset_selected = 0, 0, 0
 local drag_dimension = nil
 local current_width, current_height = "1000", "1000"
 local focus, opacity, size_zoom = nil, 100, 100
@@ -361,6 +361,7 @@ local function gallery_header()
             state.screen="title"
             gallery_selecting=false
         end
+        gallery_item_scroll=0
         gallery_menu=nil
         gallery:clear_selection()
     end)
@@ -423,11 +424,15 @@ local function gallery_item(tile,item)
         glyph("check",x+w-19,y+19,12)
     end
     local id=item.id
-    hit(x,y,w,h,function()
+    local visible_top=math.max(y,83)
+    local visible_bottom=math.min(y+h,H-58)
+    if visible_bottom>visible_top then
+    hit(x,visible_top,w,visible_bottom-visible_top,function()
         if gallery_selecting then
             gallery:select(id)
         elseif item.type=="folder" then
             gallery:enter(id)
+            gallery_item_scroll=0
         else
             state:reopen_canvas(item.width,item.height)
             active_artwork_id=id
@@ -435,6 +440,7 @@ local function gallery_item(tile,item)
         end
         gallery_menu=nil
     end,item.type.."_"..id)
+    end
 end
 
 local function gallery_screen()
@@ -457,11 +463,30 @@ local function gallery_screen()
         local gap=19
         local left=29
         local count=math.max(1,math.floor((W-left*2+gap)/(tile_w+gap)))
+        local total_rows=math.ceil(#items/count)
+        local maximum=math.max(0,total_rows*204-(H-58-109))
+        gallery_item_scroll=math.max(0,math.min(maximum,gallery_item_scroll))
+        love.graphics.setScissor(0,83*scale,W*scale,(H-141)*scale)
         for i,item in ipairs(items) do
             local row=math.floor((i-1)/count)
             local col=(i-1)%count
-            local tile={x=left+col*(tile_w+gap),y=109+row*204,w=tile_w,h=184}
-            if tile.y+tile.h<H-58 then gallery_item(tile,item) end
+            local tile={
+                x=left+col*(tile_w+gap),
+                y=109+row*204-gallery_item_scroll,w=tile_w,h=184
+            }
+            if tile.y+tile.h>83 and tile.y<H-58 then
+                gallery_item(tile,item)
+            end
+        end
+        love.graphics.setScissor()
+        if maximum>0 then
+            local track_y=97
+            local track_h=H-163
+            local thumb_h=math.max(22,track_h*track_h/(track_h+maximum))
+            local progress=gallery_item_scroll/maximum
+            rectangle(W-13,track_y,5,track_h,{0.83,0.83,0.83})
+            rectangle(W-13,track_y+progress*(track_h-thumb_h),5,
+                thumb_h,{0.53,0.53,0.53})
         end
     end
     if gallery_selecting then
@@ -569,6 +594,7 @@ local function gallery_screen()
                     gallery:rename(gallery_dialog.id,gallery_input)
                 else gallery:add_folder(gallery_input) end
                 gallery_dialog=nil
+                gallery_item_scroll=0
             else notice("Enter a valid folder name.") end
         end,"folder_confirm")
     end
@@ -1330,6 +1356,13 @@ function love.load()
             gallery:add_folder("Projects")
             gallery:add_folder("Archive")
             gallery:add_artwork(1024,768,"Untitled 1")
+        elseif smoke_screen=="gallery_many" then
+            state:open_gallery()
+            gallery:add_folder("Projects")
+            for i=1,24 do
+                gallery:add_artwork(640+i*10,800+i*5,"Study "..i)
+            end
+            gallery_item_scroll=240
         elseif smoke_screen=="gallery_inside" then
             state:open_gallery()
             local fid=gallery:add_folder("Projects")
@@ -1478,6 +1511,13 @@ function love.wheelmoved(dx,dy)
         local last=80+128+#presets*row_h
         gallery_scroll=math.max(0,math.min(
             math.max(0,last-(H-42)+6),gallery_scroll-dy*28))
+    elseif state.screen=="gallery" and not gallery_dialog and not gallery_menu then
+        local items=gallery:items()
+        local columns=math.max(1,math.floor((W-58+19)/(166+19)))
+        local rows=math.ceil(#items/columns)
+        local maximum=math.max(0,rows*204-(H-58-109))
+        gallery_item_scroll=math.max(0,math.min(maximum,
+            gallery_item_scroll-dy*72))
     elseif state.screen=="editor" and not panel then
         if love.keyboard.isDown("lshift","rshift") then
             view:rotate_wheel(dy)
@@ -1562,7 +1602,8 @@ function love.keypressed(key)
             if gallery_menu then gallery_menu=nil
             elseif gallery_selecting then
                 gallery_selecting=false;gallery:clear_selection()
-            elseif not gallery:back() then state.screen="title" end
+            elseif not gallery:back() then state.screen="title"
+            else gallery_item_scroll=0 end
         else love.event.quit() end
     elseif state.screen=="editor" then
         if key=="b" then state:set_tool("brush")
