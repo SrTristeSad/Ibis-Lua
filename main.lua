@@ -778,6 +778,15 @@ function love.load()
         elseif smoke_screen=="layer" or smoke_screen=="color" or smoke_screen=="brush" then
             state:open_gallery();state:open_new_canvas();state:create_canvas(1800,2400)
             set_panel(smoke_screen)
+        elseif smoke_screen=="zoom" then
+            state:open_gallery();state:open_new_canvas();state:create_canvas(1800,2400)
+            view:zoom_at(2,512,384,512,384)
+            view:rotate_wheel(3)
+            view:begin_pan(500,360);view:pan_to(540,380);view:end_pan()
+        elseif smoke_screen=="solo" then
+            state:open_gallery();state:open_new_canvas();state:create_canvas(1800,2400)
+            state:add_layer();state:toggle_layer_solo(1)
+            set_panel("layer")
         end
         capture_requested=true
     end
