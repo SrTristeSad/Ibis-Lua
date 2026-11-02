@@ -111,7 +111,7 @@ local function drawHome()
   local rankY=420
   UI.rect(0,rankY,w,92,{.09,.20,.33})
   UI.text('Ranking diário',20,rankY+9,14,'white')
-  UI.text('⌃',w-35,rankY+4,22,'white')
+  UI.text('^',w-35,rankY+4,22,'white')
   local count=math.max(2,math.floor((w-40)/120))
   for i=1,count do
     local xx=20+(i-1)*(w-40)/count
@@ -154,15 +154,15 @@ local function drawGallery()
     end
   end
   UI.rect(0,474,w,38,'toolbar')
-  local actions={{'+',function()S.canvasPreset=1;open('canvas_new')end},
-    {'?',function()open('gallery_selection')end},
-    {'▶',function()open('gallery_selection')end},
-    {'⇧',function()open('gallery_selection')end},
-    {'⋯',function()open('gallery_selection')end}}
+  local actions={{'plus',function()S.canvasPreset=1;open('canvas_new')end},
+    {'settings',function()open('gallery_selection')end},
+    {'play',function()open('gallery_selection')end},
+    {'folder',function()open('gallery_selection')end},
+    {'menu',function()open('gallery_selection')end}}
   for i,item in ipairs(actions) do
     local xx=8+(i-1)*52
-    UI.text(item[1],xx,481,i==1 and 24 or 17,
-      i==1 and 'blue' or 'soft','center',41)
+    glyph(item[1],xx+20,493,i==1 and 23 or 19,
+      i==1 and 'blue' or 'soft')
     UI.hit({x=xx-6,y=474,w=50,h=38},item[2])
   end
   UI.text('Editar',w-66,487,12,'soft')
@@ -189,8 +189,10 @@ local function drawRail()
     if active then UI.rect(r.x+2,r.y+1,45,r.h-1,{.57,.60,.63,.8},2) end
     glyph(item[1],r.x+24,r.y+9,17,active and 'blue' or 'white')
     if S.showLabels then
-      local label=item[2]
-      local font=#label>13 and 6 or 7
+      local short={special='Especial',frame='Quadros',wand='Varinha',
+        picker='Conta-gotas'}
+      local label=short[item[1]] or item[2]
+      local font=#label>10 and 6 or 7
       UI.text(label,r.x+1,r.y+17,font,active and 'blue' or 'white',
         'center',47)
     end
@@ -766,7 +768,7 @@ local function drawNewCanvas()
     UI.rect(p.x+p.w-78,yy,20,20,'ink',11)
     UI.text('+',p.x+p.w-78,yy+1,14,'white','center',20)
   end
-  UI.text('Velocidade  ↔  Qualidade',p.x+84,p.y+185,12,'ink')
+  UI.text('Velocidade    -    Qualidade',p.x+84,p.y+185,12,'ink')
   UI.rect(p.x+9,p.y+203,p.w-18,19,{.37,.37,.37})
   UI.text('Tamanhos predefinidos',p.x+19,p.y+205,11,'white')
   for i,item in ipairs(sizes) do
