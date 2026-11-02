@@ -31,8 +31,8 @@ jobs:
           luajit tests/test_canvas_presets.lua
           luajit tests/test_gallery.lua
           luajit tests/test_brush_catalog.lua
-      - name: Run screenshot comparator tests
-        run: python -m unittest discover -s tests -p 'test_compare.py' -v
+      - name: Run screenshot comparator and layout checker unit tests
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Exercise real LÖVE click callbacks end-to-end
         run: |
           timeout 20s xvfb-run -a env IBIS_LUA_E2E=1 love .
@@ -48,6 +48,8 @@ jobs:
             cp "$HOME/.local/share/love/ibis-lua-fidelity/ci-smoke.png" "screenshots/$screen.png"
             test -s "screenshots/$screen.png"
           done
+      - name: Check structural screenshot regression
+        run: python tools/check_ui_screenshots.py screenshots
       - name: Save screenshots for visual inspection
         if: always()
         uses: actions/upload-artifact@v4
