@@ -314,18 +314,33 @@ local function editorBar(w,h)
     U.icon(name,x,cy,22)
     U.hitbox(x-25,bottomY,50,38,callback)
   end
-  glyph("Tool Select",.027,function() Model.togglePanel(s,"tools") end,s.panel=="tools")
-  glyph(s.tool=="Eraser" and "Eraser" or "Brush",.109,function()
-    Model.togglePanel(s,s.tool=="Brush" and "brush" or "size")
-  end,s.panel=="brush")
+  -- Official sequence: Brush/Eraser, Tool Selector, Properties, Color,
+  -- Full Screen, Undo, Redo, Layer, Back.
+  glyph("BrushEraser",.027,function()
+    Model.setTool(s,s.tool=="Eraser" and "Brush" or "Eraser")
+  end,s.tool=="Eraser")
+  glyph("Tool Select",.109,function()
+    Model.togglePanel(s,"tools")
+  end,s.panel=="tools")
   local colorX=w*.215
   U.colorWheel(colorX,cy,15,s.color)
-  U.hitbox(colorX-22,bottomY,44,38,function()Model.togglePanel(s,"color")end)
+  U.hitbox(colorX-22,bottomY,44,38,function()
+    if s.tool=="Brush" or s.tool=="Eraser" then
+      Model.togglePanel(s,"brush")
+    else
+      Model.togglePanel(s,"properties")
+    end
+  end)
   local sampleX=w*.305
   U.rect(sampleX-13,cy-13,26,26,s.color)
   U.stroke(sampleX-13,cy-13,26,26,C.white)
-  U.hitbox(sampleX-22,bottomY,44,38,function()Model.togglePanel(s,"color")end)
-  glyph("Down",.44,function() s.notification="No painting engine; no canvas operation." end)
+  U.hitbox(sampleX-22,bottomY,44,38,function()
+    Model.togglePanel(s,"color")
+  end)
+  glyph("Down",.44,function()
+    s.fullscreenPreview=not s.fullscreenPreview
+    s.panel=nil
+  end,s.fullscreenPreview)
   glyph("Undo",.55,function() s.notification="Nothing to undo (visual-only mode)." end)
   glyph("Redo",.66,function() s.notification="Nothing to redo (visual-only mode)." end)
   glyph("Layer",.79,function() Model.togglePanel(s,"layer") end,s.panel=="layer")
@@ -628,6 +643,18 @@ local function dropdown(w,h)
   end
 end
 local function editorScreen(w,h)
+  if s.fullscreenPreview then
+    U.rect(0,0,w,h,{.7,.7,.7})
+    local rw=math.min(w-30,(h-30)*(s.w/s.h))
+    local rh=rw*(s.h/s.w)
+    local cx=(w-rw)/2;local cy=(h-rh)/2
+    U.rect(cx,cy,rw,rh,C.white)
+    U.stroke(cx,cy,rw,rh,C.gray)
+    U.rect(w-66,14,51,36,{.27,.27,.27},4)
+    U.icon("Full Screen",w-41,32,19)
+    U.hitbox(w-67,12,55,40,function()s.fullscreenPreview=false end)
+    return
+  end
   drawCanvas(w,h)
   editorBar(w,h)
   if s.panel=="brush" then brushPanel(w,h)
@@ -732,6 +759,10 @@ function love.keypressed(key)
     if key=="backspace" then
       s[s.focus]=math.floor((tonumber(s[s.focus]) or 0)/10)
     elseif key=="return" or key=="kpenter" or key=="escape" then s.focus=nil end
+    return
+  end
+  if key=="escape" and s.fullscreenPreview then
+    s.fullscreenPreview=false
     return
   end
   if key=="escape" then back();return end
