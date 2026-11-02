@@ -74,3 +74,10 @@
 - Uma verificação do cabeçalho detecta sobreposição de hitboxes dos ícones e das ações Select/Edit; foi introduzida após **inspeção de uma captura efetivamente gerada pelo LÖVE**.
 - Estados adicionais do CI: `gallery_new`, `gallery_folders`, `gallery_inside`, `gallery_selection` e `gallery_many`. Total **23 capturas**.
 - Continuam ausentes: captura original **Windows 14.1.4** na mesma resolução/DPI/idioma, diferenças medíveis de pixels, comparação de ícones e características de galeria em contas Pro/Premium reais.
+
+## Brush — inspeção e testes (etapa atual)
+
+- `luajit tests/test_brush_catalog.lua` verifica catálogo de exemplos, filtro de busca sem distinção de maiúsculas/minúsculas, estados válidos e cópias defensivas.
+- A sequência end-to-end `IBIS_LUA_E2E=1 love .` também abre Brush, ativa a busca, filtra os resultados, seleciona um pincel e testa os sliders e Reset.
+- GitHub Actions captura `brush.png` e `brush_search.png`, totalizando **24 estados**.
+- A evidência Windows é screenshot da Microsoft Store, sem identificação comprovada de build 14.1.4. Sem captura da mesma versão e resolução não existe resultado de fidelidade pixel a pixel.

@@ -151,3 +151,16 @@ Fontes oficiais:
 **Correção encontrada por inspeção de screenshot gerado:** as áreas de clique dos cinco ícones à direita da My Gallery entravam nas áreas de Select e Edit. Os botões foram redistribuídos, e um teste E2E verifica ausência dessa sobreposição.
 
 **Restrições:** não existe armazenamento, transferência real, login ou nuvem. A função de pastas é apresentada como demonstração e não prova um direito de uso adquirido pelo usuário. O visual de pastas e ícones não é validado para Windows 14.1.4. Nenhuma porcentagem de fidelidade pode ser inferida das capturas de smoke.
+
+## W14 — Brush Window da edição Windows (captura Microsoft Store)
+
+- Página: https://apps.microsoft.com/detail/9pfdf2zd4z4n
+- Imagem Windows da biblioteca de pincéis: https://store-images.s-microsoft.com/image/apps.32378.14202576542330599.5d8d33ef-6e70-4d7f-953d-99930bb9592a.1715e9a7-d182-4d1e-a9b7-883949af7782
+
+**Observações visualmente sustentadas:** janela Brush em primeiro plano, biblioteca predominantemente **branca/cinza-clara no lado esquerdo**, abas Basic/Custom/Online e pesquisa, vários itens com amostras de traços e números de tamanho. À direita há área escura com prévia do traço e ajustes, com sliders e outros parâmetros.
+
+**Implementado:** nova composição de painel em `main.lua`; 12 exemplos locais em `src/brush_catalog.lua`, desenho vetorial de traços sem tocar em pixels de obras, busca filtrável e sliders de espessura/opacidade. Novo smoke `brush_search` e teste de cliques sequenciais.
+
+**O que NÃO está comprovado:** números/tipos exatos de pincéis da versão 14.1.4; tipografia, dimensões e alinhamento milimétricos; ícones oficiais; equivalência dos parâmetros avançados. Os valores de espessura e o desenho das miniaturas são demonstrativos. As abas Custom/Online são apenas superfícies indicativas sem acesso ao catálogo oficial.
+
+A documentação oficial dos parâmetros de pincel está em https://ibispaint.com/lecture/index.jsp?no=118. Ela corrobora os conceitos de Thickness, Opacity, Reset, Fade e Shape, mas não mede a posição exata dos controles na versão Windows-alvo.

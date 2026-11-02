@@ -11,7 +11,7 @@ Legenda:
 | My Gallery e gerenciamento | R1 (sincronização), R6 (imagem antiga), tutorial oficial Artworks Folder (no=193) | Navegação e pastas demonstrativas implementadas; geometria/ícones Windows 14.1.4 e nuvem pendentes |
 | Novo Canvas / dimensões | R6 e W12 (screenshot Windows de versão desconhecida) | Presets/DPI e painel lateral demonstrativos; geometria 14.1.4 não verificada |
 | Editor e barras | R2, R3 | Evidência Windows sem versão; medidas pendentes |
-| Pincel e opções | R3 | Evidência Windows sem versão; medidas/ícones pendentes |
+| Pincel e opções | R3, W14 (captura Windows Microsoft Store) | Biblioteca clara e parâmetros escuros reconstruídos parcialmente; medidas/ícones 14.1.4 pendentes |
 | Borracha | R3 | Evidência Windows sem versão |
 | Cor / seletor / paleta | R3 | Evidência Windows sem versão |
 | Camadas e blending | R4, R6 e Layer Window Details oficial (no=156) | Janela e controles interativos demonstrativos; composição real e geometria 14.1.4 pendentes |

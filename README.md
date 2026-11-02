@@ -28,7 +28,7 @@ No programa: clique em My Gallery, +, escolha dimensões e clique OK. Os campos 
 - Comparador: python -m unittest discover -s tests -p "test_compare.py"
 - Diferença de imagens: python tools/compare_screenshots.py --reference original.png --actual copia.png --output-dir comparison_output
 
-O GitHub Actions realiza verificação sintática, testes do modelo, testes do comparador, integração por cliques e **captura vinte e três estados no LÖVE** (título, galeria, menu New, galeria com pastas, galeria dentro de pasta, seleção da galeria, galeria com muitos itens, novo canvas, novo canvas com DPI, editor, camadas, janela flutuante, propriedades, blending, fundo transparente, pincéis, cor, zoom/rotação, Solo, View Menu, Grid Settings, grade e janela de referência). Capturas automatizadas não comprovam correspondência com o software original.
+O GitHub Actions realiza verificação sintática, testes do modelo, testes do comparador, integração por cliques e **captura vinte e quatro estados no LÖVE** (título, galeria, menu New, galeria com pastas, galeria dentro de pasta, seleção da galeria, galeria com muitos itens, novo canvas, novo canvas com DPI, editor, camadas, janela flutuante, propriedades, blending, fundo transparente, pincéis, cor, zoom/rotação, Solo, View Menu, Grid Settings, grade e janela de referência). Capturas automatizadas não comprovam correspondência com o software original.
 
 ## Pesquisa e qualidade
 
@@ -83,3 +83,13 @@ Nesta etapa foram adicionados `src/gallery.lua` e `tests/test_gallery.lua`. O m�
 **Fidelidade:** geometria e ícones da galeria são desenhos de trabalho, **não** reproduções validadas da edição Windows 14.1.4. A fonte funcional é o tutorial oficial https://ibispaint.com/lecture/index.jsp?no=193; a fonte específica do produto Windows para o requisito de Pro/Premium é https://ibispaint.com/lecture/index.jsp?no=183.
 
 **Verificações adicionais:** `luajit tests/test_gallery.lua` e `IBIS_LUA_GALLERY_E2E=1 love .`, com o fluxo My Gallery → New → Folder → Canvas → Layer/Back → Select/Move → Rename → Scroll/Reopen. O teste de layout confirma que os sete controles do cabeçalho não possuem áreas clicáveis sobrepostas. O workflow produz **23 capturas** de estados diferentes.
+
+## Painel Brush — reconstrução visual do Windows
+
+A janela de pincéis foi refeita tomando como referência visual uma captura pública da **Microsoft Store, versão Windows**, disponível em https://apps.microsoft.com/detail/9pfdf2zd4z4n. Ela agora separa a **biblioteca clara à esquerda** da **área escura de parâmetros e pré-visualização à direita**, conforme observado nessa captura.
+
+**Elementos implementados:** abas Basic/Custom/Online, campo de busca, lista rolável com nomes e tamanhos de exemplo, miniaturas de traço procedurais (desenhos vetoriais próprios), prévia ampliada do pincel selecionado, sliders interativos de espessura e opacidade e botão de restauração. A lista de 12 exemplos foi separada em `src/brush_catalog.lua`; `tests/test_brush_catalog.lua` verifica busca e integridade dos dados.
+
+**Limites:** os traços são miniaturas sintéticas feitas por LÖVE, não são texturas extraídas nem um motor de pintura. O programa não oferece os milhares de pincéis oficiais, as abas Custom/Online não carregam coleções e as configurações avançadas do editor original não foram reproduzidas. **Não há comprovação de que a imagem da Microsoft Store corresponda especificamente à versão 14.1.4.**
+
+O teste de integração passa pelos controles reais da janela (busca, seleção, espessura, opacidade e Reset), e o GitHub Actions produz uma captura adicional `brush_search.png`. A estrutura está organizada em Lua editável.
