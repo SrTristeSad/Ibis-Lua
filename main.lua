@@ -18,6 +18,8 @@ local layer_press = nil
 local selected_brush, palette_index = 1, 1
 local toast, toast_until = nil, 0
 local smoke = os.getenv("IBIS_LUA_SMOKE") == "1"
+local e2e = os.getenv("IBIS_LUA_E2E") == "1"
+local e2e_stage = 0
 local smoke_screen = os.getenv("IBIS_LUA_SCREEN") or "title"
 local capture_requested, capture_done, capture_pending, capture_error = false, false, false, nil
 local C = {
@@ -911,9 +913,58 @@ function love.keypressed(key)
         end
     end
 end
+local function click_control(key)
+    local b
+    for i=#controls,1,-1 do
+        if controls[i].key==key then b=controls[i];break end
+    end
+    assert(b,"UI e2e: controle indisponível: "..key)
+    local x=(b.x+b.w/2)*scale
+    local y=(b.y+b.h/2)*scale
+    love.mousepressed(x,y,1)
+    love.mousereleased(x,y,1)
+end
+
 function love.update()
     if smoke and capture_done then
         if capture_error then error("Screenshot: "..capture_error) end
+        love.event.quit(0)
+    end
+    -- Teste real de callbacks de UI: o próximo passo ocorre depois do draw
+    -- do frame anterior, para que os hitboxes correspondam à tela visível.
+    if not e2e or #controls==0 then return end
+    if e2e_stage==0 then
+        assert(state.screen=="title")
+        click_control("brush") -- My Gallery
+        assert(state.screen=="gallery")
+        e2e_stage=1
+    elseif e2e_stage==1 then
+        click_control("plus")
+        assert(state.modal=="new_canvas")
+        e2e_stage=2
+    elseif e2e_stage==2 then
+        click_control("input_width")
+        for ch in ("900"):gmatch(".") do love.textinput(ch) end
+        click_control("input_height")
+        for ch in ("600"):gmatch(".") do love.textinput(ch) end
+        click_control("OK")
+        assert(state.screen=="editor" and state.document.width==900
+            and state.document.height==600,"UI e2e: nova tela com dimensões erradas")
+        e2e_stage=3
+    elseif e2e_stage==3 then
+        click_control("layer")
+        assert(panel=="layer","UI e2e: painel de camadas não abriu")
+        e2e_stage=4
+    elseif e2e_stage==4 then
+        click_control("visibility")
+        assert(not state.layers[1].visible,"UI e2e: visibilidade não alterou")
+        love.keypressed("escape")
+        assert(panel==nil,"UI e2e: painel não fechou")
+        love.wheelmoved(0,1)
+        assert(view.zoom>1,"UI e2e: zoom por roda não respondeu")
+        e2e_stage=5
+    else
+        print("PASS: UI LÖVE end-to-end (galeria, canvas, camadas, zoom)")
         love.event.quit(0)
     end
 end
