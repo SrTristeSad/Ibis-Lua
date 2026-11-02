@@ -20,13 +20,13 @@ jobs:
           SDL_AUDIODRIVER: dummy
         run: |
           set -e
-          for scene in title gallery newCanvas editor brush layer color tools; do
+          for scene in title gallery newCanvas editor brush layer color tools fullscreen; do
             echo "Capturing $scene"
             xvfb-run -a -s "-screen 0 1440x900x24" env IBIS_LUA_SCREENSHOT="$scene" timeout 20 love .
           done
           mkdir -p screenshots
           find "$HOME/.local/share/love/ibis-lua" -name 'ibis-lua-*.png' -type f -exec cp {} screenshots/ \;
-          test "$(find screenshots -name '*.png' | wc -l)" -eq 8
+          test "$(find screenshots -name '*.png' | wc -l)" -eq 9
       - uses: actions/upload-artifact@v4
         with:
           name: ibis-lua-windows-ui-linux-render-preview
