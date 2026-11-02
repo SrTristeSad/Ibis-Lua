@@ -1283,6 +1283,8 @@ local function click_control(key)
     assert(b,"UI e2e: controle indisponível: "..key)
     local x=(b.x+b.w/2)*scale
     local y=(b.y+b.h/2)*scale
+    -- Mouse callbacks that use love.mouse.getPosition must see this cursor.
+    love.mouse.setPosition(x,y)
     love.mousepressed(x,y,1)
     love.mousereleased(x,y,1)
 end
@@ -1391,6 +1393,7 @@ function love.update()
         assert(resize,"UI e2e: resize grip missing")
         local mx=(resize.x+resize.w/2)*scale
         local my=(resize.y+resize.h/2)*scale
+        love.mouse.setPosition(mx,my)
         love.mousepressed(mx,my,1)
         love.mousemoved(mx-40*scale,my-30*scale,-40*scale,-30*scale)
         love.mousereleased(mx-40*scale,my-30*scale,1)
