@@ -19,6 +19,21 @@ Protótipo **exclusivamente de interface** para Windows, desenvolvido em **Lua +
 - Cliques, seleção, visibilidade/duplicação/exclusão visual de camadas e navegação entre as telas.
 - Zoom via roda do mouse, deslocamento da folha com botão direito, `Esc` para voltar, `Tab` para tela cheia, `T` ferramentas, `L` camadas, `C` cores, `B` pincel, `E` borracha.
 
+## Teste visual e capturas
+
+Execute `testar.bat` no Windows. Na tela inicial, abra **Minha Galeria**, crie uma tela com **+** e use a barra inferior para abrir as janelas de pincéis, cor e camadas.
+
+Pressione **F12** em qualquer tela para gerar uma captura PNG da interface renderizada. O arquivo é gravado na pasta de salvamento do LÖVE, geralmente `%APPDATA%\LOVE\ibis-lua-visual-shell` no Windows. O caminho completo também aparece no console.
+
+A comparação com a versão Android 14.1.2 deve ser feita com capturas da mesma tela e proporção. Os testes do GitHub verificam sintaxe, geometria, interações e a validade de algumas chamadas gráficas simuladas, **mas não atestam equivalência pixel a pixel nem substituem um teste em LÖVE real**.
+
+### Ajustes de interface 14.x
+
+- Biblioteca de pincéis com barra vertical de categorias, amostras de traço, pesquisa e rolagem; o catálogo é demonstrativo, sem engine.
+- Janela de cores com roda HSB, losango central, barras HSB/RGB, paletas e histórico demonstrativo.
+- Janela Nova tela com dimensões e tamanhos predefinidos; camadas e galeria continuam estados temporários.
+- Teste de regressão `tests/test_visual_flow.lua` incluído no GitHub Actions.
+
 ## Fora de escopo
 
 Sem rasterizador, motor de pincéis, pintura, filtros reais, exportação, arquivos `.ipv`, vídeo de timelapse, contas online ou salvamento de obras. Estados da interface são **temporários** e não devem ser confundidos com resultados editáveis.
