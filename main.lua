@@ -136,11 +136,13 @@ end
 local function drawRail()
   if S.rail=='popup' then return end
   local x=S.rail=='right' and V.w-49 or 0
-  UI.rect(x,22,49,390,'toolbar',5)
+  local first=Layout.rail(1,S.rail,V)
+  local last=Layout.rail(#Layout.TOOLS,S.rail,V)
+  UI.rect(x,first.y,49,last.y+last.h-first.y,'toolbar',5)
   for i,item in ipairs(Layout.TOOLS) do
     local r=Layout.rail(i,S.rail,V)
     local active=S.tool==item[1]
-    if active then UI.rect(r.x+2,r.y+1,45,25,'panel2',2) end
+    if active then UI.rect(r.x+2,r.y+1,45,r.h-1,'panel2',2) end
     glyph(item[1],r.x+24,r.y+9,17,active and 'blue' or 'white')
     if S.showLabels then
       local label=item[2]
