@@ -220,6 +220,22 @@ renderers["Down"] = function()
 end
 renderers["Minus"] = function() W(2.2) L(-7,0,7,0) end
 renderers["Plus"] = function() W(2.2) L(-7,0,7,0) L(0,-7,0,7) end
+renderers["Camera"] = function()
+  W(1.75)
+  O(-11,-7,-5,-7,-3,-10,4,-10,6,-7,11,-7,11,9,-11,9)
+  S(0,1,5)
+  F(8,-4,1.1)
+end
+renderers["Check"] = function()
+  W(2.8)
+  L(-9,0,-3,6,10,-8)
+end
+renderers["Move"] = function()
+  W(1.8)
+  L(-9,-5,8,-5)
+  L(-9,0,8,0)
+  L(-9,5,8,5)
+end
 renderers["Eye"] = function()
   W(1.8)
   lg.arc("line","open",0,0,11,-.9,math.pi+.9)
