@@ -1,44 +1,40 @@
-# Ibis-Lua
+# Ibis-Lua — reconstrução da interface Windows em Lua/LÖVE
 
-Reconstrução planejada da interface do **ibisPaint para Windows 14.1.4** em Lua/LuaJIT com LÖVE 11.5, sem motor de pintura.
+**Objetivo:** interface visual e navegável do ibisPaint Windows 14.1.4, sem motor de pintura, escrita em Lua/LuaJIT e LÖVE 11.5.
 
-## Estado atual (02/11/2026)
+## Estado atual — 02/11/2026
 
-**Base técnica e pesquisa inicial — NÃO é um clone funcional ou uma tela visualmente validada.**
-A implementação anterior foi inteiramente removida da branch main, preservando o histórico Git.
+Esta versão **já contém telas e controles clicáveis**. A reconstrução **não está concluída nem validada como cópia 1:1**. A maior parte das capturas Windows públicas consultadas não identifica a compilação 14.1.4.
 
-O executável LÖVE agora apresenta uma **primeira interface visual interativa**: tela de título com organização baseada em captura histórica da versão Windows, My Gallery vazia, diálogo de dimensões simulado e estrutura parcial de editor. **Não são reproduções 1:1 da edição 14.1.4.** O conteúdo da captura antiga não foi transplantado como recurso, e a função Collection foi omitida por ter sido removida na versão 12.2.0. A geometria da versão 14.1.4 ainda requer capturas verificáveis.
+- **Tela inicial** com disposição orientada por referência Windows histórica (9.4.2). Sem Collection (função removida depois).
+- **My Gallery** com barra superior, controles de navegação e estado vazio.
+- **New Canvas lateral direito**, incluindo edição de dimensões, lista rolável de presets e criação de documento demonstrativo; substitui o diálogo central anterior.
+- **Editor** com faixa vertical de 15 ferramentas e respectivos ícones vetoriais próprios, controles inferiores, botões superiores, painéis de pincel, cor e camadas.
+- **Comportamentos simulados**: seleção de ferramenta, brush/eraser, dimensões, espessura, opacidade, paleta e camadas.
+- Recursos que precisariam de processamento de imagens não são fingidos: pintura, filtros reais, importação/exportação e renderização de camadas estão fora do escopo.
 
-## Organização
+**Nenhuma tela é certificada como visualmente equivalente ao original.** O desenho de diversos ícones, cores e subpainéis ainda precisa de comparação com a aplicação real versão 14.1.4.
 
-- main.lua e conf.lua — tela visual interativa, criação demonstrativa de tela, cliques, teclado e captura.
-- src/model.lua — modelo de estado de interface simulado, independente de renderização ou processamento de imagens.
-- tests/test_model.lua — testes de transições, controles e camadas demonstrativas.
-- tools/compare_screenshots.py — comparação pixel a pixel, sobreposição e métricas, **apenas com imagens fornecidas legitimamente**.
-- tests/test_compare.py — testes automatizados do comparador.
-- docs/REFERENCIAS_WINDOWS.md — fontes com proveniência e limites de versão.
-- docs/INVENTARIO_14_1_4.md — inventário por tela com nível de verificação.
-- docs/VALIDACAO.md — regras de medição e aceitação, com bloqueios explícitos.
-- testar.bat — inicialização no Windows e mensagens de erro.
-- .github/workflows/check.yml — verificação automatizada.
+## Execução
 
-## Executar no Windows
+Instale LÖVE 11.5 (https://love2d.org/) e execute testar.bat na pasta do projeto.
 
-Instale LÖVE 11.5 e execute testar.bat na raiz do projeto. A janela abre com a tela inicial experimental. Clique My Gallery e + para iniciar uma tela simulada. F12 salva uma captura (na pasta de dados do LÖVE); Esc retorna ou sai.
+No programa: clique em My Gallery, +, escolha dimensões e clique OK. O editor usa B (pincel), E (borracha), L (camadas), C (cores), colchetes (espessura), Escape (voltar) e F12 (captura).
 
 ## Testes
 
-- LuaJIT: luajit tests/test_model.lua
+- Lua: luajit tests/test_model.lua
+- Dependências Python: pip install -r requirements-dev.txt
 - Comparador: python -m unittest discover -s tests -p "test_compare.py"
-- Comparação: python tools/compare_screenshots.py --reference ref.png --actual actual.png --output-dir resultado
+- Diferença de imagens: python tools/compare_screenshots.py --reference original.png --actual copia.png --output-dir comparison_output
 
-As imagens precisam ter mesma resolução e mesma escala de interface. O comparador **não** certifica fidelidade sozinho; a revisão visual e a proveniência da referência são obrigatórias.
+O GitHub Actions realiza verificação sintática, testes do modelo, testes do comparador e **abre cinco telas no LÖVE com captura** (título, galeria, novo canvas, editor, camadas). Capturas automatizadas não comprovam correspondência com o software original.
 
-## Restrições de escopo
+## Pesquisa e qualidade
 
-- Sem motor de pintura, rasterização, filtros reais, importação ou exportação de obras.
-- Sem recursos gráficos proprietários copiados.
-- Sem telas, ícones ou estados inventados para preencher referências ausentes.
-- Qualquer UI futura deve estar vinculada a uma evidência Windows e a uma validação visual comparável.
+- docs/REFERENCIAS_WINDOWS.md — fontes públicas e limitações.
+- docs/MAPEAMENTO_VISUAL.md — observações da interface, origem por elemento e lacunas.
+- docs/INVENTARIO_14_1_4.md — inventário.
+- docs/VALIDACAO.md — procedimento de verificação e critérios de aceitação.
 
-Este repositório não é o ibisPaint oficial nem possui afiliação com seus desenvolvedores.
+**Avisos:** não incorporar imagens ou arquivos proprietários do ibisPaint ao projeto; não afirmar porcentagens não verificadas; não usar telas Android para preencher lacunas Windows; manter os arquivos Lua editáveis. O projeto não é afiliado à ibis inc.
