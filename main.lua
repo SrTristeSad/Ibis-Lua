@@ -2126,8 +2126,32 @@ function love.update()
         assert(layer_size and layer_size.w<408 and layer_size.h<468,
             "UI e2e: resize da janela Layer falhou")
         e2e_stage=14
+    elseif e2e_stage==14 then
+        love.keypressed("escape")
+        click_control("settings")
+        assert(panel=="brush","UI e2e: painel Brush não abriu")
+        e2e_stage=15
+    elseif e2e_stage==15 then
+        click_control("brush_search_toggle")
+        assert(brush_search_active and brush_search=="")
+        e2e_stage=16
+    elseif e2e_stage==16 then
+        for letter in ("Air"):gmatch(".") do love.textinput(letter) end
+        assert(#BrushCatalog.search(brush_search)==4)
+        e2e_stage=17
+    elseif e2e_stage==17 then
+        click_control("brush_preset_9")
+        assert(selected_brush==9 and state.brush_size==8)
+        e2e_stage=18
+    elseif e2e_stage==18 then
+        click_control("brush_size_slider")
+        click_control("brush_opacity_slider")
+        assert(state.brush_size>10 and opacity<100)
+        click_control("brush_reset")
+        assert(state.brush_size==8 and opacity==100)
+        e2e_stage=19
     else
-        print("PASS: UI LÖVE end-to-end (galeria, canvas, View e camadas flutuantes)")
+        print("PASS: UI LÖVE E2E (gallery, layers, View, brush search and sliders)")
         love.event.quit(0)
     end
 end
