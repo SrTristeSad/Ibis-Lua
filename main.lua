@@ -378,17 +378,88 @@ local function brushPanel(w,h)
   else
     U.text(s.brushTab.." brushes",x+15,y+102,listW-30,C.ink,"body")
   end
-  local sx=x+listW+15;local sw=pw-listW-29
-  U.text(Model.brushes[s.brush],sx,y+51,sw,C.white,"body")
-  U.text("Basic   Fade   Shape   Dynamic",sx,y+88,sw,C.pale,"small")
-  U.slider("Thickness",sx,y+130,sw,s.brushSize,1,120,function(v) Model.setBrushSize(s,v) end)
-  U.slider("Opacity",sx,y+197,sw,s.brushOpacity,0,100,function(v) Model.setBrushOpacity(s,v) end)
-  U.text("Stroke preview",sx,y+265,sw,C.white,"small")
-  U.rect(sx,y+288,sw,80,C.pale,5)
-  U.line(sx+16,y+328,sx+sw-16,y+328,C.ink,math.min(16,s.brushSize/4))
-  U.button("Reset",sx+sw-95,y+390,93,29,function()
-    Model.setBrushSize(s,17);Model.setBrushOpacity(s,100)
-  end)
+  local sx=x+listW+15
+  local sw=pw-listW-29
+  U.text(Model.brushes[s.brush],sx+1,y+47,sw-2,C.white,"body")
+  U.rect(sx,y+72,sw,67,{.91,.91,.91},3)
+  -- Original Windows panel has a horizontal brush-test area.
+  for k=0,24 do
+    local ax=sx+17+k*(sw-34)/24
+    local bx=sx+17+(k+1)*(sw-34)/24
+    local ay=y+106+math.sin(k*.32)*5
+    local by=y+106+math.sin((k+1)*.32)*5
+    U.line(ax,ay,bx,by,C.ink,3)
+  end
+  local tabs={"Basic","Fade","Shape","Jitter","Type","Dynamic"}
+  local tabW=sw/#tabs
+  for i,tab in ipairs(tabs) do
+    local xx=sx+(i-1)*tabW
+    U.rect(xx,y+147,tabW-2,31,
+      s.brushParamTab==tab and {.32,.49,.63} or {.40,.40,.40})
+    U.text(tab,xx+1,y+157,tabW-3,C.white,"micro","center")
+    U.hitbox(xx,y+146,tabW,33,function()s.brushParamTab=tab end)
+  end
+  local fields={}
+  local tab=s.brushParamTab
+  if tab=="Basic" then
+    fields={
+      {"Min Thickness", "startThickness"},
+      {"Max Thickness", "endThickness"},
+      {"Initial Opacity", "startOpacity"},
+      {"Final Opacity", "endOpacity"},
+      {"Fade Strength", "fadeStrength"}
+    }
+  elseif tab=="Fade" then
+    fields={
+      {"Start Length", "startThickness"},
+      {"End Length", "endThickness"},
+      {"Start Opacity", "startOpacity"},
+      {"End Opacity", "endOpacity"},
+      {"Fade Strength", "fadeStrength"}
+    }
+  elseif tab=="Shape" then
+    fields={
+      {"Spacing", "startThickness"},
+      {"Pattern Opacity", "startOpacity"},
+      {"Initial Angle", "fadeStrength"},
+      {"Aspect", "endThickness"}
+    }
+  elseif tab=="Jitter" then
+    fields={
+      {"Thickness Jitter", "startThickness"},
+      {"Opacity Jitter", "startOpacity"},
+      {"Color Jitter", "fadeStrength"}
+    }
+  elseif tab=="Type" then
+    fields={
+      {"Blending Strength", "startThickness"},
+      {"Texture", "startOpacity"}
+    }
+  elseif tab=="Dynamic" then
+    fields={
+      {"Speed - Thickness", "startThickness"},
+      {"Speed - Opacity", "startOpacity"},
+      {"Pressure - Thickness", "endThickness"},
+      {"Pressure - Opacity", "endOpacity"}
+    }
+  end
+  for i,entry in ipairs(fields) do
+    local iy=y+185+(i-1)*45
+    if iy+32<y+ph-110 then
+      local key=entry[2]
+      U.slider(entry[1],sx+5,iy,sw-10,s.brushParams[key] or 0,0,100,
+        function(v)s.brushParams[key]=math.floor(v+.5)end)
+    end
+  end
+  local lowerY=y+ph-125
+  U.button("Reset",sx+sw-78,lowerY-21,75,24,function()
+    s.brushParams={startThickness=100,endThickness=100,
+      startOpacity=100,endOpacity=100,fadeStrength=0}
+  end,false,{.31,.31,.31})
+  U.slider("Thickness",sx+5,lowerY+10,sw-10,s.brushSize,1,120,
+    function(v) Model.setBrushSize(s,v) end)
+  U.slider("Opacity",sx+5,lowerY+65,sw-10,s.brushOpacity,0,100,
+    function(v) Model.setBrushOpacity(s,v) end)
 end
 local function layerPanel(w,h)
   local pw=394
