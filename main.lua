@@ -377,7 +377,7 @@ end
 -- This side-aligned full-height panel follows the WINDOWS screenshot,
 -- replacing the ungrounded central modal used in prior commits.
 function draw_new_canvas()
-    local pw=math.min(700,math.max(440,W*0.69))
+    local pw=math.min(1050,math.max(440,W*0.69))
     local px=W-pw-4
     rectangle(px-3,47,pw+7,H-48,C.deep,0.98,2)
     rectangle(px,50,pw,H-54,C.light)
