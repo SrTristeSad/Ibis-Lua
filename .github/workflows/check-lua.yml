@@ -12,4 +12,4 @@ jobs:
       - name: Parse Lua source
         run: find . -type f -name '*.lua' -print0 | xargs -0 -n1 luac5.4 -p
       - name: Check UI geometry
-        run: lua5.4 tests/test_layout.lua && lua5.4 tests/test_shell.lua
+        run: lua5.4 tests/test_layout.lua && lua5.4 tests/test_shell.lua && lua5.4 tests/test_visual_flow.lua
