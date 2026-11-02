@@ -183,7 +183,7 @@ end
 renderers["Selection"] = function()
   W(1.7)
   for x=-9,9,5 do
-    L(x,-9,math.min(x+2,-8),-9)
+    L(x,-9,math.min(x+2,10),-9)
     L(x,9,math.min(x+2,10),9)
   end
   for y=-9,9,5 do
@@ -220,6 +220,35 @@ renderers["Down"] = function()
 end
 renderers["Minus"] = function() W(2.2) L(-7,0,7,0) end
 renderers["Plus"] = function() W(2.2) L(-7,0,7,0) L(0,-7,0,7) end
+renderers["Eye"] = function()
+  W(1.8)
+  lg.arc("line","open",0,0,11,-.9,math.pi+.9)
+  lg.arc("line","open",0,0,11,math.pi-.9,math.pi*2+.9)
+  S(0,0,4)
+  F(0,0,2)
+end
+renderers["Trash"] = function()
+  W(1.8)
+  O(-7,-6,7,-6,5,10,-5,10)
+  L(-9,-9,9,-9)
+  L(-4,-11,4,-11)
+  L(-2,-3,-2,6)
+  L(2,-3,2,6)
+end
+renderers["Duplicate"] = function()
+  W(1.8)
+  O(-10,-7,4,-7,4,7,-10,7)
+  O(-5,-11,10,-11,10,4,4,4)
+end
+renderers["Folder"] = function()
+  W(1.8)
+  O(-10,-5,-4,-5,-2,-8,2,-8,4,-5,10,-5,10,8,-10,8)
+end
+renderers["Lock"] = function()
+  W(2)
+  O(-8,-1,8,-1,8,10,-8,10)
+  lg.arc("line","open",0,-2,6,math.pi,2*math.pi)
+end
 renderers["More"] = function()
   F(-8,0,2);F(0,0,2);F(8,0,2)
 end
