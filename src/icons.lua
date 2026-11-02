@@ -101,6 +101,9 @@ function M.draw(id,x,y,diameter,r,gc,b)
     for i=0,7 do local a=i*math.pi/4
       line(math.cos(a)*8,math.sin(a)*8,math.cos(a)*11,math.sin(a)*11)
     end
+  elseif id=='search' then
+    cir('line',-2,-2,7)
+    line(3.5,3.5,10,10)
   elseif id=='globe' then
     cir('line',0,0,10)
     g.ellipse('line',0,0,4.5,10,28)
