@@ -81,3 +81,10 @@
 - A sequência end-to-end `IBIS_LUA_E2E=1 love .` também abre Brush, ativa a busca, filtra os resultados, seleciona um pincel e testa os sliders e Reset.
 - GitHub Actions captura `brush.png` e `brush_search.png`, totalizando **24 estados**.
 - A evidência Windows é screenshot da Microsoft Store, sem identificação comprovada de build 14.1.4. Sem captura da mesma versão e resolução não existe resultado de fidelidade pixel a pixel.
+
+## Verificador estrutural de screenshots
+
+- `python -m unittest discover -s tests -p 'test_*.py' -v`: roda os testes Python do comparador e do validador de layout.
+- `python tools/check_ui_screenshots.py screenshots`: verifica os 24 PNGs, resolução do CI e separação clara/escura do painel Brush.
+- O teste foi motivado por inspeção real dos screenshots gerados pelo LÖVE, incluindo correção dos traços de caneta que apareciam pontilhados.
+- **Não comparar os resultados desse verificador com uma avaliação de precisão visual contra o ibisPaint original.** São invariantes internos da reconstrução, não métricas de semelhança.

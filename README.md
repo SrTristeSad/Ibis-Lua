@@ -93,3 +93,15 @@ A janela de pincéis foi refeita tomando como referência visual uma captura pú
 **Limites:** os traços são miniaturas sintéticas feitas por LÖVE, não são texturas extraídas nem um motor de pintura. O programa não oferece os milhares de pincéis oficiais, as abas Custom/Online não carregam coleções e as configurações avançadas do editor original não foram reproduzidas. **Não há comprovação de que a imagem da Microsoft Store corresponda especificamente à versão 14.1.4.**
 
 O teste de integração passa pelos controles reais da janela (busca, seleção, espessura, opacidade e Reset), e o GitHub Actions produz uma captura adicional `brush_search.png`. A estrutura está organizada em Lua editável.
+
+## Verificações estruturais das capturas LÖVE
+
+Além dos testes Lua, o projeto inclui `tools/check_ui_screenshots.py`. Após gerar as capturas de smoke, execute:
+
+```bash
+python tools/check_ui_screenshots.py screenshots
+```
+
+O programa verifica a presença e a integridade das **24 imagens PNG** produzidas pelo LÖVE no CI (1024×768) e examina a estrutura principal do painel Brush: **biblioteca clara à esquerda e propriedades escuras à direita**. A validação também tem testes unitários em `tests/test_ui_screenshots.py`; o GitHub Actions executa as verificações automaticamente.
+
+**Esse teste não mede a fidelidade 1:1 ao ibisPaint.** Para avaliar equivalência, ainda são necessárias capturas comparáveis do Windows 14.1.4 e uso do comparador `tools/compare_screenshots.py`. A arte final do painel Brush pode ser inspecionada nos artefatos da execução do CI.
