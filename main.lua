@@ -573,6 +573,15 @@ local function gallery_screen()
     if state.modal=="new_canvas" then draw_new_canvas() end
 end
 
+local function finish_new_canvas(wi,he)
+    state:create_canvas(wi,he)
+    active_artwork_id=gallery:add_artwork(
+        wi,he,"Untitled "..tostring(gallery:total_artworks()+1))
+    view:reset()
+    panel=nil;gallery_menu=nil;focus=nil
+    gallery_selecting=false
+end
+
 -- This side-aligned full-height panel follows the WINDOWS screenshot,
 -- replacing the ungrounded central modal used in prior commits.
 function draw_new_canvas()
@@ -705,9 +714,7 @@ function draw_new_canvas()
             notice("Informe dimensões inteiras de 1 a 16384 pixels.")
             return
         end
-        state:create_canvas(ww,hh)
-        view:reset()
-        panel=nil;gallery_menu=nil;focus=nil
+        finish_new_canvas(ww,hh)
     end,true)
 end
 
@@ -1463,6 +1470,13 @@ function love.wheelmoved(dx,dy)
     end
 end
 function love.textinput(t)
+    if gallery_dialog and state.screen=="gallery" then
+        if t~="" and #gallery_input+#t<=100 then
+            gallery_input=gallery_input_replace and t or gallery_input..t
+            gallery_input_replace=false
+        end
+        return
+    end
     if state.screen~="gallery" or state.modal~="new_canvas" or not focus then return end
     if not t:match("^%d+$") then return end
     if focus=="width" then
@@ -1476,6 +1490,27 @@ function love.textinput(t)
 end
 function love.keypressed(key)
     if key=="f12" then capture_requested=true;return end
+    if gallery_dialog and state.screen=="gallery" then
+        if key=="escape" then gallery_dialog=nil
+        elseif key=="backspace" then
+            if gallery_input_replace then gallery_input=""
+            else
+                local index=utf8.offset(gallery_input,-1)
+                gallery_input=index and gallery_input:sub(1,index-1) or ""
+            end
+            gallery_input_replace=false
+        elseif key=="return" or key=="kpenter" then
+            if gallery_input=="" or #gallery_input>100 or gallery_input:match("^%s*$") then
+                notice("Enter a valid folder name.")
+            else
+                if gallery_dialog.mode=="rename" then
+                    gallery:rename(gallery_dialog.id,gallery_input)
+                else gallery:add_folder(gallery_input) end
+                gallery_dialog=nil
+            end
+        end
+        return
+    end
     if state.modal=="new_canvas" then
         if key=="escape" then state:cancel_new_canvas();focus=nil;return end
         if key=="backspace" then
@@ -1493,7 +1528,7 @@ function love.keypressed(key)
             local ww,hh=tonumber(current_width),tonumber(current_height)
             if ww and hh and ww>=1 and hh>=1 and ww<=16384 and hh<=16384
             and ww==math.floor(ww) and hh==math.floor(hh) then
-                state:create_canvas(ww,hh);view:reset();focus=nil;panel=nil
+                finish_new_canvas(ww,hh)
             else notice("Dimensões inválidas") end
             return
         end
@@ -1503,7 +1538,11 @@ function love.keypressed(key)
         if layer_blend_open then layer_blend_open=false
         elseif panel then panel=nil;state.active_panel=nil
         elseif state.screen=="editor" then set_panel("back")
-        elseif state.screen=="gallery" then state.screen="title"
+        elseif state.screen=="gallery" then
+            if gallery_menu then gallery_menu=nil
+            elseif gallery_selecting then
+                gallery_selecting=false;gallery:clear_selection()
+            elseif not gallery:back() then state.screen="title" end
         else love.event.quit() end
     elseif state.screen=="editor" then
         if key=="b" then state:set_tool("brush")
@@ -1544,6 +1583,10 @@ function love.update()
         e2e_stage=1
     elseif e2e_stage==1 then
         click_control("plus")
+        assert(gallery_menu=="new")
+        e2e_stage=1.5
+    elseif e2e_stage==1.5 then
+        click_control("new_canvas")
         assert(state.modal=="new_canvas")
         e2e_stage=2
     elseif e2e_stage==2 then
