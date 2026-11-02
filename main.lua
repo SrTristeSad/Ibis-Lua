@@ -75,36 +75,111 @@ local function textField(label,value,x,y,width,key)
   U.hitbox(x,y+17,width,30,function() s.focus=key end)
 end
 local function newCanvasDialog(w,h)
-  U.rect(0,0,w,h,{0,0,0,0.35})
-  U.hitbox(0,0,w,h,function() s.modal=nil;s.focus=nil end)
-  local dw=430;local dh=math.min(h-56,656)
-  local x=(w-dw)/2;local y=(h-dh)/2
-  U.rect(x,y,dw,dh,{0.29,0.29,0.29},4)
+  -- Reference: Windows New Canvas panel, not a centered generic modal.
+  -- Source comparison: Uptodown Windows screenshot (14.0.6).
+  local dw=math.min(525,math.max(380,w*.45))
+  local x=w-dw-8
+  local y=45
+  local dh=h-y-7
+  local dark={.28,.28,.28}
+  local paper={.88,.88,.88}
+  local light={.95,.95,.95}
+  U.rect(x,y,dw,dh,dark,3)
   U.hitbox(x,y,dw,dh,function() end)
-  U.text("New Canvas",x+9,y+8,dw-18,C.white,"body","center")
-  U.rect(x+6,y+34,dw-12,40,{0.92,0.92,0.92})
-  U.text("Import Picture",x+15,y+46,dw-32,C.ink,"body")
-  U.hitbox(x+6,y+34,dw-12,40,function() s.notification="Image import requires the file-processing engine." end)
-  U.rect(x+6,y+81,dw-12,97,C.pale)
-  textField("W",s.w,x+35,y+87,155,"w")
-  textField("H",s.h,x+235,y+87,155,"h")
-  U.text("Speed  < >  Quality",x+30,y+145,dw-60,C.ink,"small","center")
-  local start=y+180;local usable=dh-226;local rows=math.min(#Model.presets,math.floor(usable/33))
-  for i=1,rows do
-    local item=Model.presets[i]
-    local yy=start+(i-1)*33
-    U.rect(x+6,yy,dw-12,31,i%2==0 and {0.83,0.83,0.83} or {0.9,0.9,0.9})
-    U.stroke(x+12,yy+6,20,18,C.gray)
-    U.text(item[1],x+41,yy+7,235,C.ink,"body")
-    U.text(item[2].." x "..item[3],x+289,yy+7,116,C.ink,"small","right")
-    U.hitbox(x+6,yy,dw-12,31,function()
-      s.w=item[2];s.h=item[3];s.preset=i;s.focus=nil
+  U.text("New Canvas",x+10,y+6,dw-20,C.white,"body","center")
+  U.rect(x+7,y+28,dw-14,39,light)
+  U.rect(x+13,y+37,23,22,{.17,.17,.17},2)
+  U.icon("Camera",x+24,y+48,18)
+  U.text("Import Picture",x+42,y+40,dw-52,C.ink,"body")
+  U.hitbox(x+7,y+28,dw-14,39,function()
+    s.notification="Image import is outside the visual-only engine."
+  end)
+  U.rect(x+7,y+72,dw-14,103,paper)
+  -- A single pair of numeric size fields + minus/sliders/plus per row.
+  local sliderX=x+86
+  local sliderW=math.max(120,dw-218)
+  for i,dim in ipairs({{"W","w"},{"H","h"}}) do
+    local yy=y+82+(i-1)*30
+    U.text(dim[1],x+36,yy+5,17,C.ink,"small","center")
+    U.icon("Minus",x+65,yy+12,13,C.white)
+    U.circle(x+65,yy+12,11,{.14,.14,.14},true)
+    U.hitbox(x+53,yy,24,25,function()
+      s[dim[2]]=math.max(1,s[dim[2]]-10)
     end)
+    U.rect(sliderX,yy+10,sliderW,3,{.65,.65,.65})
+    local val=s[dim[2]]
+    local t=math.max(0,math.min(1,(val-100)/3900))
+    U.rect(sliderX,yy+10,sliderW*t,3,{.22,.53,.91})
+    U.circle(sliderX+sliderW*t,yy+11,7,{1,1,1})
+    U.hitbox(sliderX,yy,sliderW,23,function(p)
+      s[dim[2]]=math.floor(100+3900*p+0.5)
+    end)
+    U.circle(sliderX+sliderW+17,yy+12,10,{.12,.12,.12})
+    U.icon("Plus",sliderX+sliderW+17,yy+12,12)
+    U.hitbox(sliderX+sliderW+6,yy,23,25,function()
+      s[dim[2]]=math.min(16000,s[dim[2]]+10)
+    end)
+    local nx=x+dw-84
+    U.rect(nx,yy-2,72,26,light)
+    U.stroke(nx,yy-2,72,26,{.66,.66,.66})
+    U.text(tostring(s[dim[2]]),nx+3,yy+3,66,C.ink,"small","center")
+    U.hitbox(nx,yy-2,72,26,function()s.focus=dim[2]end)
   end
-  U.button("Cancel",x+12,y+dh-42,95,30,function() s.modal=nil;s.focus=nil end)
-  U.button("OK",x+dw-95,y+dh-42,80,30,function() s.focus=nil;Model.createCanvas(s) end,true)
+  U.text("Speed  <  >  Quality",x+10,y+145,dw-20,C.ink,"small","center")
+  local presets={
+    {"SD (Speed)",1024,768},
+    {"1 : 1 (SD)",1280,1280},
+    {"3 : 4 (SD)",1024,768},
+    {"9 : 16 (SD)",1280,720},
+    {"Twitter Header",1500,500},
+    {"Chat Stamp",370,320},
+    {"Vertical",690,4096},
+    {"Manga Manuscript",nil,nil},
+    {"Postcard (JP)",1748,1181},
+    {"A4",1754,1240},
+    {"A5",1240,874},
+    {"B4",2085,1476},
+    {"B5",1476,1039}
+  }
+  local listTop=y+179
+  local footer=dh-38
+  local lineHeight=math.min(31,math.max(22,(footer-183)/#presets))
+  for i,item in ipairs(presets) do
+    local yy=listTop+(i-1)*lineHeight
+    if yy+lineHeight<y+dh-46 then
+      U.rect(x+7,yy,dw-14,lineHeight-1,i%2==0 and {.85,.85,.85} or {.92,.92,.92})
+      local px=x+14
+      U.stroke(px,yy+4,24,lineHeight-9,{.46,.46,.46})
+      if i==7 then U.line(px+13,yy+5,px+13,yy+lineHeight-6,C.gray) end
+      U.text(item[1],x+48,yy+math.max(4,(lineHeight-17)/2),dw-196,C.ink,"body")
+      if item[2] then
+        U.rect(x+dw-119,yy+3,103,lineHeight-7,light)
+        U.text(item[2].." x "..item[3],x+dw-117,yy+math.max(5,(lineHeight-17)/2),
+          99,C.ink,"small","right")
+      end
+      if i>=10 and i<=13 then
+        U.rect(x+dw-160,yy+3,36,lineHeight-7,{.85,.85,.85})
+        U.text(i<=11 and "150 dpi" or "150 dpi",x+dw-158,yy+math.max(5,(lineHeight-17)/2),
+          34,C.ink,"micro","center")
+      end
+      U.hitbox(x+7,yy,dw-14,lineHeight-1,function()
+        if item[2] and item[3] then
+          s.w=item[2];s.h=item[3];s.preset=i;s.focus=nil
+        else
+          s.notification="This paper preset needs a verified dimension setting."
+        end
+      end)
+    end
+  end
+  U.rect(x+7,y+dh-42,dw-14,36,{.82,.82,.82})
+  U.button("mm",x+dw-150,y+dh-36,42,24,function()s.unit="mm"end,s.unit=="mm")
+  U.button("inch",x+dw-105,y+dh-36,49,24,function()s.unit="inch"end,s.unit=="inch")
+  U.button("OK",x+dw-51,y+dh-36,43,24,function()
+    s.focus=nil
+    Model.createCanvas(s)
+  end,false,{.17,.17,.17})
+  -- Windows dialog closes when the gallery top bar is used; Escape is also supported.
 end
-
 local function drawCanvas(w,h)
   local left=49;local top=72;local bottom=h-82
   U.rect(left,top,w-left,bottom-top,{0.72,0.72,0.72})
