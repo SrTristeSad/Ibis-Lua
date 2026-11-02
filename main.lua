@@ -531,7 +531,7 @@ local function drawColor()
   local rgb=S.colorValue
   S.previousColor=S.previousColor or {rgb[1],rgb[2],rgb[3]}
   UI.rect(x,p.y+35,w,35,'toolbar',1)
-  local previewW=(w-49)/2
+  local previewW=(w-84)/2
   UI.rect(x+40,p.y+39,previewW,26,rgb,1)
   UI.rect(x+40+previewW,p.y+39,previewW,26,S.previousColor,1)
   UI.text('◀',x+3,p.y+43,17,'white')
@@ -689,7 +689,7 @@ local function drawColor()
           rgb[1],rgb[2],rgb[3])
       end
       S.colorValue=hsv(S.hue,S.saturation,S.brightness)
-    end,{track='line',fill='white'})
+    end,{noTrack=true})
     UI.rect(x+w-26,sy+1,17,17,'dark',9)
     UI.text('+',x+w-26,sy,12,'white','center',17)
     UI.hit({x=x+w-26,y=sy+1,w=17,h=17},function()
