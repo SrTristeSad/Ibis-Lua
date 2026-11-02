@@ -84,3 +84,11 @@ Implementação: draw_hue_wheel e draw_editor_panel(color): círculo HSV e losan
 - **Ressalva**: gestos e modo Solo foram implementados a partir de tutoriais/documentação oficial de Windows/14.1.0, mas os elementos visuais da versão-alvo 14.1.4 continuam aguardando confrontação.
 
 Fontes: https://ibispaint.com/lecture/index.jsp?no=167 e https://ibispaint.com/newFeature.jsp
+
+## W8 — Refinamento de New Canvas e testes de interação
+
+- A proporção horizontal da janela lateral foi ajustada para ~69% da área lógica em janelas grandes, de acordo com a referência visual Windows apresentada em W1; **nenhuma medição 14.1.4 foi feita**.
+- Os controles W/H `-`, slider arrastável e `+` agora alteram numericamente as dimensões. A faixa atual do slider (1–8192) é apenas uma escolha implementativa provisória; não é parâmetro oficial verificado. Entrada manual continua permitindo valores até 16384.
+- O valor inicial **1000 x 1000** não seleciona falsamente o preset SD (Speed), porque ele tem valores diferentes.
+- O pipeline executa interação end-to-end com mouse: título → galeria → novo canvas → editor → layer → zoom. Também captura nove estados em screenshots para inspeção posterior.
+- Evidência original: https://ibis-paint.uptodown.com/windows (imagem Windows de versão não identificada). Falta confronto com captura real Windows 14.1.4.

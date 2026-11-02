@@ -34,3 +34,9 @@
 - Executar `luajit tests/test_layer_solo.lua`: valida isolamento, troca de camada Solo, restauração das visibilidades anteriores e interação com adicionar camada.
 - GitHub Actions gera nove screenshots: title, gallery, new_canvas, editor, layer, brush, color, zoom e solo.
 - **Limite**: não foram medidos desvios em pixels contra screenshot do Windows 14.1.4; resultados de smoke não devem ser apresentados como prova de fidelidade.
+
+## Integração de interface real no LÖVE
+
+- `IBIS_LUA_E2E=1 love .` exercita callbacks de mouse e teclado sem acesso ao motor de pintura.
+- Verifica galeria, popup New Canvas, incremento de largura, troca de foco, criação de tela com dimensões digitadas, abertura do painel Layer, alteração de visibilidade e zoom.
+- Regressões nessa navegação agora devem derrubar o workflow de CI. Isso é um teste de comportamento, não de semelhança geométrica com o ibisPaint.
