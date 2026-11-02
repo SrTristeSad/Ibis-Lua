@@ -11,6 +11,7 @@ U.C={
 local hits={}
 local fonts={}
 function U.init()
+  fonts.tiny=lg.newFont(9)
   fonts.small=lg.newFont(11)
   fonts.body=lg.newFont(14)
   fonts.heading=lg.newFont(19)
@@ -67,10 +68,45 @@ function U.button(label,x,y,w,h,callback,selected,color)
   U.hitbox(x,y,w,h,callback)
 end
 function U.roundButton(label,x,y,r,callback)
-  U.circle(x,y,r,{0.98,0.98,0.98,0.10})
+  U.circle(x,y,r,{0.98,0.98,0.98,0.08})
   U.circle(x,y,r,U.C.white,true)
-  U.text(label,x-r,y+r+8,2*r,U.C.white,"body","center")
+  if label=="My Gallery" then
+    U.line(x-11,y+12,x+12,y-12,U.C.white,2.3)
+    U.color(U.C.white)
+    lg.polygon("line",x-13,y+13,x-8,y+15,x-7,y+9,x-11,y+7)
+  elseif label=="Collection" then
+    local p={}
+    for i=0,9 do
+      local angle=-math.pi/2+i*math.pi/5
+      local sr=(i%2==0) and 17 or 8
+      p[#p+1]=x+math.cos(angle)*sr
+      p[#p+1]=y+math.sin(angle)*sr
+    end
+    U.color(U.C.white);lg.polygon("line",p)
+  else
+    U.circle(x,y,17,U.C.white,true)
+    U.line(x-17,y,x+17,y,U.C.white)
+    U.line(x,y-17,x,y+17,U.C.white)
+    U.color(U.C.white)
+    lg.ellipse("line",x,y,8,17)
+  end
+  U.text(label,x-r-20,y+r+8,2*r+40,U.C.white,"body","center")
   U.hitbox(x-r,y-r,r*2,r*2,callback)
+end
+function U.wordmark(x,y)
+  U.text("ibis",x,y,110,U.C.white,"title")
+  local cx=x+104;local cy=y+26;local radius=21
+  for i=0,11 do
+    local a=-math.pi/2+i*math.pi/6
+    local red,green,blue
+    if i<4 then red,green,blue=.94,.31+i*.12,.19
+    elseif i<8 then red,green,blue=.17,.74-(i-4)*.08,.48+(i-4)*.11
+    else red,green,blue=.32+(i-8)*.12,.26,.83-(i-8)*.11 end
+    lg.setColor(red,green,blue,1)
+    lg.arc("fill","pie",cx,cy,radius,a,a+math.pi/6)
+  end
+  U.circle(cx,cy,8,U.C.navy)
+  U.text("aint",x+128,y,230,U.C.white,"title")
 end
 function U.slider(label,x,y,w,value,min,max,callback)
   U.text(label,x,y-1,w*.58,U.C.white,"small")
@@ -128,7 +164,8 @@ end
 function U.toolButton(name,x,y,w,h,selected,callback)
   if selected then U.rect(x,y,w,h,U.C.accent) end
   U.icon(name,x+w*.5,y+14,17)
-  U.text(name,x+1,y+29,w-2,U.C.white,"small","center")
+  local names={["Magic Wand"]="Magic Wand",["Frame Divider"]="Frame Divider"}
+  U.text(names[name] or name,x+1,y+28,w-2,U.C.white,"tiny","center")
   U.hitbox(x,y,w,h,callback)
 end
 function U.close(x,y,callback)
