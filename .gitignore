@@ -1,0 +1,6 @@
+*.love
+*.exe
+*.zip
+.DS_Store
+user-data/
+screenshots/
