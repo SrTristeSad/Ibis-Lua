@@ -403,44 +403,44 @@ local function brushPanel(w,h)
   local tab=s.brushParamTab
   if tab=="Basic" then
     fields={
-      {"Min Thickness", "startThickness"},
-      {"Max Thickness", "endThickness"},
+      {"Min Thickness", "minThickness"},
+      {"Max Thickness", "maxThickness"},
       {"Initial Opacity", "startOpacity"},
       {"Final Opacity", "endOpacity"},
       {"Fade Strength", "fadeStrength"}
     }
   elseif tab=="Fade" then
     fields={
-      {"Start Length", "startThickness"},
-      {"End Length", "endThickness"},
+      {"Start Length", "startLength"},
+      {"End Length", "endLength"},
       {"Start Opacity", "startOpacity"},
       {"End Opacity", "endOpacity"},
       {"Fade Strength", "fadeStrength"}
     }
   elseif tab=="Shape" then
     fields={
-      {"Spacing", "startThickness"},
-      {"Pattern Opacity", "startOpacity"},
-      {"Initial Angle", "fadeStrength"},
-      {"Aspect", "endThickness"}
+      {"Spacing", "spacing"},
+      {"Pattern Opacity", "patternOpacity"},
+      {"Initial Angle", "initialAngle"},
+      {"Aspect", "aspect"}
     }
   elseif tab=="Jitter" then
     fields={
-      {"Thickness Jitter", "startThickness"},
-      {"Opacity Jitter", "startOpacity"},
-      {"Color Jitter", "fadeStrength"}
+      {"Thickness Jitter", "thicknessJitter"},
+      {"Opacity Jitter", "opacityJitter"},
+      {"Color Jitter", "colorJitter"}
     }
   elseif tab=="Type" then
     fields={
-      {"Blending Strength", "startThickness"},
-      {"Texture", "startOpacity"}
+      {"Blending Strength", "blendingStrength"},
+      {"Texture", "texture"}
     }
   elseif tab=="Dynamic" then
     fields={
-      {"Speed - Thickness", "startThickness"},
-      {"Speed - Opacity", "startOpacity"},
-      {"Pressure - Thickness", "endThickness"},
-      {"Pressure - Opacity", "endOpacity"}
+      {"Speed - Thickness", "speedThickness"},
+      {"Speed - Opacity", "speedOpacity"},
+      {"Pressure - Thickness", "pressureThickness"},
+      {"Pressure - Opacity", "pressureOpacity"}
     }
   end
   for i,entry in ipairs(fields) do
@@ -453,8 +453,11 @@ local function brushPanel(w,h)
   end
   local lowerY=y+ph-125
   U.button("Reset",sx+sw-78,lowerY-21,75,24,function()
-    s.brushParams={startThickness=100,endThickness=100,
-      startOpacity=100,endOpacity=100,fadeStrength=0}
+    s.brushParams={minThickness=1,maxThickness=100,startLength=0,endLength=0,
+      startOpacity=100,endOpacity=100,fadeStrength=0,spacing=20,
+      patternOpacity=100,initialAngle=0,aspect=50,thicknessJitter=0,
+      opacityJitter=0,colorJitter=0,blendingStrength=100,texture=0,
+      speedThickness=50,speedOpacity=50,pressureThickness=50,pressureOpacity=50}
   end,false,{.31,.31,.31})
   U.slider("Thickness",sx+5,lowerY+10,sw-10,s.brushSize,1,120,
     function(v) Model.setBrushSize(s,v) end)
