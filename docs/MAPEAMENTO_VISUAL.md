@@ -121,3 +121,9 @@ Referências oficiais de nomenclatura e funcionamento:
 **Teste:** `tests/test_layer_properties.lua` para propriedades e limites; E2E LÖVE para adicionar camada, alternar clipping/Alpha Lock, ajustar opacidade, escolher Multiply e fundo transparente escuro.
 
 **Incertezas:** screenshots públicos da edição Windows não certificam a compilação **14.1.4**, nem medidas exatas de janela, tipografia ou ícones. Miniaturas não contêm obras, e blending não é aplicado aos pixels. O desenho e a geometria permanecem classificados como **provisórios**, não como reprodução fiel.
+
+## W11 — Janela flutuante redimensionável (desktop)
+
+A documentação oficial **Layer Window Details** (https://ibispaint.com/lecture/index.jsp?no=156) especifica que a janela Layer flutuante existe em tablets e PCs, pode ser movida pela barra superior e redimensionada pelo canto inferior direito ou pelas bordas. Esta etapa implementa o **arraste pelo cabeçalho e pelo canto inferior direito**, com limites de dimensão e posição. O gesto é exercitado no teste end-to-end do LÖVE.
+
+A geometria de janela (largura/altura inicial, margens e hit area) continua provisória até uma comparação com capturas do ibisPaint **Windows 14.1.4** na mesma escala.

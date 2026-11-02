@@ -28,7 +28,7 @@ No programa: clique em My Gallery, +, escolha dimensões e clique OK. Os campos 
 - Comparador: python -m unittest discover -s tests -p "test_compare.py"
 - Diferença de imagens: python tools/compare_screenshots.py --reference original.png --actual copia.png --output-dir comparison_output
 
-O GitHub Actions realiza verificação sintática, testes do modelo, testes do comparador, integração por cliques e **captura dezesseis estados no LÖVE** (título, galeria, novo canvas, editor, camadas, propriedades de camadas, menu de blending, fundo transparente, pincéis, cor, zoom/rotação, modo Solo, View Menu, Grid Settings, grade e janela de referência). Capturas automatizadas não comprovam correspondência com o software original.
+O GitHub Actions realiza verificação sintática, testes do modelo, testes do comparador, integração por cliques e **captura dezessete estados no LÖVE** (título, galeria, novo canvas, editor, camadas, janela flutuante redimensionada, propriedades de camadas, menu de blending, fundo transparente, pincéis, cor, zoom/rotação, modo Solo, View Menu, Grid Settings, grade e janela de referência). Capturas automatizadas não comprovam correspondência com o software original.
 
 ## Pesquisa e qualidade
 
@@ -56,7 +56,7 @@ No painel **New Canvas** os botões `-`/`+` e os sliders W/H funcionam; os contr
 
 ## Janela de camadas — atualização de 02/11/2026
 
-O painel Layer foi reconstruído a partir da documentação de **Layer Window Details** e de capturas publicadas da edição Windows. Agora apresenta Selection Layer, miniaturas demonstrativas, seleção/visibilidade de camadas, botão para adicionar camadas, opacidade com slider, Clipping, Alpha Lock, seletor de Blending Mode e opções visuais de fundo White/Light/Dark. Arraste o cabeçalho da janela Layer para reposicioná-la.
+O painel Layer foi reconstruído a partir da documentação de **Layer Window Details** e de capturas publicadas da edição Windows. Agora apresenta Selection Layer, miniaturas demonstrativas, seleção/visibilidade de camadas, botão para adicionar camadas, opacidade com slider, Clipping, Alpha Lock, seletor de Blending Mode e opções visuais de fundo White/Light/Dark. Arraste o cabeçalho da janela Layer para reposicioná-la; arraste seu canto inferior direito para redimensioná-la. O tamanho e a posição ficam no estado da interface, sem alterar os dados da obra.
 
 **Importante:** nenhuma dessas opções processa uma imagem real. Modos Multiply/Screen/Overlay são apenas estados selecionáveis, e a transparência é apenas um padrão quadriculado na visualização do canvas. Renomear e bloquear camadas têm suporte no modelo de dados, mas **ainda não possuem interfaces próprias**.
 

@@ -53,3 +53,9 @@
 - `IBIS_LUA_E2E=1 love .`: testes adicionais por clique real nos controles do painel de camada.
 - GitHub Actions salva capturas de 16 estados, incluindo popup de modos de mesclagem e representação de fundo transparente.
 - Nenhuma imagem original do Windows 14.1.4 foi comparada pixel a pixel. Aprovado em CI não significa layout equivalente ou efeitos reais implementados.
+
+## Interação da janela Layer flutuante
+
+- Teste E2E: pressiona a alça de tamanho no canto inferior direito, arrasta e solta; valida mudança real da largura e altura da janela.
+- Captura adicional de janela deslocada e redimensionada: `layer_floating.png`.
+- O workflow gera **17 screenshots**, não métricas de equivalência com o original.
