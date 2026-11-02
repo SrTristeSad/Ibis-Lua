@@ -18,7 +18,7 @@ jobs:
       - name: Check syntax of every Lua source
         run: |
           while IFS= read -r file; do
-            luajit -e 'assert(loadfile(arg[1]))' "$file"
+            luajit -b "$file" /dev/null
           done < <(find . -name '*.lua' -type f | sort)
         shell: bash
       - name: Run state model tests
