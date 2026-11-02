@@ -10,7 +10,8 @@ local controls = {}
 local font = {}
 local scale, W, H = 1, 1024, 768
 local panel, gallery_menu = nil, nil
-local gallery_scroll, preset_selected = 0, 1
+local gallery_scroll, preset_selected = 0, 0
+local drag_dimension = nil
 local current_width, current_height = "1000", "1000"
 local focus, opacity, size_zoom = nil, 100, 100
 local input_replace = true
@@ -407,14 +408,40 @@ function draw_new_canvas()
     label("H",px+15,yy+70,18,"small","left",C.ink)
     for i,f in ipairs({{key="width",value=current_width},{key="height",value=current_height}}) do
         local y=yy+42+(i-1)*28
+        local key=f.key
+        local function update_dimension(value)
+            local n=math.max(1,math.min(16384,math.floor(value+0.5)))
+            if key=="width" then current_width=tostring(n)
+            else current_height=tostring(n) end
+            preset_selected=0
+            focus=nil
+            input_replace=true
+        end
         rectangle(px+39,y,pw*0.25,24,C.white)
-        stroke(px+39,y,pw*0.25,24,focus==f.key and C.blue or C.soft)
+        stroke(px+39,y,pw*0.25,24,focus==key and C.blue or C.soft)
         label(f.value,px+43,y+3,pw*0.25-8,"small","center",C.ink)
-        hit(px+39,y,pw*0.25,24,function() focus=f.key;input_replace=true end,"input_"..f.key)
-        local sx=px+pw*0.32
-        line(sx,y+12,sx+pw*0.56,y+12,4,{0.68,0.68,0.68})
-        rectangle(sx+pw*0.14,y+5,14,14,C.white,1,7)
-        hit(sx,y,sx+pw*0.56-sx,24,function() notice("Use o campo numérico para alterar a dimensão.") end,"slider")
+        hit(px+39,y,pw*0.25,24,function() focus=key;input_replace=true end,"input_"..key)
+        local sx=px+pw*0.35
+        local track_w=pw*0.51
+        line(sx,y+12,sx+track_w,y+12,4,{0.68,0.68,0.68})
+        local value=tonumber(f.value) or 1
+        local fill=math.max(0,math.min(1,(value-1)/8191))
+        rectangle(sx,y+10,track_w*fill,4,C.blue)
+        rgba(C.white)
+        love.graphics.circle("fill",sx+track_w*fill,y+12,7)
+        rgba(C.deep)
+        love.graphics.circle("fill",sx-15,y+12,10)
+        love.graphics.circle("fill",sx+track_w+15,y+12,10)
+        line(sx-19,y+12,sx-11,y+12,1.7,C.white)
+        line(sx+track_w+11,y+12,sx+track_w+19,y+12,1.7,C.white)
+        line(sx+track_w+15,y+8,sx+track_w+15,y+16,1.7,C.white)
+        hit(sx-26,y,21,24,function() update_dimension(value-1) end,"decrease_"..key)
+        hit(sx,y,track_w,24,function()
+            local mx=pointer()
+            update_dimension(1+math.max(0,math.min(1,(mx-sx)/track_w))*8191)
+            drag_dimension={key=key,sx=sx,width=track_w}
+        end,"slider_"..key)
+        hit(sx+track_w+5,y,23,24,function() update_dimension(value+1) end,"increase_"..key)
     end
     label("Speed ↔ Quality",px,yy+108,pw,"small","center",{0.30,0.30,0.30})
     yy=yy+128
@@ -830,6 +857,12 @@ function love.mousepressed(rx,ry,button)
     elseif panel then panel=nil;state.active_panel=nil end
 end
 function love.mousemoved(rx,ry,dx,dy)
+    if drag_dimension and state.modal=="new_canvas" then
+        local value=math.floor(1+math.max(0,math.min(1,
+            (rx/scale-drag_dimension.sx)/drag_dimension.width))*8191+0.5)
+        if drag_dimension.key=="width" then current_width=tostring(value)
+        else current_height=tostring(value) end
+    end
     if view.is_panning then
         if love.keyboard.isDown("space") then view:pan_to(rx/scale,ry/scale)
         else view:end_pan() end
@@ -837,6 +870,7 @@ function love.mousemoved(rx,ry,dx,dy)
 end
 function love.mousereleased(rx,ry,button)
     if button~=1 then return end
+    drag_dimension=nil
     view:end_pan()
     if layer_press then
         if state.screen=="editor" and panel=="layer" then
@@ -871,6 +905,7 @@ function love.textinput(t)
     elseif focus=="height" then
         current_height=(input_replace and t or current_height..t):sub(-5)
     end
+    preset_selected=0
     input_replace=false
 end
 function love.keypressed(key)
