@@ -8,6 +8,15 @@ for _,name in ipairs({'push','pop','scale','clear','setColor','rectangle',
   'translate','setLineWidth','setLineJoin','setLineStyle'}) do
   g[name]=function()end
 end
+-- Reprodução do contrato real do LÖVE 11.5: 'round' não é válido.
+g.setLineJoin=function(style)
+  assert(style=='none' or style=='miter' or style=='bevel',
+    "setLineJoin inválido: "..tostring(style))
+end
+g.setLineStyle=function(style)
+  assert(style=='rough' or style=='smooth',
+    "setLineStyle inválido: "..tostring(style))
+end
 g.getWidth=function()return width end
 g.getHeight=function()return height end
 g.newFont=function(size)
