@@ -191,11 +191,12 @@ end
 local function drawTop()
   for i,id in ipairs(Layout.TOP) do
     local r=Layout.top(i,V)
-    UI.rect(r.x,r.y,r.w,r.h,'dark',17)
-    glyph(id,r.x+r.w/2,r.y+r.h/2,21)
+    UI.rect(r.x,r.y,r.w,r.h,{.49,.50,.51,.82},17)
+    glyph(id,r.x+r.w/2,r.y+r.h/2,20)
     UI.hit(r,function()open(id)end)
   end
 end
+
 local function drawEditor()
   lg.clear(.745,.749,.753,1)
   local w=V.w
@@ -208,27 +209,30 @@ local function drawEditor()
   end
   drawTop()
   drawRail()
-  -- Dois controles horizontais conforme a referência do editor Android.
-  local sx=(w-385)/2
+  -- Dois ajustes rápidos lado a lado sobre a barra inferior, como no editor.
+  local sliderWidth=math.min(220,math.max(108,(w-210)/2))
+  local space=sliderWidth+108
+  local first=(w-(2*space-20))/2
   for i,kind in ipairs({'size','opacity'}) do
-    local y=i==1 and 425 or 448
+    local x=first+(i-1)*space
+    local y=452
     local value=kind=='size' and S.size or S.opacity
-    UI.text(kind=='size' and ('%.1f'):format(value) or tostring(value),
-      sx-35,y+2,10,'ink')
-    UI.rect(sx-11,y+2,19,19,'dark',10)
-    UI.text('−',sx-11,y,16,'white','center',19)
-    UI.hit({x=sx-11,y=y,w=19,h=21},function()
+    UI.text(kind=='size' and ('%.1f px'):format(value) or (value..'%'),
+      x,y+1,10,'ink')
+    UI.rect(x+51,y-1,19,19,'dark',10)
+    UI.text('−',x+51,y-2,15,'white','center',19)
+    UI.hit({x=x+51,y=y-1,w=19,h=20},function()
       if kind=='size' then S.size=math.max(.1,S.size-1)
       else S.opacity=math.max(1,S.opacity-5) end
     end)
-    UI.slider(sx+21,y+4,285,kind=='size' and (S.size/100) or
-      (S.opacity/100),function(t)
+    UI.slider(x+77,y,sliderWidth,kind=='size' and S.size/100
+      or S.opacity/100,function(t)
       if kind=='size' then S.size=math.floor((.1+t*99.9)*10)/10
       else S.opacity=math.floor(t*100+.5) end
     end,{track='line',fill='white'})
-    UI.rect(sx+319,y+2,19,19,'dark',10)
-    UI.text('+',sx+319,y+1,15,'white','center',19)
-    UI.hit({x=sx+319,y=y,w=19,h=21},function()
+    UI.rect(x+79+sliderWidth,y-1,19,19,'dark',10)
+    UI.text('+',x+79+sliderWidth,y-2,14,'white','center',19)
+    UI.hit({x=x+79+sliderWidth,y=y-1,w=19,h=20},function()
       if kind=='size' then S.size=math.min(100,S.size+1)
       else S.opacity=math.min(100,S.opacity+5) end
     end)
