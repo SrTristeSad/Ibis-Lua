@@ -11,6 +11,10 @@ for _,size in ipairs({{960,640},{1220,800},{1920,1080}}) do
     assert(L.contains(r,r.x+8,r.y+8))
     railBottom=r.y+r.h
   end
+  local rightStart=L.rail(1,'right',v)
+  local rightEnd=L.rail(15,'right',v)
+  assert(rightStart.y>=56 and rightEnd.y+rightEnd.h<=421,
+    'Faixa direita deve ficar abaixo dos comandos superiores e acima dos sliders')
   local last=0
   for i=1,9 do
     local r=L.dock(i,v)
