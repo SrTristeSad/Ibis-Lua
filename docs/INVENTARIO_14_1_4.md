@@ -24,6 +24,7 @@ Legenda:
 | Configurações gerais / login | R1 | Alteração confirmada, geometria pendente |
 | Menus contextuais e submenus | Sem série integral de capturas | Pendente |
 | Pop-ups e botões de check | R1 | Alguns novos botões confirmados; localização pendente |
+| View Menu / Grid Settings | Tutorial oficial no=168; capturas multiplataforma | Estados e guias demonstrativos implementados; geometria Windows 14.1.4 pendente |
 | Hover, disabled, loading | R1 (mudanças gerais) | Pendente |
 | Iconografia ferramenta por ferramenta | R3 (visão parcial) | Pendente |
 
@@ -33,7 +34,7 @@ Legenda:
 - My Gallery: navegação e botão + funcionais; geometria provisória baseada em fonte Windows sem confirmação da versão.
 - Novo Canvas: formulário funcional simulado; medidas e rótulos aguardam referência Windows 14.1.4.
 - Editor: área de canvas e controles documentados, porém interface visual aproximada e incompleta, sem motor de pintura.
-- Ícones: apenas pincel e globo vetoriais preliminares. **Não aprovados como equivalentes aos oficiais**.
+- Ícones: desenhos vetoriais próprios e preliminares para várias ferramentas e menus. **Nenhum conjunto foi aprovado como visualmente equivalente aos ícones oficiais**.
 - Resultado: nenhuma tela aprovada como fidelidade 1:1.
 
 ## Escopo do modelo Lua

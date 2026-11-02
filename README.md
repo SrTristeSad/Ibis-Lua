@@ -23,12 +23,12 @@ No programa: clique em My Gallery, +, escolha dimensões e clique OK. Os campos 
 
 ## Testes
 
-- Lua: luajit tests/test_model.lua, luajit tests/test_viewport.lua e luajit tests/test_layer_solo.lua
+- Lua: luajit tests/test_model.lua, luajit tests/test_viewport.lua, luajit tests/test_layer_solo.lua e luajit tests/test_view_state.lua
 - Dependências Python: pip install -r requirements-dev.txt
 - Comparador: python -m unittest discover -s tests -p "test_compare.py"
 - Diferença de imagens: python tools/compare_screenshots.py --reference original.png --actual copia.png --output-dir comparison_output
 
-O GitHub Actions realiza verificação sintática, testes do modelo, testes do comparador e **abre nove estados no LÖVE com captura** (título, galeria, novo canvas, editor, camadas, pincéis, cor, zoom/rotação e modo Solo). Capturas automatizadas não comprovam correspondência com o software original.
+O GitHub Actions realiza verificação sintática, testes do modelo, testes do comparador, integração por cliques e **captura treze estados no LÖVE** (título, galeria, novo canvas, editor, camadas, pincéis, cor, zoom/rotação, modo Solo, View Menu, Grid Settings, grade e janela de referência). Capturas automatizadas não comprovam correspondência com o software original.
 
 ## Pesquisa e qualidade
 
@@ -44,3 +44,12 @@ O GitHub Actions realiza verificação sintática, testes do modelo, testes do c
 A variável `IBIS_LUA_E2E=1` executa uma sequência de cliques dentro do próprio LÖVE (sem substituir callbacks por chamadas diretas ao modelo): abre **My Gallery**, abre **New Canvas**, aumenta a largura com `+`, digita largura e altura, cria uma tela de demonstração, abre **Layer**, muda a visibilidade de uma camada, fecha a janela e amplia o canvas com a roda do mouse. O GitHub Actions executa o teste e falha se a navegação ou o estado não corresponderem às verificações.
 
 No painel **New Canvas** os botões `-`/`+` e os sliders W/H funcionam; os controles respondem ao arrastar. Para o slider, a faixa demonstrativa é de **1 a 8192 pixels**, enquanto os campos manuais aceitam de 1 a 16384. **Essa faixa não foi confirmada na versão oficial 14.1.4** e não representa uma afirmação sobre o comportamento exato do aplicativo proprietário.
+
+## View Menu e grade — etapa atual
+
+- No editor, abra **View Menu** no primeiro ícone da região superior direita.
+- **Grid** alterna as linhas de referência no canvas; **Grid Settings** permite mudar os intervalos, alternar as cores demonstrativas, deslocar a origem em passos de 8 pixels e restaurar os valores da simulação.
+- **Reference Window** abre uma miniatura demonstrativa do canvas, sem importação de imagens; **Manga Manuscript** alterna guias ilustrativos, ainda não validados geometricamente.
+- A escolha **Smooth / Pixelated** é mantida no estado da interface. **Não há rasterização nem imagem importada**, portanto não há efeito de interpolação aplicado a pixels reais.
+- Valores atuais (64/256 px e posições 0/0) e cores ilustrativas **não são valores padrão comprovados do ibisPaint Windows 14.1.4**.
+- As operações foram fundamentadas na documentação oficial de View Menu: https://ibispaint.com/lecture/index.jsp?no=168. As imagens desse tutorial são multiplataforma e **não devem ser apresentadas como capturas Windows 14.1.4**.

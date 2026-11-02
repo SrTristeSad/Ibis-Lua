@@ -92,3 +92,18 @@ Fontes: https://ibispaint.com/lecture/index.jsp?no=167 e https://ibispaint.com/n
 - O valor inicial **1000 x 1000** não seleciona falsamente o preset SD (Speed), porque ele tem valores diferentes.
 - O pipeline executa interação end-to-end com mouse: título → galeria → novo canvas → editor → layer → zoom. Também captura nove estados em screenshots para inspeção posterior.
 - Evidência original: https://ibis-paint.uptodown.com/windows (imagem Windows de versão não identificada). Falta confronto com captura real Windows 14.1.4.
+
+## W9 — View Menu, Grid Settings e janela de referência (documentação oficial)
+
+Referências oficiais de nomenclatura e funcionamento:
+
+- Tutorial View Menu: https://ibispaint.com/lecture/index.jsp?no=168
+- Imagem de opções: https://ibispaint.com/img/lecture/en/chapter_168_01.png
+- Imagem de Grid Settings: https://ibispaint.com/img/lecture/en/chapter_168_02.png
+- Referência da janela de Settings: https://ibispaint.com/lecture/index.jsp?no=81
+
+**Verificado funcionalmente**: toggles Reference Window, Grid e Manga Manuscript; configurações de Grid 1/2 Interval, Grid 1/2 Color e Position X/Y; Reset; opções Smooth/Pixelated para exibição ampliada. O tutorial oficial apresenta controles dessas funções, porém não atesta a geometria específica **Windows 14.1.4**.
+
+**Implementado agora**: ViewState independente de motor de pintura, opções com controles de estado, guias renderizadas sobre o canvas respeitando zoom/rotação, janela de referência demonstrativa em modo Canvas, seleção Smooth/Pixelated, botões para intervalos, origem e cores de exemplo. Novos testes de modelo e cliques reais de integração (incluindo View Menu e Grid Settings); quatro capturas adicionais incorporadas ao CI.
+
+**Pendências**: seletor real de cores de guia, edição fina/drag dos parâmetros da grade, proporções exatas, toda a janela real de referência e referência Windows 14.1.4 em resolução, DPI e idioma medidos. Os controles de interpolação mudam apenas o estado porque não existe motor de imagens.

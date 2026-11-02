@@ -40,3 +40,9 @@
 - `IBIS_LUA_E2E=1 love .` exercita callbacks de mouse e teclado sem acesso ao motor de pintura.
 - Verifica galeria, popup New Canvas, incremento de largura, troca de foco, criação de tela com dimensões digitadas, abertura do painel Layer, alteração de visibilidade e zoom.
 - Regressões nessa navegação agora devem derrubar o workflow de CI. Isso é um teste de comportamento, não de semelhança geométrica com o ibisPaint.
+
+## View Menu — validação funcional (02/11/2026)
+
+- Módulo testado: `luajit tests/test_view_state.lua`, cobrindo toggles, intervalos, cores demonstrativas, interpolação explícita e reset.
+- Integração `IBIS_LUA_E2E=1 love .`: após criar canvas e abrir Layer, abre View Menu, alterna Grid e Reference Window, escolhe Pixelated, abre Grid Settings, incrementa Grid 1 Interval e testa Reset.
+- Pipeline: 13 capturas de estados de UI, ainda em Linux/Xvfb; **não constituem provas de correspondência de pixels com o aplicativo Windows original**.
