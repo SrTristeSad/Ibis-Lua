@@ -558,8 +558,8 @@ local function draw_view_guides(dw,dh,canvas_scale)
                 y=y+interval
             end
         end
-        grid_pass(visual.grid1,C.dark,0.22)
-        grid_pass(visual.grid2,C.blue,0.54)
+        grid_pass(visual.grid2,visual:grid_color("grid2"),0.22)
+        grid_pass(visual.grid1,visual:grid_color("grid1"),0.48)
     end
     if visual.manga then
         rgba({0.94,0.25,0.29},0.55)
@@ -681,69 +681,105 @@ function draw_editor_panel()
     draw_panel_box(x,y,w,h,titles[name] or name)
     if name=="view" then
         local bx=x+12
-        local function option(yy,text,is_enabled,action,key)
-            rectangle(bx,yy,w-24,36,C.white,over(bx,yy,w-24,36) and 0.18 or 0.07,2)
-            stroke(bx+9,yy+9,18,18,C.soft)
-            if is_enabled then
-                line(bx+12,yy+19,bx+16,yy+23,2,C.white)
-                line(bx+16,yy+23,bx+24,yy+12,2,C.white)
-            end
-            label(text,bx+38,yy+10,w-70,"small","left",C.white)
-            hit(bx,yy,w-24,36,action,key)
+        local function option(yy,title,enabled,action,key)
+            rectangle(bx,yy,w-24,34,C.white,over(bx,yy,w-24,34) and 0.13 or 0.04,2)
+            label(title,bx+10,yy+9,w-95,"small","left",C.white)
+            local xx=bx+w-79
+            rectangle(xx,yy+6,42,23,
+                enabled and C.blue or {0.60,0.60,0.60},1,11)
+            rgba(C.white)
+            love.graphics.circle("fill",enabled and xx+31 or xx+11,yy+17,9)
+            hit(bx,yy,w-24,34,action,key)
         end
         option(y+47,"Reference Window",visual.reference,
             function() visual:toggle_reference() end,"view_reference")
-        option(y+87,"Grid",visual.grid,
+        option(y+85,"Grid",visual.grid,
             function() visual:toggle_grid() end,"view_grid")
-        option(y+167,"Manga Manuscript",visual.manga,
+        option(y+165,"Manga Manuscript",visual.manga,
             function() visual:toggle_manga() end,"view_manga")
-        option(y+247,"Display when zoomed: "..visual.interpolation,false,
-            function() visual:toggle_interpolation() end,"view_interpolation")
-        local function section(yy,name,callback,key)
-            rectangle(bx+17,yy,w-41,33,C.deep,over(bx+17,yy,w-41,33) and 0.95 or 0.48,2)
-            label(name,bx+29,yy+9,w-67,"small","left",C.white)
-            label(">",bx+w-69,yy+9,20,"small","right",C.white)
-            hit(bx+17,yy,w-41,33,callback,key)
+        local function section_row(yy,text,callback,key)
+            rectangle(bx+12,yy,w-49,32,C.deep,over(bx+12,yy,w-49,32) and 0.94 or 0.75,16)
+            label(text,bx+18,yy+9,w-61,"small","center",C.white)
+            hit(bx+12,yy,w-49,32,callback,key)
         end
-        section(y+127,"Grid Settings",function() set_panel("grid_settings") end,
+        section_row(y+123,"Grid Settings",function() set_panel("grid_settings") end,
             "view_grid_settings")
-        section(y+207,"Manga Manuscript Settings",function()
-            notice("Configurações detalhadas ainda sem referência Windows 14.1.4.")
+        section_row(y+203,"Manga Manuscript Settings",function()
+            notice("Geometria das opções de manuscrito ainda não verificada no Windows.")
         end,"view_manga_settings")
+        label("Display when zooming",bx+9,y+245,w-44,"small","left",C.white)
+        local bw=(w-48)/2
+        local xx=bx+12
+        rectangle(xx,y+267,bw,35,
+            visual.interpolation=="smooth" and C.blue or C.deep,0.84,2)
+        rectangle(xx+bw,y+267,bw,35,
+            visual.interpolation=="pixelated" and C.blue or C.deep,0.84,2)
+        label("Smooth",xx,y+277,bw,"small","center",C.white)
+        label("Pixelated",xx+bw,y+277,bw,"small","center",C.white)
+        hit(xx,y+267,bw,35,function()
+            visual:set_interpolation("smooth")
+        end,"view_smooth")
+        hit(xx+bw,y+267,bw,35,function()
+            visual:set_interpolation("pixelated")
+        end,"view_pixelated")
     elseif name=="grid_settings" then
         local bx=x+13
-        local function switch(yy,name,value,key,minus,plus)
-            label(name,bx,yy,w-23,"small","left",C.white)
-            rectangle(bx,yy+22,w-26,38,C.white,0.06,2)
-            label(tostring(value).." px",bx+55,yy+32,w-145,"small","center",C.white)
-            plain_button(bx+4,yy+25,41,31,"-",minus)
-            plain_button(x+w-60,yy+25,41,31,"+",plus)
-            hit(x+w-60,yy+25,41,31,plus,"increase_"..key)
+        local function interval_row(yy,title,value,key,step)
+            label(title,bx,yy,w-26,"small","left",C.white)
+            local by=yy+19
+            rectangle(bx,by,w-26,37,C.white,0.09,2)
+            label(tostring(value).." px",bx+57,by+11,w-150,"small","center",C.white)
+            local dec=function()
+                visual:set_interval(key,math.max(1,visual[key]-step))
+            end
+            local inc=function()
+                visual:set_interval(key,math.min(8192,visual[key]+step))
+            end
+            plain_button(bx+3,by+3,35,31,"-",dec)
+            plain_button(x+w-59,by+3,35,31,"+",inc)
+            hit(x+w-59,by+3,35,31,inc,"increase_"..key)
         end
-        local function change_interval(key,d)
-            visual:set_interval(key,math.max(1,math.min(8192,visual[key]+d)))
+        interval_row(y+76,"Grid 1 Interval",visual.grid1,"grid1",8)
+        interval_row(y+145,"Grid 2 Interval",visual.grid2,"grid2",8)
+        local function color_row(yy,title,key)
+            label(title,bx,yy+8,w-115,"small","left",C.white)
+            local xx=x+w-75
+            rectangle(xx,yy+3,53,27,visual:grid_color(key),1,2)
+            stroke(xx,yy+3,53,27,C.white,0.5)
+            hit(xx-2,yy,58,34,function()
+                visual:cycle_grid_color(key)
+            end,"grid_color_"..key)
         end
-        switch(y+48,"Grid 1 Interval",visual.grid1,"grid1",
-            function() change_interval("grid1",-8) end,
-            function() change_interval("grid1",8) end)
-        switch(y+121,"Grid 2 Interval",visual.grid2,"grid2",
-            function() change_interval("grid2",-32) end,
-            function() change_interval("grid2",32) end)
-        label("Grid Origin",bx,y+203,w-26,"small","left",C.white)
-        plain_button(bx,y+229,(w-38)/2,33,
-            "X  "..visual.offset_x,function()
-                visual:set_origin(visual.offset_x+8,visual.offset_y)
+        color_row(y+214,"Grid 1 Color","grid1")
+        color_row(y+248,"Grid 2 Color","grid2")
+        label("Position X",bx,y+288,(w-24)/2,"small","left",C.white)
+        label("Position Y",bx+(w-24)/2,y+288,(w-24)/2,"small","left",C.white)
+        local bw=(w-42)/4
+        plain_button(bx,y+310,bw,28,"-",function()
+            visual:set_origin(visual.offset_x-8,visual.offset_y)
+        end)
+        plain_button(bx+bw,y+310,bw,28,
+            tostring(visual.offset_x),function()
+                visual:set_origin(0,visual.offset_y)
             end)
-        plain_button(bx+6+(w-38)/2,y+229,(w-38)/2,33,
-            "Y  "..visual.offset_y,function()
-                visual:set_origin(visual.offset_x,visual.offset_y+8)
+        plain_button(bx+2*bw+9,y+310,bw,28,"-",function()
+            visual:set_origin(visual.offset_x,visual.offset_y-8)
+        end)
+        plain_button(bx+3*bw+9,y+310,bw,28,
+            tostring(visual.offset_y),function()
+                visual:set_origin(visual.offset_x,0)
             end)
-        plain_button(bx,y+292,w-26,36,
+        local toggle_x=x+w-90
+        label("Show Grid",bx,y+49,w-110,"small","left",C.white)
+        rectangle(toggle_x,y+46,60,23,
+            visual.grid and C.blue or {0.5,0.5,0.5},1,11)
+        rgba(C.white)
+        love.graphics.circle("fill",
+            visual.grid and toggle_x+46 or toggle_x+12,y+57,9)
+        hit(toggle_x,y+43,62,29,function() visual:toggle_grid() end,
+            "settings_grid_toggle")
+        plain_button(bx,y+367,w-26,33,
             "Reset Grid",function() visual:reset_grid() end)
-        -- Substitui um botão de cor ainda não pesquisado por estado documentado.
-        label(visual.grid and "Show Grid: On" or "Show Grid: Off",
-            bx,y+340,w-26,"small","center",C.soft)
-        hit(bx,y+330,w-26,35,function() visual:toggle_grid() end,"settings_grid_toggle")
     elseif name=="layer" then
         local bx=x+12
         rectangle(bx,y+49,w-59,45,{0.76,0.76,0.76},0.3)
@@ -1147,7 +1183,7 @@ function love.update()
         assert(visual.grid,"UI e2e: grade não ativou")
         click_control("view_reference")
         assert(visual.reference,"UI e2e: janela de referência não ativou")
-        click_control("view_interpolation")
+        click_control("view_pixelated")
         assert(visual.interpolation=="pixelated",
             "UI e2e: interpolação não alternou")
         click_control("view_grid_settings")
