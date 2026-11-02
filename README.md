@@ -25,7 +25,7 @@ Execute `testar.bat` no Windows. Na tela inicial, abra **Minha Galeria**, crie u
 
 Pressione **F12** em qualquer tela para gerar uma captura PNG da interface renderizada. O arquivo é gravado na pasta de salvamento do LÖVE, geralmente `%APPDATA%\LOVE\ibis-lua-visual-shell` no Windows. O caminho completo também aparece no console.
 
-A comparação com a versão Android 14.1.2 deve ser feita com capturas da mesma tela e proporção. Os testes do GitHub verificam sintaxe, geometria, interações e a validade de algumas chamadas gráficas simuladas, **mas não atestam equivalência pixel a pixel nem substituem um teste em LÖVE real**.
+A comparação com a versão Android 14.1.2 deve ser feita com capturas da mesma tela e proporção. Os testes básicos do GitHub verificam sintaxe, geometria e interações. Um fluxo adicional (`.github/workflows/visual-screenshots.yml`) abre o aplicativo em **LÖVE 11.5 real**, sob ambiente gráfico virtual, e publica oito capturas como artefato baixável do GitHub Actions. A comparação pixel a pixel com capturas reais do ibisPaint ainda não foi automatizada.
 
 ### Ajustes de interface 14.x
 
@@ -33,6 +33,7 @@ A comparação com a versão Android 14.1.2 deve ser feita com capturas da mesma
 - Janela de cores com roda HSB, losango central, barras HSB/RGB, paletas e histórico demonstrativo.
 - Janela Nova tela com dimensões e tamanhos predefinidos; camadas e galeria continuam estados temporários.
 - Teste de regressão `tests/test_visual_flow.lua` incluído no GitHub Actions.
+- Captura real opcional em CI: `love . --capture-ui brushes` (também aceita `home`, `gallery`, `canvas_new`, `editor`, `color`, `layers` e `tools`).
 
 ## Fora de escopo
 
