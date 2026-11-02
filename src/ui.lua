@@ -68,8 +68,10 @@ end
 function UI.slider(x,y,w,value,onClick,opts)
   opts=opts or {}
   local v=math.max(0,math.min(1,value))
-  UI.rect(x,y+5,w,5,opts.track or 'line',3)
-  UI.rect(x,y+5,math.max(1,w*v),5,opts.fill or 'white',3)
+  if not opts.noTrack then
+    UI.rect(x,y+5,w,5,opts.track or 'line',3)
+    UI.rect(x,y+5,math.max(1,w*v),5,opts.fill or 'white',3)
+  end
   UI.rect(x+w*v-7,y,14,15,'white',7)
   UI.hit({x=x,y=y-6,w=w,h=25},function()
     local mx=love.mouse.getX()/(love.graphics.getHeight()/512)
