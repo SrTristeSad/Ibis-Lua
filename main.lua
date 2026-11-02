@@ -6,9 +6,17 @@ local Model = require("src.model")
 local Viewport = require("src.viewport")
 local ViewState = require("src.view_state")
 local CanvasPresets = require("src.canvas_presets")
+local Gallery = require("src.gallery")
+local utf8 = require("utf8")
 local state = Model.new()
 local view = Viewport.new()
 local visual = ViewState.new()
+local gallery = Gallery.new()
+local gallery_selecting=false
+local gallery_dialog=nil
+local gallery_input=""
+local gallery_input_replace=true
+local active_artwork_id=nil
 local controls = {}
 local font = {}
 local scale, W, H = 1, 1024, 768
@@ -332,24 +340,101 @@ local function title_screen()
     label("Online Gallery",0,H*0.83,W,"normal","center",C.soft)
 end
 
+-- Gallery layout inspired by a published Windows image and the official
+-- artwork-folder tutorial. Exact version-14.1.4 geometry is not certified.
+local function gallery_open_dialog(mode,id)
+    gallery_dialog={mode=mode,id=id}
+    gallery_input=mode=="rename" and gallery:get(id).name or "New Folder"
+    gallery_input_replace=true
+    gallery_menu=nil
+end
+
 local function gallery_header()
     rectangle(0,0,W,48,C.dark)
-    label("My Gallery ("..tostring(state.document and 1 or 0)..")",74,12,275,"normal","left",C.white)
-    icon_button(8,3,48,42,"back",function() state.screen="title" end)
+    local folder=gallery:folder(gallery.current_folder)
+    label(folder.id==0 and ("My Gallery ("..gallery:total_artworks()..")")
+            or folder.name,74,12,math.max(180,W-475),"normal","left",C.white)
+    icon_button(8,3,48,42,"back",function()
+        if not gallery:back() then
+            state.screen="title"
+            gallery_selecting=false
+        end
+        gallery_menu=nil
+        gallery:clear_selection()
+    end)
+    -- The official 12.2+ New menu permits choosing Canvas or Folder.
     local actions={
-        {"plus",function() state:open_new_canvas();gallery_menu=nil end},
+        {"plus",function() gallery_menu=gallery_menu=="new" and nil or "new" end},
         {"settings",function() gallery_menu=gallery_menu=="cloud" and nil or "cloud" end},
-        {"play",function() notice("Reprodução indisponível sem motor de pintura.") end},
-        {"material",function() notice("Exportação real excluída deste projeto.") end},
+        {"play",function() notice("Time-lapse: unavailable without artwork engine.") end},
+        {"material",function() notice("Export requires image processing.") end},
         {"more",function() gallery_menu=gallery_menu=="more" and nil or "more" end}
     }
     local start=W-270
-    for i,a in ipairs(actions) do icon_button(start+(i-1)*42,4,39,40,a[1],a[2]) end
-    label("Select",W-81,14,50,"small","center",C.white)
-    hit(W-86,4,55,40,function() gallery_menu="select" end,"select")
+    for i,a in ipairs(actions) do
+        icon_button(start+(i-1)*42,4,39,40,a[1],a[2])
+    end
+    label(gallery_selecting and "Done" or "Select",
+        W-81,14,50,"small","center",C.white)
+    hit(W-86,4,55,40,function()
+        gallery_selecting=not gallery_selecting
+        if not gallery_selecting then
+            gallery:clear_selection();gallery_menu=nil
+        end
+    end,"gallery_select")
     label("Edit",W-38,14,37,"small","center",C.white)
-    hit(W-42,4,40,40,function() gallery_menu="edit" end,"edit")
+    hit(W-42,4,40,40,function()
+        if gallery.current_folder~=0 then
+            gallery_open_dialog("rename",gallery.current_folder)
+        else
+            notice("Select an artwork or open a folder to edit its details.")
+        end
+    end,"gallery_edit")
 end
+
+local function gallery_item(tile,item)
+    local x,y,w,h=tile.x,tile.y,tile.w,tile.h
+    rectangle(x,y,w,h,C.white,1,2)
+    stroke(x,y,w,h,{0.74,0.74,0.74},0.75)
+    if item.type=="folder" then
+        -- Geometric placeholder; official 14.1.4 folder artwork unverified.
+        rectangle(x+26,y+23,w-52,107,{0.72,0.72,0.72},1,4)
+        rectangle(x+26,y+15,w*0.39,20,{0.78,0.78,0.78},1,3)
+        rectangle(x+30,y+30,w-60,94,{0.80,0.80,0.80},1,2)
+        label("Folder",x+20,y+132,w-40,"tiny","center",{0.43,0.43,0.43})
+    else
+        -- The screenshot contains only the blank simulated canvas.
+        local avail_w,avail_h=w-29,h-63
+        local ratio=item.width/item.height
+        local cw,ch=math.min(avail_w,avail_h*ratio),math.min(avail_h,avail_w/ratio)
+        rectangle(x+(w-cw)/2,y+14+(avail_h-ch)/2,cw,ch,C.paper)
+        stroke(x+(w-cw)/2,y+14+(avail_h-ch)/2,cw,ch,C.soft)
+        label(item.width.." x "..item.height,x+10,y+132,w-20,
+            "tiny","center",{0.55,0.55,0.55})
+    end
+    local name=item.name
+    if #name>22 then name=name:sub(1,20).."…" end
+    label(name,x+6,y+h-34,w-12,"small","center",C.ink)
+    if gallery.selected[item.id] then
+        rectangle(x,y,w,h,C.blue,0.22)
+        rectangle(x+w-31,y+7,24,24,C.blue,0.93,12)
+        glyph("check",x+w-19,y+19,12)
+    end
+    local id=item.id
+    hit(x,y,w,h,function()
+        if gallery_selecting then
+            gallery:select(id)
+        elseif item.type=="folder" then
+            gallery:enter(id)
+        else
+            state:reopen_canvas(item.width,item.height)
+            active_artwork_id=id
+            view:reset()
+        end
+        gallery_menu=nil
+    end,item.type.."_"..id)
+end
+
 local function gallery_screen()
     rectangle(0,0,W,H,C.paper)
     gallery_header()
@@ -358,26 +443,134 @@ local function gallery_screen()
     rectangle(220,57,35,18,{0.80,0.80,0.80},1,9)
     rgba(C.white);love.graphics.circle("fill",229,66,8)
     hit(214,51,48,30,function() gallery_menu="cloud" end,"cloud")
-    if state.document then
-        rectangle(40,130,160,206,C.white,1,2)
-        rectangle(54,143,132,160,{0.93,0.93,0.93})
-        label(tostring(state.document.width).." x "..tostring(state.document.height),45,316,150,"small","center",C.ink)
-        hit(40,130,160,216,function() state.screen="editor" end,"artwork")
+    local items=gallery:items()
+    if #items==0 then
+        label(gallery.current_folder==0 and "There is no artwork."
+             or "This folder is empty.",0,H*0.54,W,"small","center",
+             {0.63,0.63,0.63})
+        label("Press '+' to create an artwork or folder.",0,H*0.54+23,W,
+             "small","center",{0.63,0.63,0.63})
     else
-        label("There is no artwork.",0,H*0.54,W,"small","center",{0.63,0.63,0.63})
-        label("Press '+' button to create a new artwork.",0,H*0.54+23,W,"small","center",{0.63,0.63,0.63})
+        local tile_w=166
+        local gap=19
+        local left=29
+        local count=math.max(1,math.floor((W-left*2+gap)/(tile_w+gap)))
+        for i,item in ipairs(items) do
+            local row=math.floor((i-1)/count)
+            local col=(i-1)%count
+            local tile={x=left+col*(tile_w+gap),y=109+row*204,w=tile_w,h=184}
+            if tile.y+tile.h<H-58 then gallery_item(tile,item) end
+        end
     end
-    if gallery_menu and state.modal~="new_canvas" then
+    if gallery_selecting then
+        rectangle(0,H-49,W,49,C.dark)
+        label(tostring(#gallery:selection()).." selected",15,H-32,210,
+            "small","left",C.white)
+        plain_button(W-181,H-43,168,36,"Move",function()
+            if #gallery:selection()>0 then gallery_menu="move"
+            else notice("Select an artwork or folder first.") end
+        end,true)
+    end
+
+    if gallery_menu=="new" and state.modal~="new_canvas" then
+        local x=math.max(66,W-326)
+        rectangle(x,49,256,130,C.dark,0.98,3)
+        label("New",x+11,60,230,"small","left",C.white)
+        plain_button(x+9,81,238,38,"Canvas",function()
+            state:open_new_canvas();gallery_menu=nil
+        end)
+        hit(x+9,81,238,38,function()
+            state:open_new_canvas();gallery_menu=nil
+        end,"new_canvas")
+        plain_button(x+9,125,238,38,"Folder (Pro)",function()
+            gallery_open_dialog("create")
+        end)
+        hit(x+9,125,238,38,function()
+            gallery_open_dialog("create")
+        end,"new_folder")
+    elseif gallery_menu=="move" and state.modal~="new_canvas" then
+        local folders=gallery:folders()
+        local n=math.min(#folders,10)
+        local menu_w=292
+        local x=W-menu_w-11
+        local y=82
+        rectangle(x,y,menu_w,45+n*34,C.dark,0.99,3)
+        hit(x,y,menu_w,45+n*34,function() end,"move_surface")
+        label("Move to folder",x+12,y+10,menu_w-25,"normal","left",C.white)
+        for i=1,n do
+            local folder=folders[i]
+            local yy=y+42+(i-1)*34
+            local fid=folder.id
+            rectangle(x+9,yy,menu_w-18,32,
+                over(x+9,yy,menu_w-18,32) and C.blue or C.bar,0.72,2)
+            label(folder.name,x+19,yy+9,menu_w-40,"small","left",C.white)
+            hit(x+9,yy,menu_w-18,32,function()
+                local ok,result=pcall(function()
+                    return gallery:move_selection(fid)
+                end)
+                if not ok then notice("Move not permitted: folder hierarchy.")
+                else
+                    gallery_menu=nil;gallery_selecting=false
+                    notice(result.." item(s) moved.")
+                end
+            end,"move_to_"..fid)
+        end
+    elseif gallery_menu and state.modal~="new_canvas" then
         local x=W-245
         rectangle(x,49,238,138,C.dark,0.95,3)
-        local text_map={cloud="Cloud Synchronization (offline)",select="Selection: no artworks selected",
-           edit="Edit: demonstration only",more="My Gallery options"}
-        label(text_map[gallery_menu] or "",x+10,66,218,"small","center",C.white)
-        plain_button(x+22,124,190,33,"Close",function() gallery_menu=nil end)
+        local text_map={
+            cloud="Cloud synchronization requires an account.",
+            more="My Gallery (demonstration only)"
+        }
+        label(text_map[gallery_menu] or "",x+10,66,218,
+            "small","center",C.white)
+        plain_button(x+22,124,190,33,"Close",function()
+            gallery_menu=nil
+        end)
     end
-    if state.modal=="new_canvas" then
-        draw_new_canvas()
+
+    if gallery_dialog then
+        rectangle(0,0,W,H,C.deep,0.56)
+        hit(0,0,W,H,function() end,"folder_scrim")
+        local ww=math.min(W-52,408)
+        local xx=(W-ww)/2
+        local yy=H/2-119
+        rectangle(xx,yy,ww,238,C.light,1,8)
+        label(gallery_dialog.mode=="rename" and "Rename Folder" or "New Folder",
+            xx+18,yy+20,ww-36,"header","center",C.ink)
+        label("Folder name",xx+26,yy+74,ww-52,"small","left",C.ink)
+        rectangle(xx+26,yy+97,ww-52,41,C.white,1,3)
+        stroke(xx+26,yy+97,ww-52,41,C.blue)
+        label(gallery_input,xx+36,yy+108,ww-72,"normal","left",C.ink)
+        hit(xx+26,yy+97,ww-52,41,function()
+            gallery_input_replace=true
+        end,"folder_name")
+        plain_button(xx+26,yy+171,(ww-63)/2,39,"Cancel",function()
+            gallery_dialog=nil
+        end)
+        plain_button(xx+37+(ww-63)/2,yy+171,(ww-63)/2,39,"OK",function()
+            local valid=gallery_input~="" and #gallery_input<=100
+                and not gallery_input:match("^%s*$")
+            if not valid then notice("Enter a valid folder name.");return end
+            if gallery_dialog.mode=="rename" then
+                gallery:rename(gallery_dialog.id,gallery_input)
+            else
+                gallery:add_folder(gallery_input)
+            end
+            gallery_dialog=nil
+        end,true)
+        hit(xx+37+(ww-63)/2,yy+171,(ww-63)/2,39,function()
+            local valid=gallery_input~="" and #gallery_input<=100
+                and not gallery_input:match("^%s*$")
+            if valid then
+                if gallery_dialog.mode=="rename" then
+                    gallery:rename(gallery_dialog.id,gallery_input)
+                else gallery:add_folder(gallery_input) end
+                gallery_dialog=nil
+            else notice("Enter a valid folder name.") end
+        end,"folder_confirm")
     end
+    if state.modal=="new_canvas" then draw_new_canvas() end
 end
 
 -- This side-aligned full-height panel follows the WINDOWS screenshot,
