@@ -55,6 +55,13 @@ A presença de uma captura numa fonte relativa ao Windows **NÃO prova** que a c
 - Limitação: o tutorial não é uma auditoria da build Windows 14.1.4; a sequência e as dimensões de barras e ícones precisam ser conferidas no aplicativo Windows da versão-alvo.
 - O modelo simulado oferece seleção lógica dessas 15 ferramentas, sem afirmar reproduzir layout ou comportamento completo.
 
+## R8 — Registro de mudanças estruturais entre versões
+
+- URL: https://ibispaint.com/newFeature.jsp
+- Em 12.2.0, a função Collection foi removida da tela inicial e as obras baixadas passaram para uma pasta Downloads dentro de My Gallery.
+- Importante: a captura histórica Windows 9.4.2 de R5 mostra três botões, mas a reconstrução não deve reutilizar o botão Collection.
+- A organização geral da tela inicial com logo e menu circular tem evidência Windows histórica, mas **não** tem geometria certificada na 14.1.4.
+
 ## Evidências faltantes para construção fiel
 
 1. Capturas integrais da versão **Windows 14.1.4**, com resolução, DPI e idioma.
