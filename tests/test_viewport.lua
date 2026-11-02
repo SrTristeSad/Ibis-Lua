@@ -14,7 +14,7 @@ v:reset()
 local z=v:zoom_at(1,130,140,100,100)
 assert(z>1 and v.pan_x<0 and v.pan_y<0)
 -- O ponto sob o cursor deve permanecer sob o cursor após mudar o zoom.
-local x_before=(130-100)/z
+local x_before=130-100
 local projected=100+v.pan_x + x_before*z
 assert(math.abs(projected-130)<0.0001)
 for i=1,100 do v:zoom_at(10,100,100,100,100) end
