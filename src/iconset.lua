@@ -160,13 +160,17 @@ renderers["Full Screen"] = function()
   L(-10,4,-10,10,-4,10)
   L(10,4,10,10,4,10)
 end
-renderers["Tool Select"] = function()
-  W(2)
-  -- Stylus and eraser crossed, like the Windows toolbar pair.
+renderers["BrushEraser"] = function()
+  W(2.2)
   L(-9,-8,7,8)
   L(-9,8,7,-8)
   P(7,8,11,11,9,6)
   P(7,-8,11,-11,9,-6)
+end
+renderers["Tool Select"] = function()
+  -- Slanted pen-tip silhouette follows the Windows toolbar reference.
+  P(-10,9,-8,1,6,-10,10,-6,-4,5)
+  P(-10,9,-4,5,-6,11)
 end
 renderers["Properties"] = function()
   W(2.2)
