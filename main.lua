@@ -110,36 +110,55 @@ local function drawHome()
   end
 end
 local function drawGallery()
-  lg.clear(.935,.938,.945,1)
+  -- Galeria: faixa superior e inferior escuras, miniaturas em fundo creme.
+  lg.clear(.966,.966,.939,1)
   local w=V.w
-  UI.rect(0,0,w,54,{.99,.99,.99})
-  glyph('back',28,27,22,'ink')
-  UI.text('A Minha Galeria',61,14,22,'ink')
-  UI.hit({x=0,y=0,w=50,h=54},function()S.screen='home' end)
-  UI.rect(0,54,w,1,'line')
+  UI.rect(0,0,w,34,'toolbar')
+  UI.text('‹ Voltar',12,9,12,'blue')
+  UI.text(('Minha Galeria (%d)'):format(#S.works),
+    0,9,14,'white','center',w)
+  UI.text('Selecionar',w-94,10,12,'blue')
+  UI.hit({x=0,y=0,w=90,h=34},function()S.screen='home' end)
+  UI.hit({x=w-102,y=0,w=102,h=34},
+    function()open('gallery_selection')end)
+  local cols=math.max(3,math.floor((w-32)/135))
+  local tile=(w-40-(cols-1)*12)/cols
+  tile=math.min(130,tile)
   if #S.works==0 then
-    UI.text('Nenhuma obra',0,190,23,'ink','center',w)
-    UI.text('Toque em + para criar uma nova tela.',0,222,14,'ink','center',w)
+    UI.text('Nenhuma obra ainda',0,213,15,'ink','center',w)
+    UI.text('Toque em + para criar uma tela',0,237,11,'ink','center',w)
   else
-    local cols=math.max(1,math.floor((w-35)/166))
     for i,work in ipairs(S.works) do
       local col=(i-1)%cols
       local row=math.floor((i-1)/cols)
-      local x=19+col*166;local y=73+row*173
-      UI.rect(x,y,150,156,'white',3)
-      UI.rect(x+6,y+6,138,111,'gallery')
-      UI.checker(x+28,y+20,94,82,9)
-      UI.rect(x+27,y+19,96,84,'line',1,true)
-      UI.text(work.name,x+10,y+122,13,'ink')
-      UI.text(work.width..' × '..work.height,x+10,y+139,10,'ink')
-      UI.hit({x=x,y=y,w=150,h=156},function()openEditor(work)end)
+      local x=16+col*(tile+12)
+      local y=43+row*(tile+38)
+      UI.rect(x,y,tile,tile,{.995,.995,.995},1)
+      UI.rect(x+.5,y+.5,tile-1,tile-1,{.68,.68,.68},0,true)
+      local ratio=work.width/work.height
+      local tw=math.min(tile-12,(tile-12)*ratio)
+      local th=math.min(tile-12,(tile-12)/ratio)
+      UI.rect(x+(tile-tw)/2,y+(tile-th)/2,tw,th,'paper',1)
+      UI.text(work.name,x,y+tile+6,11,'ink')
+      UI.hit({x=x,y=y,w=tile,h=tile+25},
+        function()openEditor(work)end)
     end
   end
-  UI.rect(0,471,w,41,'white')
-  UI.button('+',18,478,53,29,function()S.canvasPreset=1;open('canvas_new')end,
-    {bg='blue',font=24})
-  UI.text('Selecionar',w-132,483,14,'ink')
-  UI.hit({x=w-155,y=471,w=155,h=41},function()open('gallery_selection')end)
+  UI.rect(0,474,w,38,'toolbar')
+  local actions={{'+',function()S.canvasPreset=1;open('canvas_new')end},
+    {'?',function()open('gallery_selection')end},
+    {'▶',function()open('gallery_selection')end},
+    {'⇧',function()open('gallery_selection')end},
+    {'⋯',function()open('gallery_selection')end}}
+  for i,item in ipairs(actions) do
+    local xx=8+(i-1)*52
+    UI.text(item[1],xx,481,i==1 and 24 or 17,
+      i==1 and 'blue' or 'soft','center',41)
+    UI.hit({x=xx-6,y=474,w=50,h=38},item[2])
+  end
+  UI.text('Editar',w-66,487,12,'soft')
+  UI.hit({x=w-90,y=474,w=90,h=38},
+    function()open('gallery_selection')end)
 end
 local function drawCanvas()
   local work=S.project or {width=1280,height=920}
@@ -521,23 +540,54 @@ local function drawSettings()
 end
 local function drawNewCanvas()
   local p=panelBase('canvas_new','Nova tela')
-  UI.text('Escolha o tamanho da tela',p.x+17,p.y+44,13,'white')
-  local sizes={{1280,920,'Padrão'},{1280,1280,'Quadrado'},
-    {1920,1080,'Paisagem'},{1080,1920,'Retrato'},
+  -- Tela "New": importar imagem, dimensões W/H e relação de presets.
+  UI.rect(p.x+6,p.y+34,p.w-12,p.h-83,{.92,.92,.92},1)
+  UI.rect(p.x+8,p.y+36,p.w-16,39,'white',1)
+  UI.rect(p.x+17,p.y+43,31,25,'ink',2)
+  glyph('canvas',p.x+32,p.y+55,19)
+  UI.text('Importar imagem',p.x+58,p.y+46,16,'ink')
+  UI.rect(p.x+8,p.y+76,p.w-16,21,{.37,.37,.37})
+  UI.text('Ilustração',p.x+17,p.y+79,12,'white')
+  local sizes={{1280,920,'Padrão'},{1280,1280,'1 : 1 (Quadrado)'},
+    {1920,1080,'16 : 9 (Paisagem)'},{1080,1920,'9 : 16 (Retrato)'},
     {512,512,'Pequeno'}}
-  for i,preset in ipairs(sizes) do
-    local y=p.y+74+(i-1)*48
-    UI.button(preset[3]..'     '..preset[1]..' × '..preset[2],
-      p.x+16,y,p.w-32,41,function()S.canvasPreset=i end,
-      {bg=S.canvasPreset==i and 'blue' or 'panel2',font=12})
+  local current=sizes[S.canvasPreset]
+  UI.rect(p.x+150,p.y+99,57,27,'white',2)
+  UI.rect(p.x+220,p.y+99,57,27,'white',2)
+  UI.text(tostring(current[1]),p.x+150,p.y+105,13,'ink','center',57)
+  UI.text('×',p.x+209,p.y+106,13,'ink','center',11)
+  UI.text(tostring(current[2]),p.x+220,p.y+105,13,'ink','center',57)
+  for i,lab in ipairs({'W','H'}) do
+    local yy=p.y+132+(i-1)*25
+    UI.text(lab,p.x+64,yy+2,13,'ink')
+    UI.rect(p.x+88,yy,20,20,'ink',11)
+    UI.text('−',p.x+88,yy,15,'white','center',20)
+    UI.slider(p.x+123,yy+2,p.w-216,.48,function(t)
+      S.canvasPreset=math.min(5,math.max(1,math.floor(1+t*5)))
+    end,{track='line',fill='blue'})
+    UI.rect(p.x+p.w-78,yy,20,20,'ink',11)
+    UI.text('+',p.x+p.w-78,yy+1,14,'white','center',20)
   end
-  UI.text('Prévia do formato',p.x+18,p.y+326,11,'soft')
-  local dim=sizes[S.canvasPreset]
-  local width=dim[1]/math.max(dim[1],dim[2])*34
-  local height=dim[2]/math.max(dim[1],dim[2])*26
-  UI.rect(p.x+154,p.y+318,width,height,'white',1)
-  UI.button('Cancelar',p.x+18,p.y+p.h-44,115,32,close)
-  UI.button('OK',p.x+p.w-129,p.y+p.h-44,111,32,createWork,{bg='blue'})
+  UI.text('Velocidade  ↔  Qualidade',p.x+84,p.y+185,12,'ink')
+  UI.rect(p.x+9,p.y+203,p.w-18,19,{.37,.37,.37})
+  UI.text('Tamanhos predefinidos',p.x+19,p.y+205,11,'white')
+  for i,item in ipairs(sizes) do
+    local y=p.y+222+(i-1)*27
+    UI.rect(p.x+9,y,p.w-18,27,
+      S.canvasPreset==i and {.82,.89,.97} or {.91,.91,.91},0)
+    UI.line(p.x+10,y+26,p.x+p.w-10,y+26,{.67,.67,.67},.6)
+    UI.rect(p.x+17,y+3,21,21,'ink',0,true)
+    UI.text(item[3],p.x+48,y+5,12,'ink')
+    UI.rect(p.x+p.w-119,y+2,108,24,'white',1)
+    UI.text(item[1]..' × '..item[2],p.x+p.w-118,y+8,11,'ink',
+      'center',106)
+    UI.hit({x=p.x+9,y=y,w=p.w-18,h=27},
+      function()S.canvasPreset=i end)
+  end
+  UI.rect(p.x+7,p.y+p.h-48,p.w-14,43,'toolbar',1)
+  UI.button('Cancelar',p.x+15,p.y+p.h-43,102,31,close,{bg='dark'})
+  UI.button('OK',p.x+p.w-126,p.y+p.h-43,111,31,
+    createWork,{bg='dark'})
 end
 local function drawBack()
   local p=panelBase('back','Voltar')
