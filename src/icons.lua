@@ -16,7 +16,7 @@ function M.draw(id,x,y,diameter,r,gc,b)
   g.translate(x,y)
   g.scale((diameter or 22)/24)
   g.setColor(r or .97,gc or .97,b or .97,1)
-  g.setLineWidth(1.65);g.setLineJoin('round')
+  g.setLineWidth(1.65);g.setLineJoin('bevel')
   if id=='brush' or id=='brush-toggle' or id=='special' then
     line(-8,8,-4,4,7,-8);poly('line',-9,7,-7,10,-3,8,-4,4)
     if id=='special' then cir('fill',8,-8,1.5);line(5,-8,11,-8) end
