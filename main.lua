@@ -25,8 +25,8 @@ local function back()
   Model.back(s)
 end
 local function topLogo(x,y,scale)
-  U.text("ibisPaint",x,y,500,C.white,"title")
-  U.text("Ver. 14.1.4 (Windows reference)",x+126,y+52,350,C.white,"small")
+  U.wordmark(x,y)
+  U.text("Ver. 14.1.4",x+128,y+51,220,C.white,"small")
 end
 local function titleScreen(w,h)
   U.rect(0,0,w,h*.67,C.blue)
@@ -38,8 +38,6 @@ local function titleScreen(w,h)
   U.roundButton("Collection",cx,sy,41,function() s.page="collection" end)
   U.roundButton("Online Gallery",cx+170,sy,41,function() s.page="online" end)
   U.text("Daily Ranking",0,h*.70,w,C.white,"heading","center")
-  U.text("Online previews not yet reproduced - source assets are not bundled.",
-    0,h*.82,w,C.pale,"body","center")
   U.button("Settings",w-128,14,110,29,enterSettings,false,{0.25,0.38,0.53})
 end
 local function galleryScreen(w,h)
@@ -133,27 +131,34 @@ local function editorBar(w,h)
     U.toolButton(name,0,yy,49,stride,s.tool==name,function() Model.setTool(s,name) end)
   end
   U.rect(0,bottom,w,h-bottom,{0.42,0.42,0.42})
-  local cy=bottom+23
-  U.button("B/E",61,bottom+8,48,30,function()
+  local span=w-49;local cy=bottom+25
+  local function glyph(name,pos,callback)
+    local x=49+span*pos
+    U.icon(name,x,cy,19)
+    U.hitbox(x-22,bottom+2,44,46,callback)
+  end
+  glyph(s.tool=="Eraser" and "Eraser" or "Brush",.037,function()
     Model.setTool(s,s.tool=="Brush" and "Eraser" or "Brush")
   end)
-  U.button("Tool",118,bottom+8,54,30,function() Model.togglePanel(s,"tools") end)
-  U.button("Size",180,bottom+8,55,30,function() Model.togglePanel(s,"size") end)
-  U.circle(261,cy,14,s.color)
-  U.circle(261,cy,14,C.white,true)
-  U.hitbox(246,bottom+6,34,36,function() Model.togglePanel(s,"color") end)
-  U.button("Layer",295,bottom+8,61,30,function() Model.togglePanel(s,"layer") end)
-  U.button("Undo",w*.48,bottom+8,56,30,function() s.notification="No painting engine: nothing to undo." end)
-  U.button("Redo",w*.48+64,bottom+8,56,30,function() s.notification="No painting engine: nothing to redo." end)
-  U.text(s.zoom.."%",w-235,bottom+15,55,C.white,"small","center")
-  U.button("-",w-173,bottom+8,36,30,function() Model.setZoom(s,s.zoom-10) end)
-  U.button("+",w-135,bottom+8,36,30,function() Model.setZoom(s,s.zoom+10) end)
-  U.button("Back",w-92,bottom+8,82,30,function() s.menu=s.menu=="back" and nil or "back" end)
-  local topY=2
-  U.button("View",w-248,topY,55,26,function() s.menu=s.menu=="view" and nil or "view" end)
-  U.button("Select",w-190,topY,60,26,function() Model.togglePanel(s,"selection") end)
-  U.button("Ruler",w-127,topY,58,26,function() Model.togglePanel(s,"ruler") end)
-  U.button("...",w-64,topY,54,26,function() s.menu=s.menu=="more" and nil or "more" end)
+  glyph("Tool Select",.10,function() Model.togglePanel(s,"tools") end)
+  glyph("Properties",.16,function() Model.togglePanel(s,"brush") end)
+  U.slider("Size (px)",49+span*.208,bottom+7,span*.14,s.brushSize,1,120,
+    function(v) Model.setBrushSize(s,v) end)
+  U.slider("Opacity %",49+span*.382,bottom+7,span*.135,s.brushOpacity,0,100,
+    function(v) Model.setBrushOpacity(s,v) end)
+  local cx=49+span*.567
+  U.circle(cx,cy,16,s.color)
+  U.circle(cx,cy,16,C.white,true)
+  U.hitbox(cx-22,bottom+1,44,48,function() Model.togglePanel(s,"color") end)
+  glyph("Full Screen",.64,function() s.notification="Full-screen preview is not yet simulated." end)
+  glyph("Undo",.715,function() s.notification="No painting engine: nothing to undo." end)
+  glyph("Redo",.79,function() s.notification="No painting engine: nothing to redo." end)
+  glyph("Layer",.86,function() Model.togglePanel(s,"layer") end)
+  glyph("Back",.955,function() s.menu=s.menu=="back" and nil or "back" end)
+  U.button("View",w-248,2,55,26,function() s.menu=s.menu=="view" and nil or "view" end)
+  U.button("Select",w-190,2,60,26,function() Model.togglePanel(s,"selection") end)
+  U.button("Ruler",w-127,2,58,26,function() Model.togglePanel(s,"ruler") end)
+  U.button("...",w-64,2,54,26,function() s.menu=s.menu=="more" and nil or "more" end)
 end
 local function brushPanel(w,h)
   local pw=math.min(620,w-70);local ph=math.min(604,h-115)
