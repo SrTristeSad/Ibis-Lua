@@ -28,10 +28,10 @@ jobs:
           luajit tests/test_layer_solo.lua
       - name: Run screenshot comparator tests
         run: python -m unittest discover -s tests -p 'test_compare.py' -v
-      - name: Run LÖVE and capture seven actual UI screens
+      - name: Run LÖVE and capture nine actual UI states
         run: |
           mkdir -p screenshots
-          for screen in title gallery new_canvas editor layer brush color; do
+          for screen in title gallery new_canvas editor layer brush color zoom solo; do
             echo "Capturing UI state: $screen"
             timeout 20s xvfb-run -a env IBIS_LUA_SMOKE=1 IBIS_LUA_SCREEN="$screen" love .
             cp "$HOME/.local/share/love/ibis-lua-fidelity/ci-smoke.png" "screenshots/$screen.png"
