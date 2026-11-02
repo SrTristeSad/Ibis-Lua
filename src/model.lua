@@ -84,22 +84,32 @@ function Model:add_layer()
     return id
 end
 
-function Model:create_canvas(width, height)
-    require_screen(self, "gallery")
-    assert(self.modal == "new_canvas", "Abra o diálogo de nova tela")
-    assert(uint(width, 16384) and uint(height, 16384), "Dimensões inválidas")
-    self.document = { width = width, height = height, simulated = true }
-    self.screen = "editor"
-    self.modal = nil
-    self.active_tool = "brush"
-    self.active_panel = nil
-    self.layers = {}
-    self.active_layer_id = nil
-    self.next_layer_id = 1
-    self.solo_layer_id = nil
-    self.solo_before = nil
-    self.background_mode = "white"
+local function initialise_canvas(self,width,height)
+    assert(uint(width,16384) and uint(height,16384),"Dimensões inválidas")
+    self.document={width=width,height=height,simulated=true}
+    self.screen="editor"
+    self.modal=nil
+    self.active_tool="brush"
+    self.active_panel=nil
+    self.layers={}
+    self.active_layer_id=nil
+    self.next_layer_id=1
+    self.solo_layer_id=nil
+    self.solo_before=nil
+    self.background_mode="white"
     self:add_layer()
+end
+
+function Model:create_canvas(width,height)
+    require_screen(self,"gallery")
+    assert(self.modal=="new_canvas","Abra o diálogo de nova tela")
+    initialise_canvas(self,width,height)
+end
+
+function Model:reopen_canvas(width,height)
+    require_screen(self,"gallery")
+    assert(self.modal==nil,"Feche o diálogo antes de abrir uma obra")
+    initialise_canvas(self,width,height)
 end
 
 function Model:set_tool(tool)
