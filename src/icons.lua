@@ -101,6 +101,12 @@ function M.draw(id,x,y,diameter,r,gc,b)
     for i=0,7 do local a=i*math.pi/4
       line(math.cos(a)*8,math.sin(a)*8,math.cos(a)*11,math.sin(a)*11)
     end
+  elseif id=='globe' then
+    cir('line',0,0,10)
+    g.ellipse('line',0,0,4.5,10,28)
+    line(-10,0,10,0)
+    g.arc('line','open',0,0,10,math.pi*.18,math.pi*.82,20)
+    g.arc('line','open',0,0,10,math.pi*1.18,math.pi*1.82,20)
   elseif id=='folder' then
     poly('line',-10,-5,-2,-5,1,-2,10,-2,10,8,-10,8)
   else cir('line',0,0,9) end
