@@ -6,7 +6,7 @@
 - Reconstrução do projeto técnico do zero, sem reciclar os desenhos, componentes e layouts antigos.
 - Ferramenta nova para comparação de imagens e suite de testes sintéticos.
 - Pipeline de CI para sintaxe e modelo Lua, testes Python e inicialização LÖVE/Xvfb.
-- **Não** houve inspeção presencial do ibisPaint Windows 14.1.4 nem comparação de uma tela reconstruída contra uma captura real da versão.
+- Interface inicial experimental já substituiu o diagnóstico: título, My Gallery, novo canvas e estrutura de editor, com navegação visual. A referência geométrica é limitada e histórica; **não** houve inspeção do ibisPaint Windows 14.1.4 nem comparação pixel a pixel de uma tela reconstruída com uma captura real da versão.
 
 ## Procedimento obrigatório por tela
 
