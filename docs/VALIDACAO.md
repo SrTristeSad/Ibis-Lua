@@ -27,3 +27,18 @@ Os screenshots estao nos artifacts do workflow de capturas acima.
 5. Substituir icones vetoriais provisórios por reconstrucoes fundamentadas em referencias autorizadas.
 
 Nenhuma porcentagem de conclusao e atribuida neste relatorio.
+
+## Iteracao de icones — 02/11/2026
+
+- Adicionado `src/iconset.lua` com desenhos vetoriais proprios para as ferramentas,
+  controles superiores e comandos de camadas; nao sao sprites extraidos do programa.
+- Barra inferior separada em controles de tamanho/opacidade e barra de navegacao;
+  botoes superiores com pictogramas no lugar de textos.
+- Seletor de ferramentas em duas colunas e painel de camadas com faixa preta de icones.
+- Painel Color com roda de matiz, losango HSB, paleta e controles HSB/RGB.
+- Amostras de pinceis horizontais redesenhadas e ajustadas para o catalogo.
+- Capturas do LÖVE (8 estados): https://github.com/SrTristeSad/Ibis-Lua/actions/runs/41467956187
+
+**Importante:** os simbolos sao aproximacoes vetoriais baseadas em capturas oficiais,
+e nao podem ser declarados identicos sem comparacao em resolucao equivalente.
+A execucao real no Windows permanece pendente.
