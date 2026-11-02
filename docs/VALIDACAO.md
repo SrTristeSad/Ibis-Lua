@@ -1,6 +1,6 @@
 # Protocolo de validação visual
 
-## O que foi executado nesta etapa
+## O que foi executado nesta etapa (incluindo a etapa de gestos e Solo)
 
 - Pesquisa em páginas oficiais e fotografias/screenshots do Windows com limites de versão registrados.
 - Reconstrução do projeto técnico do zero, sem reciclar os desenhos, componentes e layouts antigos.
@@ -27,3 +27,10 @@
 - Não existe porcentagem de conclusão sem auditoria por tela e por estado.
 - Não copiar e distribuir recursos protegidos da aplicação sem autorização.
 - Nenhuma UI real da versão-alvo foi aprovada nesta etapa.
+
+## Verificações adicionais da etapa de interação
+
+- Executar `luajit tests/test_viewport.lua`: valida zoom ancorado, limites, rotação, pan e reset, sem motor de pintura.
+- Executar `luajit tests/test_layer_solo.lua`: valida isolamento, troca de camada Solo, restauração das visibilidades anteriores e interação com adicionar camada.
+- GitHub Actions gera nove screenshots: title, gallery, new_canvas, editor, layer, brush, color, zoom e solo.
+- **Limite**: não foram medidos desvios em pixels contra screenshot do Windows 14.1.4; resultados de smoke não devem ser apresentados como prova de fidelidade.

@@ -9,8 +9,8 @@ Esta versão **já contém telas e controles clicáveis**. A reconstrução **n�
 - **Tela inicial** com disposição orientada por referência Windows histórica (9.4.2). Sem Collection (função removida depois).
 - **My Gallery** com barra superior, controles de navegação e estado vazio.
 - **New Canvas lateral direito**, incluindo edição de dimensões, lista rolável de presets e criação de documento demonstrativo; substitui o diálogo central anterior.
-- **Editor** com faixa vertical de 15 ferramentas e respectivos ícones vetoriais próprios, controles inferiores, botões superiores, painéis de pincel, cor e camadas.
-- **Comportamentos simulados**: seleção de ferramenta, brush/eraser, dimensões, espessura, opacidade, paleta e camadas.
+- **Editor** com faixa vertical de 15 ferramentas e respectivos ícones vetoriais próprios, controles inferiores, botões superiores, painéis de pincel, cor e camadas. Visualização do canvas com **zoom pelo scroll do mouse, rotação com Shift+scroll e pan com Espaço+arrastar**.
+- **Comportamentos simulados**: seleção de ferramenta, brush/eraser, dimensões, espessura, opacidade, paleta e camadas. Inclui **modo Solo**: manter pressionado o ícone de visibilidade da camada e soltar; pressionar de novo restaura os estados anteriores.
 - Recursos que precisariam de processamento de imagens não são fingidos: pintura, filtros reais, importação/exportação e renderização de camadas estão fora do escopo.
 
 **Nenhuma tela é certificada como visualmente equivalente ao original.** O desenho de diversos ícones, cores e subpainéis ainda precisa de comparação com a aplicação real versão 14.1.4.
@@ -19,16 +19,16 @@ Esta versão **já contém telas e controles clicáveis**. A reconstrução **n�
 
 Instale LÖVE 11.5 (https://love2d.org/) e execute testar.bat na pasta do projeto.
 
-No programa: clique em My Gallery, +, escolha dimensões e clique OK. O editor usa B (pincel), E (borracha), L (camadas), C (cores), colchetes (espessura), Escape (voltar) e F12 (captura).
+No programa: clique em My Gallery, +, escolha dimensões e clique OK. Os campos W/H aceitam seleção e substituição ao digitar (Backspace apaga, Tab troca o foco). No editor, scroll amplia/reduz o canvas, Shift+scroll o rotaciona e Espaço+arrastar move a visualização sem alterar os pixels. Mantenha pressionado o olho de uma camada para ativar/desativar o modo Solo; clique curto alterna visibilidade. B/E trocam pincel/borracha, L abre camadas, C abre cores, colchetes alteram a espessura, Escape volta e F12 captura.
 
 ## Testes
 
-- Lua: luajit tests/test_model.lua
+- Lua: luajit tests/test_model.lua, luajit tests/test_viewport.lua e luajit tests/test_layer_solo.lua
 - Dependências Python: pip install -r requirements-dev.txt
 - Comparador: python -m unittest discover -s tests -p "test_compare.py"
 - Diferença de imagens: python tools/compare_screenshots.py --reference original.png --actual copia.png --output-dir comparison_output
 
-O GitHub Actions realiza verificação sintática, testes do modelo, testes do comparador e **abre sete telas no LÖVE com captura** (título, galeria, novo canvas, editor, camadas, pincéis e cor). Capturas automatizadas não comprovam correspondência com o software original.
+O GitHub Actions realiza verificação sintática, testes do modelo, testes do comparador e **abre nove estados no LÖVE com captura** (título, galeria, novo canvas, editor, camadas, pincéis, cor, zoom/rotação e modo Solo). Capturas automatizadas não comprovam correspondência com o software original.
 
 ## Pesquisa e qualidade
 

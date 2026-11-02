@@ -74,3 +74,13 @@ Referência visual pública: screenshot da janela Color com grade de amostras à
 Implementação: draw_hue_wheel e draw_editor_panel(color): círculo HSV e losango reconstruídos geometricamente, interação de matiz/saturação/luminosidade, paleta demonstrativa, prévia hexadecimal e canais RGB.
 
 **Limites:** captura sem comprovação de ser Windows 14.1.4; não afirmar equivalência da paleta de amostras, da disposição dos canais ou das medidas. O alfa permanece simulado por opacidade do rodapé.
+
+## Incremento de navegação e camadas — 02/11/2026
+
+- **Viewport visual, sem edição de imagens**: módulo puro src/viewport.lua. Mouse wheel aproxima/afasta o canvas com ancoragem no cursor; Shift+mouse wheel rotaciona; Espaço+arrastar move; limites de zoom testados.
+- **Modo Solo de camadas**: módulo src/model.lua preserva a visibilidade anterior, permite trocar a camada isolada, restaura o estado ao desativar e encerra o Solo quando uma operação incompatível é solicitada.
+- **Bug de cliques atravessando janelas**: painéis e New Canvas interceptam cliques em suas superfícies, em vez de acionar controles posicionados atrás.
+- **Campos numéricos New Canvas**: o primeiro dígito digitado substitui o conteúdo selecionado; Tab alterna os campos e Backspace edita valores.
+- **Ressalva**: gestos e modo Solo foram implementados a partir de tutoriais/documentação oficial de Windows/14.1.0, mas os elementos visuais da versão-alvo 14.1.4 continuam aguardando confrontação.
+
+Fontes: https://ibispaint.com/lecture/index.jsp?no=167 e https://ibispaint.com/newFeature.jsp
