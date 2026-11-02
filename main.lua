@@ -11,11 +11,16 @@ local S={screen='home',popup=nil,tool='brush',rail='left',columns=2,
   colorTab='HSB',colorValue={.18,.51,.91},
   works={},project=nil,layers={},canvasPreset=1,
   optionChoice=1,collectionTab='Básico',toolPage=1,
-  brushSearchOpen=false,brushQuery='',
+  brushSearchOpen=false,brushQuery='',paletteGroup=1,colorMode='HSB',
   brushCategory='Todos',brushCategoryPage=1,brushScroll=0,drag=nil}
 local V
 local function inside(r,x,y) return Layout.contains(r,x,y) end
-local function open(kind) S.popup=kind end
+local function open(kind)
+  if kind=='color' and S.popup~='color' then
+    S.previousColor={S.colorValue[1],S.colorValue[2],S.colorValue[3]}
+  end
+  S.popup=kind
+end
 local function close() S.popup=nil end
 local function newLayers()
   S.layers={{name='1',visible=true,opacity=100}}
@@ -508,77 +513,202 @@ local function drawLayers()
     current.opacity=math.floor(100*t+.5)
   end)
 end
+local function rgbToHsv(r,g,b)
+  local mx=math.max(r,g,b);local mn=math.min(r,g,b)
+  local d=mx-mn;local hue=0
+  if d>0 then
+    if mx==r then hue=((g-b)/d)%6
+    elseif mx==g then hue=(b-r)/d+2
+    else hue=(r-g)/d+4 end
+    hue=hue*60
+  end
+  return hue,mx==0 and 0 or d/mx,mx
+end
 local function drawColor()
   local p=panelBase('color','Cor')
+  local x=p.x+10
+  local w=p.w-20
   local rgb=S.colorValue
-  UI.rect(p.x+12,p.y+39,62,28,rgb,2)
-  UI.rect(p.x+83,p.y+39,62,28,'white',2)
-  UI.text('Atual',p.x+14,p.y+70,10,'soft')
-  UI.text('Anterior',p.x+88,p.y+70,10,'soft')
-  UI.button(S.colorTab=='HSB' and 'Paleta' or 'HSB',p.x+p.w-92,p.y+42,78,27,
-    function()S.colorTab=S.colorTab=='HSB' and 'Paleta' or 'HSB' end,{font=11})
+  S.previousColor=S.previousColor or {rgb[1],rgb[2],rgb[3]}
+  UI.rect(x,p.y+35,w,35,'toolbar',1)
+  local previewW=(w-49)/2
+  UI.rect(x+40,p.y+39,previewW,26,rgb,1)
+  UI.rect(x+40+previewW,p.y+39,previewW,26,S.previousColor,1)
+  UI.text('◀',x+3,p.y+43,17,'white')
+  UI.hit({x=x,y=p.y+36,w=36,h=34},close)
+  UI.rect(x+w-38,p.y+39,33,26,'dark',13)
+  UI.text('›',x+w-35,p.y+40,20,'white','center',27)
+  UI.hit({x=x+w-38,y=p.y+39,w=33,h=26},function()
+    S.colorTab=S.colorTab=='HSB' and 'Paleta' or 'HSB'
+  end)
   if S.colorTab=='Paleta' then
-    for row=0,5 do for col=0,8 do
-      local hue=(row*9+col)*360/54
-      local c=hsv(hue,.65,.96)
-      local x,y=p.x+19+col*37,p.y+92+row*35
-      UI.rect(x,y,31,30,c,2)
-      UI.hit({x=x,y=y,w=31,h=30},function()
-        S.hue=hue;S.colorValue=c
-      end)
-    end end
-    UI.text('Histórico de cores',p.x+18,p.y+331,12,'white')
+    UI.rect(x,p.y+75,w,p.h-91,{.93,.93,.93},0)
+    local groups={'Padrão','Personalizada','Histórico'}
+    S.paletteGroup=S.paletteGroup or 1
+    local groupW=w/3
+    for i,item in ipairs(groups) do
+      local xx=x+(i-1)*groupW
+      UI.rect(xx,p.y+77,groupW-1,24,
+        S.paletteGroup==i and 'white' or {.68,.68,.68},0)
+      UI.text(item,xx,p.y+83,10,'ink','center',groupW)
+      UI.hit({x=xx,y=p.y+77,w=groupW,h=25},
+        function()S.paletteGroup=i end)
+    end
+    UI.checker(x+3,p.y+103,w-6,p.h-158,12)
+    if S.paletteGroup==1 then
+      local basic={
+        {0,0,0},{1,1,1},{1,0,0},{1,.48,0},{1,1,0},{.43,1,0},
+        {0,1,0},{0,1,.5},{0,1,1},{0,.4,1},{.1,0,.9},{.5,0,1},
+        {1,0,1},{1,0,.6},{1,.6,.7},{1,.83,.57},{.8,.7,.6},
+        {.5,.31,.23},{.86,.89,.95}
+      }
+      local cell=(w-10)/10
+      for i,c in ipairs(basic) do
+        local col=(i-1)%10;local row=math.floor((i-1)/10)
+        local xx=x+5+col*cell;local yy=p.y+106+row*cell
+        UI.rect(xx,yy,cell-2,cell-2,c,0)
+        UI.hit({x=xx,y=yy,w=cell-2,h=cell-2},function()
+          S.colorValue={c[1],c[2],c[3]}
+          S.hue,S.saturation,S.brightness=rgbToHsv(c[1],c[2],c[3])
+        end)
+      end
+    else
+      UI.text(S.paletteGroup==2 and 'Nova paleta  +' or
+        'Nenhuma cor no histórico',x+18,p.y+174,12,'ink')
+    end
+    UI.text('100%',x+5,p.y+p.h-42,10,'white')
+    UI.slider(x+65,p.y+p.h-42,w-73,S.opacity/100,function(t)
+      S.opacity=math.floor(t*100+.5) end)
     return
   end
-  local cx=p.x+115;local cy=p.y+192
-  for i=0,71 do
-    local a=i*math.pi/36;local b=(i+1)*math.pi/36
-    UI.color(hsv(i*5,.96,1))
-    lg.setLineWidth(18)
-    lg.line(cx+math.cos(a)*76,cy+math.sin(a)*76,
-      cx+math.cos(b)*76,cy+math.sin(b)*76)
+  local cx=p.x+p.w/2;local cy=p.y+172
+  local radius=105
+  -- Anel cromático com 120 fatias contíguas e interior em cinza neutro.
+  for i=0,119 do
+    local a=(i/120)*math.pi*2
+    UI.color(hsv(i*3,1,1))
+    lg.arc('fill','pie',cx,cy,radius,a,a+math.pi*2/120+.003,3)
   end
-  -- Losango HSB: amostragem cromática apenas para apresentação.
-  for yy=-44,44,3 do for xx=-44,44,3 do
-    if math.abs(xx)+math.abs(yy)<=43 then
-      local ss=math.max(0,math.min(1,(xx+44)/88))
-      local vv=math.max(0,math.min(1,(44-yy)/88))
-      UI.color(hsv(S.hue,ss,vv))
-      lg.rectangle('fill',cx+xx,cy+yy,3.3,3.3)
+  UI.color({.42,.43,.45})
+  lg.circle('fill',cx,cy,78,96)
+  -- Losango de saturação/valor no centro.
+  local square=59
+  for yy=-square,square,2 do
+    for xx=-square,square,2 do
+      if math.abs(xx)+math.abs(yy)<=square then
+        local sat=math.max(0,math.min(1,(xx+square)/(square*2)))
+        local val=math.max(0,math.min(1,(square-yy)/(square*2)))
+        UI.color(hsv(S.hue,sat,val))
+        lg.rectangle('fill',cx+xx,cy+yy,2.5,2.5)
+      end
     end
-  end end
-  UI.hit({x=cx-90,y=cy-90,w=180,h=180},function()
+  end
+  local markerAngle=math.rad(S.hue)
+  UI.color('white');lg.setLineWidth(2)
+  lg.circle('line',cx+math.cos(markerAngle)*92,
+    cy+math.sin(markerAngle)*92,8,32)
+  UI.color('ink')
+  lg.circle('line',cx+(S.saturation*2-1)*square*.45,
+    cy+(1-S.brightness*2)*square*.45,6,28)
+  UI.hit({x=cx-radius,y=cy-radius,w=2*radius,h=2*radius},function()
     local mx=love.mouse.getX()/V.scale
     local my=love.mouse.getY()/V.scale
     local dx,dy=mx-cx,my-cy
-    local d=math.sqrt(dx*dx+dy*dy)
-    if d>59 and d<96 then
+    local dist=math.sqrt(dx*dx+dy*dy)
+    if dist>78 then
       S.hue=(math.deg(math.atan2 and math.atan2(dy,dx) or
         math.atan(dy,dx))+360)%360
-    elseif math.abs(dx)+math.abs(dy)<=45 then
-      S.saturation=math.max(0,math.min(1,(dx+44)/88))
-      S.brightness=math.max(0,math.min(1,(44-dy)/88))
+    elseif math.abs(dx)+math.abs(dy)<=square then
+      S.saturation=math.max(0,math.min(1,(dx+square)/(2*square)))
+      S.brightness=math.max(0,math.min(1,(square-dy)/(2*square)))
     end
     S.colorValue=hsv(S.hue,S.saturation,S.brightness)
   end)
-  local sx=p.x+223;local sy=p.y+114
-  for i,lab in ipairs({'H','S','B','A'}) do
-    local y=sy+(i-1)*48
-    UI.text(lab,sx,y,12,'white')
-    local t=lab=='H' and S.hue/360 or lab=='S' and S.saturation
-      or lab=='B' and S.brightness or S.opacity/100
-    UI.slider(sx+24,y,p.w-252,t,function(v)
-      if lab=='H' then S.hue=v*360
-      elseif lab=='S' then S.saturation=v
-      elseif lab=='B' then S.brightness=v
-      else S.opacity=math.floor(v*100+.5) end
+  UI.rect(x+4,p.y+278,w-8,21,'toolbar',2)
+  UI.text('#'..('%.2X%.2X%.2X'):format(
+    math.floor(rgb[1]*255+.5),math.floor(rgb[2]*255+.5),
+    math.floor(rgb[3]*255+.5)),x+14,p.y+282,12,'white')
+  UI.button(S.colorMode=='RGB' and 'RGB' or 'HSB',x+w-71,p.y+279,
+    60,19,function()
+      S.colorMode=S.colorMode=='RGB' and 'HSB' or 'RGB'
+    end,{bg='dark',font=10})
+  local start=p.y+306
+  for i=1,4 do
+    local isRGB=S.colorMode=='RGB'
+    local label=(isRGB and ({'R','G','B','A'})[i]) or
+      ({'H','S','B','A'})[i]
+    local t
+    if label=='H' then t=S.hue/360
+    elseif label=='S' then t=S.saturation
+    elseif label=='B' and not isRGB then t=S.brightness
+    elseif label=='A' then t=S.opacity/100
+    else t=rgb[i] end
+    local sy=start+(i-1)*20
+    UI.text(label,x+5,sy,10,'white')
+    UI.rect(x+21,sy+1,17,17,'dark',9)
+    UI.text('−',x+21,sy,13,'white','center',17)
+    UI.hit({x=x+21,y=sy+1,w=17,h=17},function()
+      if label=='A' then S.opacity=math.max(0,S.opacity-1)
+      elseif label=='H' then S.hue=(S.hue-1)%360
+      elseif label=='S' then S.saturation=math.max(0,S.saturation-.01)
+      elseif label=='B' and not isRGB then
+        S.brightness=math.max(0,S.brightness-.01)
+      else
+        local idx=({R=1,G=2,B=3})[label]
+        rgb[idx]=math.max(0,rgb[idx]-.01)
+        S.hue,S.saturation,S.brightness=rgbToHsv(
+          rgb[1],rgb[2],rgb[3])
+      end
+      S.colorValue=hsv(S.hue,S.saturation,S.brightness)
+    end)
+    local trackX=x+44
+    local trackW=w-89
+    for k=0,40 do
+      local frac=k/40
+      local c
+      if label=='H' then c=hsv(frac*360,1,1)
+      elseif label=='S' then c=hsv(S.hue,frac,S.brightness)
+      elseif label=='B' and not isRGB then
+        c=hsv(S.hue,S.saturation,frac)
+      elseif label=='A' then c={frac,frac,frac}
+      else
+        c={rgb[1],rgb[2],rgb[3]}
+        c[({R=1,G=2,B=3})[label]]=frac
+      end
+      UI.rect(trackX+frac*trackW,sy+7,trackW/40+1,5,c,0)
+    end
+    UI.slider(trackX,sy,trackW,t,function(frac)
+      if label=='H' then S.hue=frac*360
+      elseif label=='S' then S.saturation=frac
+      elseif label=='B' and not isRGB then S.brightness=frac
+      elseif label=='A' then S.opacity=math.floor(frac*100+.5)
+      else
+        local idx=({R=1,G=2,B=3})[label]
+        rgb[idx]=frac
+        S.hue,S.saturation,S.brightness=rgbToHsv(
+          rgb[1],rgb[2],rgb[3])
+      end
+      S.colorValue=hsv(S.hue,S.saturation,S.brightness)
+    end,{track='line',fill='white'})
+    UI.rect(x+w-26,sy+1,17,17,'dark',9)
+    UI.text('+',x+w-26,sy,12,'white','center',17)
+    UI.hit({x=x+w-26,y=sy+1,w=17,h=17},function()
+      if label=='A' then S.opacity=math.min(100,S.opacity+1)
+      elseif label=='H' then S.hue=(S.hue+1)%360
+      elseif label=='S' then S.saturation=math.min(1,S.saturation+.01)
+      elseif label=='B' and not isRGB then
+        S.brightness=math.min(1,S.brightness+.01)
+      else
+        local idx=({R=1,G=2,B=3})[label]
+        rgb[idx]=math.min(1,rgb[idx]+.01)
+        S.hue,S.saturation,S.brightness=rgbToHsv(
+          rgb[1],rgb[2],rgb[3])
+      end
       S.colorValue=hsv(S.hue,S.saturation,S.brightness)
     end)
   end
-  UI.text('HEX   #'..('%.2X%.2X%.2X'):format(math.floor(rgb[1]*255),
-    math.floor(rgb[2]*255),math.floor(rgb[3]*255)),
-    p.x+20,p.y+p.h-39,12,'white')
 end
+
 local function drawSettings()
   local p=panelBase('settings','Configurações')
   UI.text('INTERFACE DO USUÁRIO',p.x+21,p.y+47,12,'soft')
