@@ -3,7 +3,12 @@
 local Model = {}
 Model.__index = Model
 
-local valid_tools = { brush = true, eraser = true }
+local valid_tools = {
+    transform = true, magic_wand = true, lasso = true, filter = true,
+    brush = true, eraser = true, smudge = true, blur = true,
+    special_pen = true, bucket = true, vector = true, text = true,
+    frame_divider = true, eyedropper = true, canvas = true
+}
 local valid_panels = { brush = true, color = true, layer = true }
 
 local function require_screen(self, screen)
