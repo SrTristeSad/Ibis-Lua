@@ -933,7 +933,9 @@ end
 -- They do not write to the canvas or create artwork pixels.
 local function draw_brush_sample(x,y,width,amplitude,kind,large)
     local graphics=love.graphics
-    local steps=large and 56 or 30
+    -- Sample points overlap at display scale; discrete dots previously
+    -- produced a visually incorrect dotted "pen" in the Windows list.
+    local steps=math.max(60,math.floor(width*(large and 1.20 or 1.05)))
     local base=large and 6 or 2.4
     for step=0,steps do
         local t=step/steps
