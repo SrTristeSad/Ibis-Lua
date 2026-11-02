@@ -9,7 +9,7 @@ Legenda:
 | --- | --- | --- |
 | Tela inicial / título | R2 (promo), R5 (histórico) | Pendente |
 | My Gallery e gerenciamento | R1 (sincronização), R6 (imagem antiga) | Parcial: alteração textual confirmada; geometria pendente |
-| Novo Canvas / dimensões | R6 (terceiro) | Pendente |
+| Novo Canvas / dimensões | R6 e W12 (screenshot Windows de versão desconhecida) | Presets/DPI e painel lateral demonstrativos; geometria 14.1.4 não verificada |
 | Editor e barras | R2, R3 | Evidência Windows sem versão; medidas pendentes |
 | Pincel e opções | R3 | Evidência Windows sem versão; medidas/ícones pendentes |
 | Borracha | R3 | Evidência Windows sem versão |

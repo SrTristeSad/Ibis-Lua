@@ -127,3 +127,13 @@ Referências oficiais de nomenclatura e funcionamento:
 A documentação oficial **Layer Window Details** (https://ibispaint.com/lecture/index.jsp?no=156) especifica que a janela Layer flutuante existe em tablets e PCs, pode ser movida pela barra superior e redimensionada pelo canto inferior direito ou pelas bordas. Esta etapa implementa o **arraste pelo cabeçalho e pelo canto inferior direito**, com limites de dimensão e posição. O gesto é exercitado no teste end-to-end do LÖVE.
 
 A geometria de janela (largura/altura inicial, margens e hit area) continua provisória até uma comparação com capturas do ibisPaint **Windows 14.1.4** na mesma escala.
+
+## W12 — Medidas observáveis do New Canvas Windows e revisão de DPI
+
+- Captura publicada: https://img.utdstc.com/screen/a65/274/a65274b8eed31f3f889105ad4259cd2290958b5cb1ff1e9b74ffed7e65b1ae2a%3A600
+- Página: https://ibis-paint.uptodown.com/windows (exibe o pacote 14.0.10.0 em 02/11/2026, mas **não afirma versão da captura**).
+- Estrutura observável: lista em faixas horizontais separadas por linhas finas; miniaturas da razão de aspecto à esquerda; rótulo de cada modelo ao centro; dimensões à direita; nos formatos de papel/cartão-postal há indicação de DPI.
+- Presets de referência transcritos para `src/canvas_presets.lua`; registro de DPI inicial: cartão-postal 300; A4/A5/B4/B5 150. O DPI pode ser alterado no protótipo para conferir atualização dos campos W/H.
+- **Inconsistência da fonte:** a linha de rótulo `9 : 16 (SD)` acompanha `1280 x 720` na captura pequena. Não foi corrigida por suposição, e precisa ser confrontada com a interface oficial 14.1.4.
+- Melhorias atuais: escala vertical das linhas ao espaço disponível, controles de DPI, miniaturas vetoriais com aspecto de cada modelo, leitura de dimensões na faixa inferior e limites de rolagem definidos pela altura do conteúdo.
+- **Nenhuma comparação geométrica foi aprovada**: sem screenshot 14.1.4 capturado no mesmo DPI e resolução, fontes/ícones/tamanhos de linhas ainda são aproximações.

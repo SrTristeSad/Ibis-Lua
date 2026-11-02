@@ -28,7 +28,7 @@ No programa: clique em My Gallery, +, escolha dimensões e clique OK. Os campos 
 - Comparador: python -m unittest discover -s tests -p "test_compare.py"
 - Diferença de imagens: python tools/compare_screenshots.py --reference original.png --actual copia.png --output-dir comparison_output
 
-O GitHub Actions realiza verificação sintática, testes do modelo, testes do comparador, integração por cliques e **captura dezessete estados no LÖVE** (título, galeria, novo canvas, editor, camadas, janela flutuante redimensionada, propriedades de camadas, menu de blending, fundo transparente, pincéis, cor, zoom/rotação, modo Solo, View Menu, Grid Settings, grade e janela de referência). Capturas automatizadas não comprovam correspondência com o software original.
+O GitHub Actions realiza verificação sintática, testes do modelo, testes do comparador, integração por cliques e **captura dezoito estados no LÖVE** (título, galeria, novo canvas, novo canvas com DPI de papel, editor, camadas, janela flutuante redimensionada, propriedades de camadas, menu de blending, fundo transparente, pincéis, cor, zoom/rotação, modo Solo, View Menu, Grid Settings, grade e janela de referência). Capturas automatizadas não comprovam correspondência com o software original.
 
 ## Pesquisa e qualidade
 
@@ -63,3 +63,11 @@ O painel Layer foi reconstruído a partir da documentação de **Layer Window De
 A versão atual inclui `tests/test_layer_properties.lua`, executado no CI, além de verificações end-to-end pelos próprios botões. A interface de camadas da build Windows 14.1.4 **não foi medida pixel a pixel**.
 
 Fontes: https://ibispaint.com/lecture/index.jsp?no=156 e https://ibis-paint.en.uptodown.com/windows.
+
+## New Canvas — presets de tamanho e DPI
+
+A lista agora é carregada de `src/canvas_presets.lua`, não de constantes escondidas no desenho. Cada modelo possui identificador, título e dimensões. Modelos de papel/postcard expõem DPI clicável (150, 300, 600) que recalcula as dimensões **somente no formulário**. O aspecto de cada miniatura acompanha a proporção do modelo. O espaçamento vertical se ajusta à altura da janela, e a rolagem respeita o conteúdo.
+
+Esta é uma **transcrição de uma captura pública de Windows de versão indeterminada**, não a comprovação dos modelos atuais da versão 14.1.4. A página que hospeda a captura atualmente identifica o pacote Windows 14.0.10.0; isso não certifica a data nem a versão da própria imagem. A inconsistência visível entre o rótulo `9 : 16 (SD)` e as dimensões `1280 x 720` permanece registrada como **pendência de verificação**, não como uma regra de proporção garantida.
+
+O CI executa `tests/test_canvas_presets.lua`, verifica seleção A4 e a mudança de DPI pelos callbacks reais, e testa a navegação em 1024×768 e 1600×900. A captura `new_canvas_dpi.png` fica disponível no artefato de screenshots do GitHub Actions.

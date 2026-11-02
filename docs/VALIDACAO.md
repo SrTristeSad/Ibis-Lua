@@ -59,3 +59,10 @@
 - Teste E2E: pressiona a alça de tamanho no canto inferior direito, arrasta e solta; valida mudança real da largura e altura da janela.
 - Captura adicional de janela deslocada e redimensionada: `layer_floating.png`.
 - O workflow gera **17 screenshots**, não métricas de equivalência com o original.
+
+## New Canvas — verificação por conteúdo e por resolução
+
+- `luajit tests/test_canvas_presets.lua` valida os 13 presets transcritos da captura Windows, cópias defensivas, escalonamento por DPI e rejeição de dados inválidos.
+- A suíte de cliques `IBIS_LUA_E2E=1 love .` verifica preset A4, DPI de 150 para 300, edição dos campos numéricos e criação do documento simulado.
+- O CI executa também `IBIS_LUA_E2E=1 IBIS_LUA_E2E_RES=1600x900 love .` em Xvfb com resolução ajustada; isso verifica navegação e evita regressões em janelas largas, **não** fidelidade visual.
+- O workflow gera **18 capturas** e inclui o estado `new_canvas_dpi`.
