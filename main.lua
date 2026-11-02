@@ -14,6 +14,8 @@ local S={screen='home',popup=nil,tool='brush',rail='left',columns=2,
   brushSearchOpen=false,brushQuery='',paletteGroup=1,colorMode='HSB',
   brushCategory='Todos',brushCategoryPage=1,brushScroll=0,drag=nil}
 local V
+local captureScene=nil
+local captureFrame=0
 local function inside(r,x,y) return Layout.contains(r,x,y) end
 local function open(kind)
   if kind=='color' and S.popup~='color' then
@@ -871,9 +873,43 @@ local function drawInfo(kind)
     p.x+23,p.y+73,14,'white')
   UI.button('Fechar',p.x+p.w-138,p.y+p.h-55,118,35,close,{bg='blue'})
 end
-function love.load()
+function love.load(args)
   UI.font(10);UI.font(11);UI.font(12);UI.font(13)
   UI.font(14);UI.font(18);UI.font(22);UI.font(68)
+  -- Uso restrito aos testes de comparacao visual em CI:
+  -- love . --capture-ui home|gallery|editor|brushes|layers|color|tools|canvas_new
+  if type(args)=='table' then
+    for i=1,#args do
+      if args[i]=='--capture-ui' then
+        local scene=args[i+1] or 'editor'
+        local valid={home=true,gallery=true,editor=true,brushes=true,
+          layers=true,color=true,tools=true,canvas_new=true}
+        if not valid[scene] then error('Cena de captura desconhecida: '..scene) end
+        captureScene=scene
+        captureFrame=0
+        if scene~='home' then
+          if scene=='canvas_new' then
+            S.screen='gallery'
+            open('canvas_new')
+          else
+            createWork()
+            if scene=='gallery' then S.screen='gallery'
+            elseif scene~='editor' then open(scene) end
+          end
+        end
+        break
+      end
+    end
+  end
+end
+function love.update(dt)
+  if not captureScene then return end
+  captureFrame=captureFrame+1
+  if captureFrame==6 then
+    lg.captureScreenshot('visual-'..captureScene..'.png')
+  elseif captureFrame>=14 then
+    love.event.quit(0)
+  end
 end
 function love.draw()
   V=Layout.viewport(lg.getWidth(),lg.getHeight())
