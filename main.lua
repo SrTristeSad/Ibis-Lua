@@ -935,6 +935,17 @@ function love.textinput(char)
   end
 end
 function love.keypressed(key)
+  if key=='f12' then
+    if lg.captureScreenshot then
+      local screen=tostring(S.popup or S.screen):gsub('[^%w_-]','')
+      local name='ibis-lua-'..screen..'-'..os.date('%Y%m%d-%H%M%S')..'.png'
+      lg.captureScreenshot(name)
+      if love.filesystem and love.filesystem.getSaveDirectory then
+        print('Captura PNG: '..love.filesystem.getSaveDirectory()..'/'..name)
+      end
+    end
+    return
+  end
   if S.popup=='brushes' and S.brushSearchOpen and key=='backspace' then
     local q=S.brushQuery or ''
     S.brushQuery=q:sub(1,-2)
