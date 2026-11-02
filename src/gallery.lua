@@ -47,6 +47,14 @@ function Gallery:items(parent)
     end
     return out
 end
+function Gallery:folders()
+    local out={{id=0,type="folder",name="My Gallery",parent=nil}}
+    for _,id in ipairs(self.order) do
+        local item=self.records[id]
+        if item and item.type=="folder" then out[#out+1]=copy(item) end
+    end
+    return out
+end
 function Gallery:total_artworks()
     local count=0
     for _,item in pairs(self.records) do
