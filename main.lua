@@ -947,6 +947,13 @@ function love.load()
             state:open_gallery();state:open_new_canvas();state:create_canvas(1800,2400)
             state:add_layer();state:toggle_layer_solo(1)
             set_panel("layer")
+        elseif smoke_screen=="view" or smoke_screen=="grid_settings"
+            or smoke_screen=="grid" or smoke_screen=="reference" then
+            state:open_gallery();state:open_new_canvas();state:create_canvas(1800,2400)
+            visual.grid=true
+            if smoke_screen=="reference" then visual.reference=true
+            elseif smoke_screen=="view" then panel="view"
+            elseif smoke_screen=="grid_settings" then panel="grid_settings" end
         end
         capture_requested=true
     end
@@ -1131,8 +1138,30 @@ function love.update()
         love.wheelmoved(0,1)
         assert(view.zoom>1,"UI e2e: zoom por roda não respondeu")
         e2e_stage=5
+    elseif e2e_stage==5 then
+        click_control("view")
+        assert(panel=="view","UI e2e: View Menu não abriu")
+        e2e_stage=6
+    elseif e2e_stage==6 then
+        click_control("view_grid")
+        assert(visual.grid,"UI e2e: grade não ativou")
+        click_control("view_reference")
+        assert(visual.reference,"UI e2e: janela de referência não ativou")
+        click_control("view_interpolation")
+        assert(visual.interpolation=="pixelated",
+            "UI e2e: interpolação não alternou")
+        click_control("view_grid_settings")
+        assert(panel=="grid_settings","UI e2e: Grid Settings não abriu")
+        e2e_stage=7
+    elseif e2e_stage==7 then
+        click_control("increase_grid1")
+        assert(visual.grid1==72,"UI e2e: intervalo da grade não foi alterado")
+        click_control("Reset Grid")
+        assert(visual.grid1==64 and visual.grid2==256,
+            "UI e2e: Reset Grid não restaurou os intervalos")
+        e2e_stage=8
     else
-        print("PASS: UI LÖVE end-to-end (galeria, canvas, camadas, zoom)")
+        print("PASS: UI LÖVE end-to-end (galeria, canvas, camadas, zoom e View Menu)")
         love.event.quit(0)
     end
 end
