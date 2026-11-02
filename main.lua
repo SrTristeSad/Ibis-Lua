@@ -199,10 +199,10 @@ local function newCanvasDialog(w,h)
   }
   local listTop=y+179
   local footer=dh-38
-  local lineHeight=math.min(31,math.max(22,(footer-183)/#presets))
+  local lineHeight=math.max(21,math.min(43,(dh-225)/#presets))
   for i,item in ipairs(presets) do
     local yy=listTop+(i-1)*lineHeight
-    if yy+lineHeight<y+dh-46 then
+    if yy+lineHeight<=y+dh-42 then
       U.rect(x+7,yy,dw-14,lineHeight-1,i%2==0 and {.85,.85,.85} or {.92,.92,.92})
       local px=x+14
       U.stroke(px,yy+4,24,lineHeight-9,{.46,.46,.46})
