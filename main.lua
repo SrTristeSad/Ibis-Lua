@@ -10,7 +10,8 @@ local S={screen='home',popup=nil,tool='brush',rail='left',columns=2,
   selectedLayer=1,layerOpacity=100,brush='Caneta (Dura)',
   colorTab='HSB',colorValue={.18,.51,.91},
   works={},project=nil,layers={},canvasPreset=1,
-  optionChoice=1,collectionTab='Básico',drag=nil}
+  optionChoice=1,collectionTab='Básico',toolPage=1,
+  brushCategory='Todos',brushCategoryPage=1,brushScroll=0,drag=nil}
 local V
 local function inside(r,x,y) return Layout.contains(r,x,y) end
 local function open(kind) S.popup=kind end
