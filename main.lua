@@ -65,33 +65,49 @@ local function wheelLogo(cx,cy,r)
   UI.color('dark');lg.circle('fill',cx,cy,r*.22,28)
 end
 local function drawHome()
-  lg.clear(.10,.29,.45,1)
+  -- Composição baseada na tela de entrada do ibisPaint 14.x:
+  -- azul profundo, logo central, galeria local/online e ranking inferior.
+  lg.clear(.145,.302,.458,1)
   local w=V.w
-  UI.text('◉',w-120,22,20,'white')
-  UI.text('?',w-80,26,18,'white')
-  glyph('settings',w-31,37,22)
-  UI.hit({x=w-60,y=11,w=52,h=52},function()open('settings')end)
-  local font=UI.font(68)
-  local leftW,rightW=font:getWidth('ibis'),font:getWidth('Paint')
-  local groupW=leftW+64+rightW
-  local base=w/2-groupW/2
-  UI.text('ibis',base,155,68,'white')
-  wheelLogo(base+leftW+32,201,27)
-  UI.text('Paint',base+leftW+64,155,68,'white')
-  local opts={{'Minha Galeria','brush'},{'Coleção','folder'},
-    {'Galeria Online','view'}}
-  for i,item in ipairs(opts) do
-    local cx=w/2+(i-2)*168
-    UI.color('white');lg.setLineWidth(1.5)
-    lg.circle('line',cx,340,44,48)
-    glyph(item[2],cx,340,42)
-    UI.text(item[1],cx-73,404,16,'white','center',146)
-    UI.hit({x=cx-60,y=285,w=120,h=128},function()
+  local headerY=math.max(104,math.min(141,V.h*.25))
+  UI.color({.99,.79,.17});lg.circle('fill',w-88,22,12,28)
+  UI.text('P',w-95,12,16,'white','center',14)
+  UI.color('white');lg.circle('line',w-52,22,12,26)
+  UI.text('?',w-59,12,16,'white','center',14)
+  glyph('settings',w-20,22,22)
+  UI.hit({x=w-44,y=0,w=44,h=44},function()open('settings')end)
+  local logoFont=math.min(70,math.floor(w*.092))
+  local f=UI.font(logoFont)
+  local ibisW,aintW=f:getWidth('ibis'),f:getWidth('aint')
+  local wheelWidth=logoFont*.94
+  local left=(w-(ibisW+wheelWidth+aintW))/2
+  UI.text('ibis',left,headerY,logoFont,'white')
+  wheelLogo(left+ibisW+wheelWidth/2,headerY+logoFont*.49,wheelWidth*.46)
+  UI.text('aint',left+ibisW+wheelWidth,headerY,logoFont,'white')
+  UI.text('Ver.14.1.2',left+ibisW+wheelWidth+aintW-74,
+    headerY+logoFont+3,11,'white')
+  local y=322
+  local positions={w/2-125,w/2+125}
+  for i,item in ipairs({{'Minha Galeria','brush'},{'Galeria Online','globe'}}) do
+    local cx=positions[i]
+    UI.color({.91,.94,.97});lg.setLineWidth(1)
+    lg.circle('line',cx,y,44,52)
+    glyph(item[2],cx,y,42)
+    UI.text(item[1],cx-85,y+54,14,'white','center',170)
+    UI.hit({x=cx-80,y=y-49,w=160,h=120},function()
       if i==1 then S.screen='gallery';close()
-      else open(i==2 and 'collection' or 'online') end
+      else open('online') end
     end)
   end
-  UI.text('Ibis-Lua · protótipo de interface',13,487,11,'soft')
+  local rankY=420
+  UI.rect(0,rankY,w,92,{.09,.20,.33})
+  UI.text('Ranking diário',20,rankY+9,14,'white')
+  UI.text('⌃',w-35,rankY+4,22,'white')
+  local count=math.max(2,math.floor((w-40)/120))
+  for i=1,count do
+    local xx=20+(i-1)*(w-40)/count
+    UI.rect(xx,rankY+34,math.min(105,(w-52)/count-5),56,{.96,.96,.97},1)
+  end
 end
 local function drawGallery()
   lg.clear(.935,.938,.945,1)
@@ -138,16 +154,16 @@ local function drawRail()
   local x=S.rail=='right' and V.w-49 or 0
   local first=Layout.rail(1,S.rail,V)
   local last=Layout.rail(#Layout.TOOLS,S.rail,V)
-  UI.rect(x,first.y,49,last.y+last.h-first.y,'toolbar',5)
+  UI.rect(x,first.y,49,last.y+last.h-first.y,{.45,.46,.47,.92},2)
   for i,item in ipairs(Layout.TOOLS) do
     local r=Layout.rail(i,S.rail,V)
     local active=S.tool==item[1]
-    if active then UI.rect(r.x+2,r.y+1,45,r.h-1,'panel2',2) end
+    if active then UI.rect(r.x+2,r.y+1,45,r.h-1,{.57,.60,.63,.8},2) end
     glyph(item[1],r.x+24,r.y+9,17,active and 'blue' or 'white')
     if S.showLabels then
       local label=item[2]
       local font=#label>13 and 6 or 7
-      UI.text(label,r.x+1,r.y+17,font,active and 'blue' or 'soft',
+      UI.text(label,r.x+1,r.y+17,font,active and 'blue' or 'white',
         'center',47)
     end
     UI.hit(r,function()pickTool(item[1])end)
@@ -257,90 +273,153 @@ local function drawTools()
 end
 local function drawBrushes()
   local p=panelBase('brushes','Pincel ('..S.brush..')')
+  -- Interface 14.x: categorias verticais escuras, prévia e itens claros.
+  local side=p.x+9
+  UI.rect(p.x+9,p.y+34,p.w-18,p.h-126,{.96,.96,.96},1)
+  UI.rect(side,p.y+88,72,p.h-215,{.055,.059,.063},1)
+  local contentX=p.x+86
+  local contentW=p.w-98
+  UI.checker(contentX,p.y+39,contentW,45,8)
+  UI.color('ink');lg.setLineWidth(3)
+  local wave={}
+  for i=0,34 do
+    wave[#wave+1]=contentX+10+i*(contentW-20)/34
+    wave[#wave+1]=p.y+61+math.sin(i*.29)*6
+  end
+  lg.line(wave)
   local tabs={'Básico','Personalizado','Online'}
   for i,title in ipairs(tabs) do
-    local x=p.x+10+(i-1)*132
-    UI.button(title,x,p.y+38,126,24,function()S.collectionTab=title end,
-      {bg=S.collectionTab==title and 'panel2' or 'toolbar',font=11})
+    local tw=(contentW-7)/3
+    local tx=contentX+(i-1)*tw
+    UI.rect(tx,p.y+89,tw-1,25,
+      S.collectionTab==title and 'white' or {.68,.68,.68},1)
+    UI.text(title,tx+1,p.y+95,10,'ink','center',tw-2)
+    UI.hit({x=tx,y=p.y+89,w=tw,h=26},
+      function()S.collectionTab=title end)
   end
-  local brushes={'Caneta (Dura)','Caneta (Suave)','Caneta (Tinta)',
-    'Caneta de feltro','Aerógrafo (Normal)','Lápis (Grafite)',
-    'Pincel (Duro)'}
+  local categories={'Todos','Simples','Esboço','Quadrinho','Tinta','Vetor',
+    'Aerógrafo'}
+  S.brushCategory=S.brushCategory or 'Todos'
+  for i,title in ipairs(categories) do
+    local yy=p.y+120+(i-1)*26
+    if title==S.brushCategory then
+      UI.rect(side+1,yy,70,25,{.20,.30,.37},1)
+    end
+    UI.text(title,side+2,yy+7,9,
+      title==S.brushCategory and 'blue' or 'white','center',68)
+    UI.hit({x=side,y=yy,w=72,h=26},function()S.brushCategory=title end)
+  end
+  local brushes={
+    {'Caneta (Dura)','Simples'},{'Caneta (Suave)','Simples'},
+    {'Caneta (Tinta)','Tinta'},{'Lápis (Grafite)','Esboço'},
+    {'Pincel (Duro)','Tinta'},{'Aerógrafo (Normal)','Aerógrafo'},
+    {'Caneta Vetorial','Vetor'},{'Caneta para mangá','Quadrinho'}}
   if S.collectionTab=='Básico' then
-    for i,name in ipairs(brushes) do
-      local y=p.y+66+(i-1)*39
-      if S.brush==name then UI.rect(p.x+9,y,p.w-18,37,'panel2',2) end
-      UI.rect(p.x+15,y+5,42,25,'white',1)
-      UI.color('ink');lg.setLineWidth(i%3+1)
-      local pts={}
-      for k=0,18 do
-        local bx=p.x+17+k*2.0
-        local by=y+17+math.sin(k*.4)*4
-        pts[#pts+1]=bx;pts[#pts+1]=by
+    local visible=0
+    for i,item in ipairs(brushes) do
+      if S.brushCategory=='Todos' or S.brushCategory==item[2] then
+        visible=visible+1
+        if visible<=6 then
+          local y=p.y+118+(visible-1)*32
+          UI.rect(contentX,y,contentW,31,
+            S.brush==item[1] and {.79,.87,.97} or 'white',1)
+          UI.line(contentX,y+31,contentX+contentW,y+31,{.80,.80,.80},.65)
+          UI.color('ink');lg.setLineWidth(1+visible*.25)
+          local pts={}
+          for k=0,22 do
+            pts[#pts+1]=contentX+6+k*2.3
+            pts[#pts+1]=y+19+math.sin(k*.33)*4
+          end
+          lg.line(pts)
+          UI.text(item[1],contentX+64,y+8,10,'ink')
+          UI.text('›',contentX+contentW-18,y+4,18,'ink')
+          UI.hit({x=contentX,y=y,w=contentW,h=31},function()
+            S.brush=item[1];S.optionChoice=i
+          end)
+        end
       end
-      lg.line(pts)
-      UI.text(name,p.x+67,y+9,12,'white')
-      UI.text('›',p.x+p.w-30,y+7,19,'soft')
-      UI.hit({x=p.x+9,y=y,w=p.w-18,h=38},function()
-        S.brush=name;S.optionChoice=i
-      end)
     end
   else
     UI.text(S.collectionTab=='Personalizado' and 'Sem pincéis personalizados'
-      or 'Biblioteca online não conectada',p.x+18,p.y+115,13,'soft')
+      or 'Biblioteca online indisponível',contentX+7,p.y+138,11,'ink')
   end
-  sectionLine(p.x+12,p.y+p.h-61,p.w-24)
-  UI.text(('Espessura  %.1f px'):format(S.size),p.x+15,p.y+p.h-54,11,'white')
-  UI.slider(p.x+150,p.y+p.h-56,p.w-168,S.size/100,
+  local fy=p.y+p.h-126
+  UI.rect(p.x+9,fy,p.w-18,126,'toolbar',1)
+  UI.text(('Tamanho     %.1f px'):format(S.size),p.x+20,fy+12,11,'white')
+  UI.slider(p.x+134,fy+12,p.w-158,S.size/100,
     function(t)S.size=math.floor((.1+t*99.9)*10)/10 end)
-  UI.text(('Opacidade  %d%%'):format(S.opacity),p.x+15,p.y+p.h-31,11,'white')
-  UI.slider(p.x+150,p.y+p.h-33,p.w-168,S.opacity/100,
+  UI.text(('Opacidade  %d%%'):format(S.opacity),p.x+20,fy+48,11,'white')
+  UI.slider(p.x+134,fy+48,p.w-158,S.opacity/100,
     function(t)S.opacity=math.floor(t*100+.5)end)
 end
 local function drawLayers()
   local p=panelBase('layers','Camadas')
   local x=p.x+9
-  UI.rect(x,p.y+38,p.w-18,40,'panel2',2)
-  UI.rect(x+5,p.y+42,40,31,'pink',1)
-  UI.text('Camada de seleção',x+54,p.y+43,12,'white')
-  UI.text('Sem seleção',x+54,p.y+59,10,'soft')
-  local max=math.min(#S.layers,4)
-  for i=1,max do
+  local mainW=p.w-66
+  local contentY=p.y+35
+  -- Miniaturas claras, seleção azul e barra vertical preta.
+  UI.rect(x,contentY,mainW,p.h-126,{.94,.94,.94},1)
+  UI.rect(x+mainW,contentY,42,p.h-126,{.055,.06,.065},1)
+  UI.rect(x,contentY,mainW,49,{.89,.89,.89},1)
+  UI.checker(x+5,contentY+6,38,37,7)
+  UI.rect(x+5,contentY+6,38,37,{1,.6,.72,.7})
+  UI.text('Camada de seleção',x+52,contentY+7,11,'ink')
+  UI.text('Sem seleção',x+52,contentY+26,10,'ink')
+  local count=math.min(#S.layers,3)
+  for i=1,count do
     local index=#S.layers-i+1
     local layer=S.layers[index]
-    local y=p.y+81+(i-1)*44
-    UI.rect(x,y,p.w-18,43,index==S.selectedLayer and 'panel2' or 'panel',2)
-    UI.checker(x+7,y+6,44,30,8)
-    UI.rect(x+6,y+5,46,32,'soft',0,true)
-    UI.text(layer.name,x+60,y+5,14,'white')
-    UI.text(('Normal    %d%%'):format(layer.opacity),x+60,y+24,10,'soft')
-    glyph('eye',p.x+p.w-42,y+22,18,layer.visible and 'white' or 'soft')
-    UI.hit({x=p.x+p.w-58,y=y,w=43,h=43},function()
-      layer.visible=not layer.visible
-    end)
-    UI.hit({x=x,y=y,w=p.w-73,h=43},function()S.selectedLayer=index end)
+    local y=contentY+50+(i-1)*50
+    UI.rect(x,y,mainW,49,
+      index==S.selectedLayer and {.79,.86,.96} or {.94,.94,.94},1)
+    UI.line(x,y+49,x+mainW,y+49,{.73,.73,.73},.6)
+    UI.checker(x+6,y+6,41,38,7)
+    UI.rect(x+6,y+6,41,38,
+      index==S.selectedLayer and 'blue' or {.74,.74,.74},0,true)
+    UI.text(layer.name,x+54,y+4,13,'ink')
+    glyph('eye',x+68,y+32,16,layer.visible and 'ink' or 'soft')
+    UI.text(('%d%%'):format(layer.opacity),x+111,y+24,11,'ink')
+    UI.text('Normal',x+162,y+24,10,'ink')
+    UI.hit({x=x+50,y=y,w=mainW-50,h=49},
+      function()S.selectedLayer=index end)
+    UI.hit({x=x+52,y=y+23,w=32,h=25},
+      function()layer.visible=not layer.visible end)
   end
-  local fy=p.y+p.h-86
-  sectionLine(x,fy,p.w-18)
-  UI.button('+',x,fy+7,43,29,function()
+  local barX=x+mainW
+  for i,id in ipairs({'layers','plus','transform','selection','eye','menu'}) do
+    local yy=contentY+4+(i-1)*32
+    glyph(id,barX+21,yy+12,17)
+    UI.hit({x=barX,y=yy,w=42,h=32},function()
+      if id=='plus' then
+        local index=#S.layers+1
+        S.layers[index]={name=tostring(index),visible=true,opacity=100}
+        S.selectedLayer=index
+      elseif id=='menu' then open('blend') end
+    end)
+  end
+  local fy=p.y+p.h-91
+  UI.rect(x,fy,p.w-18,85,'toolbar',1)
+  UI.button('+',x+4,fy+9,44,29,function()
     local index=#S.layers+1
     S.layers[index]={name=tostring(index),visible=true,opacity=100}
     S.selectedLayer=index
-  end,{font=23})
-  UI.button('Duplicar',x+51,fy+7,68,29,function()
+  end,{font=22,bg='dark'})
+  UI.button('Duplicar',x+54,fy+9,69,29,function()
     local layer=S.layers[S.selectedLayer]
     local index=#S.layers+1
-    S.layers[index]={name=layer.name..' cópia',visible=layer.visible,opacity=layer.opacity}
+    S.layers[index]={name=layer.name..' cópia',visible=layer.visible,
+      opacity=layer.opacity}
     S.selectedLayer=index
-  end,{font=11})
-  UI.button('Excluir',x+127,fy+7,61,29,function()
+  end,{font=11,bg='dark'})
+  UI.button('Excluir',x+129,fy+9,61,29,function()
     if #S.layers>1 then table.remove(S.layers,S.selectedLayer)
       S.selectedLayer=math.min(#S.layers,S.selectedLayer) end
-  end,{font=11})
-  UI.button('Normal ▾',x+196,fy+7,99,29,function()open('blend')end,{font=11})
-  UI.text('Opacidade',x,fy+46,10,'soft')
+  end,{font=11,bg='dark'})
+  UI.button('Normal ▾',x+195,fy+9,92,29,
+    function()open('blend')end,{font=10,bg='dark'})
+  UI.text('100%',x+7,fy+52,10,'white')
   local current=S.layers[S.selectedLayer]
-  UI.slider(x+79,fy+44,p.w-103,current.opacity/100,function(t)
+  UI.slider(x+62,fy+48,p.w-91,current.opacity/100,function(t)
     current.opacity=math.floor(100*t+.5)
   end)
 end
