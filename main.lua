@@ -203,7 +203,7 @@ end
 local function brushPanel(w,h)
   local pw=math.min(620,w-70);local ph=math.min(604,h-115)
   local x=57;local y=39
-  panelBox(x,y,pw,ph,"Brush ("..#Model.brushes..")")
+  panelBox(x,y,pw,ph,"Brush")
   local listW=math.floor(pw*.53)
   local tabs={"Basic","Custom","Online"}
   for i,name in ipairs(tabs) do
@@ -216,8 +216,17 @@ local function brushPanel(w,h)
     for i=1,limit do
       local yy=y+80+(i-1)*38
       U.rect(x+12,yy,listW-18,36,s.brush==i and {0.66,0.8,0.94} or {0.94,0.94,0.94})
-      U.line(x+25,yy+27,x+100,yy+11,C.ink,math.max(1,(i%6)+1))
-      U.text(Model.brushes[i],x+112,yy+11,listW-128,C.ink,"small")
+      U.circle(x+31,yy+18,10,C.white)
+      U.circle(x+31,yy+18,10,C.gray,true)
+      U.icon("Plus",x+31,yy+18,12,C.ink)
+      for k=0,17 do
+        local bx=x+50+k*(listW-75)/18
+        local nx=x+50+(k+1)*(listW-75)/18
+        local by=yy+15+math.sin(k*.41+i*.23)*2.8
+        local ny=yy+15+math.sin((k+1)*.41+i*.23)*2.8
+        U.line(bx,by,nx,ny,C.ink,math.max(1,(i%4)+1))
+      end
+      U.text(Model.brushes[i],x+52,yy+24,listW-73,C.ink,"small")
       U.hitbox(x+12,yy,listW-18,36,function() Model.setBrush(s,i) end)
     end
   else
@@ -225,7 +234,7 @@ local function brushPanel(w,h)
   end
   local sx=x+listW+15;local sw=pw-listW-29
   U.text(Model.brushes[s.brush],sx,y+51,sw,C.white,"body")
-  U.text("Basic   Fade   Shape",sx,y+88,sw,C.pale,"small")
+  U.text("Basic   Fade   Shape   Dynamic",sx,y+88,sw,C.pale,"small")
   U.slider("Thickness",sx,y+130,sw,s.brushSize,1,120,function(v) Model.setBrushSize(s,v) end)
   U.slider("Opacity",sx,y+197,sw,s.brushOpacity,0,100,function(v) Model.setBrushOpacity(s,v) end)
   U.text("Stroke preview",sx,y+265,sw,C.white,"small")
