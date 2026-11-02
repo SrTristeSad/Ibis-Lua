@@ -28,7 +28,7 @@ No programa: clique em My Gallery, +, escolha dimensões e clique OK. O editor u
 - Comparador: python -m unittest discover -s tests -p "test_compare.py"
 - Diferença de imagens: python tools/compare_screenshots.py --reference original.png --actual copia.png --output-dir comparison_output
 
-O GitHub Actions realiza verificação sintática, testes do modelo, testes do comparador e **abre cinco telas no LÖVE com captura** (título, galeria, novo canvas, editor, camadas). Capturas automatizadas não comprovam correspondência com o software original.
+O GitHub Actions realiza verificação sintática, testes do modelo, testes do comparador e **abre sete telas no LÖVE com captura** (título, galeria, novo canvas, editor, camadas, pincéis e cor). Capturas automatizadas não comprovam correspondência com o software original.
 
 ## Pesquisa e qualidade
 
