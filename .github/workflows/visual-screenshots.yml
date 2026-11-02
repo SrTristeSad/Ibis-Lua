@@ -1,0 +1,55 @@
+name: Ibis-Lua real visual screenshots
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  capture-real-love:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install LOVE 11.5 and virtual display
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y love xvfb libgl1-mesa-dri
+          love --version
+      - name: Render interface scenes in actual LOVE
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/ibis-captures"
+          for scene in home gallery canvas_new editor brushes color layers tools; do
+            echo "[Ibis-Lua] capturing ${scene}"
+            timeout 40s xvfb-run -a -s '-screen 0 1600x1000x24' \
+              env SDL_AUDIODRIVER=dummy LIBGL_ALWAYS_SOFTWARE=1 \
+              love . --capture-ui "${scene}"
+            file="${HOME}/.local/share/love/ibis-lua-visual-shell/visual-${scene}.png"
+            test -s "$file" || { echo "Missing capture: $file"; exit 1; }
+            cp "$file" "${RUNNER_TEMP}/ibis-captures/"
+          done
+      - name: Verify eight PNG files and original resolution
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from struct import unpack
+          import os
+          root = Path(os.environ['RUNNER_TEMP']) / 'ibis-captures'
+          pngs = sorted(root.glob('*.png'))
+          assert len(pngs) == 8, f'Expected 8 real screenshots, got {len(pngs)}'
+          for path in pngs:
+              raw = path.read_bytes()
+              assert raw[:8] == b'\x89PNG\r\n\x1a\n', path
+              width, height = unpack('>II', raw[16:24])
+              assert (width, height) == (1220, 800), (path, width, height)
+              print(path.name, width, height, len(raw))
+          PY
+      - name: Attach real LÖVE screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ibis-Lua-real-Love-11_5-screenshots
+          path: ${{ runner.temp }}/ibis-captures/*.png
+          if-no-files-found: warn
+          retention-days: 14
