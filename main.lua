@@ -1716,8 +1716,33 @@ local function gallery_e2e_update()
         click_control("folder_confirm")
         assert(gallery:get(1).name=="Ideas" and gallery_dialog==nil)
         gallery_e2e_stage=21
+    elseif gallery_e2e_stage==21 then
+        click_control("back")
+        assert(gallery.current_folder==0)
+        for i=1,24 do
+            gallery:add_artwork(900,600,"Scroll test "..i)
+        end
+        gallery_e2e_stage=22
+    elseif gallery_e2e_stage==22 then
+        love.wheelmoved(0,-6)
+        assert(gallery_item_scroll>0,
+            "UI e2e: gallery list did not scroll")
+        gallery_e2e_stage=23
+    elseif gallery_e2e_stage==23 then
+        local key=nil
+        for i=#controls,1,-1 do
+            if controls[i].key and controls[i].key:match("^artwork_%d+$") then
+                key=controls[i].key
+                break
+            end
+        end
+        assert(key,"UI e2e: no visible thumbnail after scroll")
+        click_control(key)
+        assert(state.screen=="editor",
+            "UI e2e: scrolled thumbnail is not clickable")
+        gallery_e2e_stage=24
     else
-        print("PASS: My Gallery click E2E (folder, canvas, move, reopen, rename)")
+        print("PASS: My Gallery E2E (folders, move, rename, scroll and reopen)")
         love.event.quit(0)
     end
 end
