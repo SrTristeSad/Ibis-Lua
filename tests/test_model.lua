@@ -23,6 +23,15 @@ assert(s.screen == "editor" and s.document.simulated == true)
 assert(s.document.width == 1024 and s.document.height == 768)
 assert(s.active_tool == "brush")
 assert(#s.layers == 1 and s.active_layer_id == 1)
+local documented_tools = {
+    "transform", "magic_wand", "lasso", "filter", "brush", "eraser",
+    "smudge", "blur", "special_pen", "bucket", "vector", "text",
+    "frame_divider", "eyedropper", "canvas"
+}
+for _, name in ipairs(documented_tools) do
+    s:set_tool(name)
+    assert(s.active_tool == name)
+end
 s:set_tool("eraser")
 assert(s.active_tool == "eraser")
 fails(function() s:set_tool("made_up_tool") end)
