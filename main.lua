@@ -189,6 +189,8 @@ local function draw_gallery()
     if state.modal=="new_canvas" then
         color({0,0,0},0.52)
         love.graphics.rectangle("fill",0,0,W,H)
+        -- Bloqueia clique nos controles da tela abaixo da janela modal.
+        hit(0,0,W,H,function() end,"modal_scrim")
         local x,y,w,h=306,171,412,422
         color(C.modal)
         love.graphics.rectangle("fill",x,y,w,h,10,10)
@@ -252,8 +254,8 @@ local function draw_editor()
             love.graphics.rectangle("fill",x,H-61,bw,61)
         end
         text(item[1],x,H-40,bw,fonts.small,"center",C.white)
+        local key=item[2]
         hit(x,H-61,bw,61,function()
-            local key=item[2]
             if key=="brush" or key=="eraser" then state:set_tool(key)
             elseif key=="color" then state:toggle_panel("color")
             elseif key=="layer" then state:toggle_panel("layer")
@@ -299,8 +301,9 @@ local function draw_editor()
                 local px=x+11+((i-1)%2)*151
                 local py=y+53+math.floor((i-1)/2)*43
                 if py<y+h-32 then
+                    local tool_key=item[2]
                     button(px,py,141,35,item[1],function()
-                        state:set_tool(item[2])
+                        state:set_tool(tool_key)
                         state.active_panel=nil
                     end)
                 end
