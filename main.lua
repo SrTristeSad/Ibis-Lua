@@ -5,6 +5,7 @@
 local Model = require("src.model")
 local Viewport = require("src.viewport")
 local ViewState = require("src.view_state")
+local CanvasPresets = require("src.canvas_presets")
 local state = Model.new()
 local view = Viewport.new()
 local visual = ViewState.new()
@@ -42,13 +43,9 @@ local tools = {
     {"Bucket","bucket"},{"Vector","vector"},{"Text","text"},
     {"Frame Divider","frame_divider"},{"Eyedropper","eyedropper"},{"Canvas","canvas"}
 }
-local presets = {
-    {"SD (Speed)",1024,768},{"1 : 1 (SD)",1280,1280},{"3 : 4 (SD)",1024,768},
-    {"9 : 16 (SD)",720,1280},{"Twitter Header",1500,500},
-    {"Chat Stamp",370,320},{"Vertical",690,4096},
-    {"Manga Manuscript",2576,3648},{"Postcard (JP)",1748,1181},
-    {"A4",1754,1240},{"A5",1240,874},{"B4",2085,1476},{"B5",1476,1039}
-}
+local presets = CanvasPresets.list()
+local active_dpi=nil
+
 local palette = {
     {0,0,0},{255,255,255},{235,48,48},{252,147,33},
     {249,229,49},{34,171,65},{16,182,222},{33,88,209},
@@ -423,6 +420,7 @@ function draw_new_canvas()
             if key=="width" then current_width=tostring(n)
             else current_height=tostring(n) end
             preset_selected=0
+            active_dpi=nil
             focus=nil
             input_replace=true
         end
@@ -454,25 +452,59 @@ function draw_new_canvas()
     end
     label("Speed ↔ Quality",px,yy+108,pw,"small","center",{0.30,0.30,0.30})
     yy=yy+128
+    local row_h=math.min(39,math.max(25,(H-250)/#presets))
     for i,p in ipairs(presets) do
-        local row_y=yy+(i-1)*30
-        if row_y+30>=top and row_y<=H-42 then
+        local row_y=yy+(i-1)*row_h
+        if row_y+row_h>=top and row_y<=H-42 then
             local selected=preset_selected==i
-            rectangle(px+4,row_y,pw-8,29,selected and {0.78,0.84,0.88} or C.light)
-            stroke(px+5,row_y+4,22,20,{0.45,0.45,0.45})
-            label(p[1],px+36,row_y+6,pw-205,"small","left",C.ink)
-            label(p[2].." x "..p[3],px+pw-156,row_y+6,144,"small","right",C.ink)
-            line(px+3,row_y+29,px+pw-6,row_y+29,1,{0.73,0.73,0.73})
-            hit(px+4,row_y,pw-8,29,function()
+            rectangle(px+4,row_y,pw-8,row_h-1,
+                selected and {0.77,0.83,0.87} or C.light)
+            local ar=p.width/p.height
+            local thumb_w=math.min(24,math.max(4,19*ar))
+            local thumb_h=math.min(22,math.max(4,19/ar))
+            stroke(px+8+(24-thumb_w)/2,
+                row_y+(row_h-thumb_h)/2,thumb_w,thumb_h,{0.43,0.43,0.43})
+            label(p.name,px+39,row_y+(row_h-16)/2,pw-(p.dpi and 245 or 165),
+                "small","left",C.ink)
+            local shown_w,shown_h=CanvasPresets.pixels(
+                p,preset_selected==i and active_dpi or nil)
+            label(tostring(shown_w).." x "..tostring(shown_h),
+                px+pw-123,row_y+(row_h-16)/2,109,"small","right",C.ink)
+            line(px+4,row_y+row_h-1,px+pw-4,row_y+row_h-1,
+                1,{0.72,0.72,0.72})
+            hit(px+4,row_y,pw-8,row_h,function()
                 preset_selected=i
-                current_width=tostring(p[2]);current_height=tostring(p[3])
+                active_dpi=p.dpi
+                local wi,he=CanvasPresets.pixels(p,active_dpi)
+                current_width=tostring(wi)
+                current_height=tostring(he)
                 focus=nil;input_replace=true
             end,"preset_"..i)
+            if p.dpi then
+                local dpi=preset_selected==i and active_dpi or p.dpi
+                local dpi_x=px+pw-210
+                rectangle(dpi_x,row_y+4,81,row_h-9,C.white,0.96,2)
+                stroke(dpi_x,row_y+4,81,row_h-9,C.soft)
+                label(tostring(dpi).." dpi",dpi_x+3,
+                    row_y+(row_h-15)/2,75,"tiny","center",C.ink)
+                hit(dpi_x,row_y+4,81,row_h-9,function()
+                    if preset_selected~=i then
+                        preset_selected=i
+                        active_dpi=p.dpi
+                    end
+                    active_dpi=CanvasPresets.next_dpi(p,active_dpi)
+                    local wi,he=CanvasPresets.pixels(p,active_dpi)
+                    current_width=tostring(wi)
+                    current_height=tostring(he)
+                    focus=nil;input_replace=true
+                end,"dpi_"..p.id)
+            end
         end
     end
     love.graphics.setScissor()
     rectangle(px,H-42,pw,38,C.dark)
-    label("Pixels",px+12,H-32,66,"small","left",C.white)
+    label(current_width.." x "..current_height.." px",
+        px+12,H-32,pw-154,"small","left",C.white)
     plain_button(px+pw-136,H-38,127,30,"OK",function()
         local ww,hh=tonumber(current_width),tonumber(current_height)
         if not ww or not hh or ww<1 or hh<1 or ww>16384 or hh>16384
@@ -1211,7 +1243,10 @@ function love.mousereleased(rx,ry,button)
 end
 function love.wheelmoved(dx,dy)
     if state.screen=="gallery" and state.modal=="new_canvas" then
-        gallery_scroll=math.max(0,math.min(300,gallery_scroll-dy*28))
+        local row_h=math.min(39,math.max(25,(H-250)/#presets))
+        local last=80+128+#presets*row_h
+        gallery_scroll=math.max(0,math.min(
+            math.max(0,last-(H-42)+6),gallery_scroll-dy*28))
     elseif state.screen=="editor" and not panel then
         if love.keyboard.isDown("lshift","rshift") then
             view:rotate_wheel(dy)
@@ -1232,6 +1267,7 @@ function love.textinput(t)
         current_height=(input_replace and t or current_height..t):sub(-5)
     end
     preset_selected=0
+    active_dpi=nil
     input_replace=false
 end
 function love.keypressed(key)
@@ -1307,12 +1343,20 @@ function love.update()
         assert(state.modal=="new_canvas")
         e2e_stage=2
     elseif e2e_stage==2 then
-        click_control("increase_width")
-        assert(current_width=="1001","UI e2e: incremento da largura falhou")
+        click_control("preset_10")
+        assert(current_width=="1754" and current_height=="1240",
+            "UI e2e: preset A4 não aplicado")
+        click_control("dpi_a4")
+        assert(current_width=="3508" and current_height=="2480",
+            "UI e2e: DPI A4 não mudou dimensões")
         click_control("input_width")
         for ch in ("900"):gmatch(".") do love.textinput(ch) end
         click_control("input_height")
         for ch in ("600"):gmatch(".") do love.textinput(ch) end
+        click_control("increase_width")
+        assert(current_width=="901","UI e2e: incremento da largura falhou")
+        click_control("input_width")
+        for ch in ("900"):gmatch(".") do love.textinput(ch) end
         click_control("OK")
         assert(state.screen=="editor" and state.document.width==900
             and state.document.height==600,"UI e2e: nova tela com dimensões erradas")
