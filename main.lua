@@ -1343,6 +1343,8 @@ function love.update()
         assert(state.modal=="new_canvas")
         e2e_stage=2
     elseif e2e_stage==2 then
+        click_control("increase_width")
+        assert(current_width=="1001","UI e2e: incremento inicial da largura falhou")
         click_control("preset_10")
         assert(current_width=="1754" and current_height=="1240",
             "UI e2e: preset A4 não aplicado")
@@ -1353,10 +1355,6 @@ function love.update()
         for ch in ("900"):gmatch(".") do love.textinput(ch) end
         click_control("input_height")
         for ch in ("600"):gmatch(".") do love.textinput(ch) end
-        click_control("increase_width")
-        assert(current_width=="901","UI e2e: incremento da largura falhou")
-        click_control("input_width")
-        for ch in ("900"):gmatch(".") do love.textinput(ch) end
         click_control("OK")
         assert(state.screen=="editor" and state.document.width==900
             and state.document.height==600,"UI e2e: nova tela com dimensões erradas")
