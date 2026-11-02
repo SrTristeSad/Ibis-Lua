@@ -7,6 +7,7 @@ local Viewport = require("src.viewport")
 local ViewState = require("src.view_state")
 local CanvasPresets = require("src.canvas_presets")
 local Gallery = require("src.gallery")
+local BrushCatalog = require("src.brush_catalog")
 local utf8 = require("utf8")
 local state = Model.new()
 local view = Viewport.new()
@@ -30,6 +31,11 @@ local layer_press = nil
 local layer_position, layer_size, drag_layer, drag_layer_resize, drag_opacity = nil, nil, nil, nil, nil
 local layer_blend_open = false
 local selected_brush, palette_index = 1, 1
+local brush_scroll=0
+local brush_search_active=false
+local brush_search=""
+local brush_drag=nil
+local brush_tab="Basic"
 local toast, toast_until = nil, 0
 local smoke = os.getenv("IBIS_LUA_SMOKE") == "1"
 local e2e = os.getenv("IBIS_LUA_E2E") == "1"
@@ -923,6 +929,42 @@ local function editor_screen()
     if panel then draw_editor_panel() end
 end
 
+-- Procedural vector strokes, for brush-library thumbnails only.
+-- They do not write to the canvas or create artwork pixels.
+local function draw_brush_sample(x,y,width,amplitude,kind,large)
+    local graphics=love.graphics
+    local steps=large and 56 or 30
+    local base=large and 6 or 2.4
+    for step=0,steps do
+        local t=step/steps
+        local px=x+width*t
+        local py=y-amplitude*0.35*math.sin(t*math.pi*1.8)
+            +amplitude*0.10*math.sin(t*math.pi*4)
+        local taper=math.max(0.12,math.sin(t*math.pi)^0.7)
+        local radius=base*taper
+        if kind=="air" or kind=="watercolor" then
+            for ring=3,1,-1 do
+                graphics.setColor(0.1,0.1,0.1,
+                    kind=="watercolor" and 0.075 or 0.047)
+                graphics.circle("fill",px,py,radius*(ring+1.3))
+            end
+        elseif kind=="pencil" then
+            graphics.setColor(0.12,0.12,0.12,0.30)
+            graphics.circle("fill",px,py,radius*0.9)
+        elseif kind=="bleed" then
+            graphics.setColor(0.08,0.08,0.08,0.45)
+            graphics.circle("fill",px,py,radius*1.6)
+        elseif kind=="fade" then
+            graphics.setColor(0.05,0.05,0.05,0.65*(1-t))
+            graphics.circle("fill",px,py,radius*2)
+        else
+            graphics.setColor(0.06,0.06,0.06,0.94)
+            graphics.circle("fill",px,py,
+                kind=="marker" and radius*1.5 or radius)
+        end
+    end
+end
+
 local function draw_panel_box(x,y,w,h,title)
     rectangle(x-1,y-1,w+2,h+2,C.deep,0.80,3)
     rectangle(x,y,w,h,{0.31,0.31,0.31},0.89,3)
@@ -936,7 +978,13 @@ end
 function draw_editor_panel()
     local name=panel
     local x,y,w,h
-    if name=="brush" or name=="tools" or name=="color" then
+    if name=="brush" then
+        -- Store Windows screenshot: light preset list, charcoal parameter side.
+        x=math.min(185,math.max(66,W*0.16))
+        y=55
+        w=math.min(565,W-x-34)
+        h=math.min(H-107,660)
+    elseif name=="tools" or name=="color" then
         x=65;y=92;w=math.min(505,W-140);h=math.min(570,H-185)
     elseif name=="view" then
         w=math.min(350,W-90);h=342
@@ -1184,35 +1232,182 @@ function draw_editor_panel()
             end
         end
     elseif name=="brush" then
-        label("Brush",x+15,y+54,w-30,"normal","center",C.white)
+        local gx=love.graphics
+        local margin=8
+        local inner_x=x+margin
+        local inner_y=y+39
+        local inner_w=w-margin*2
+        local inner_h=h-46
+        local left_w=math.floor(inner_w*0.53)
+        local right_x=inner_x+left_w
+        local right_w=inner_w-left_w
+        rectangle(inner_x,inner_y,left_w,inner_h,C.white,1)
+        rectangle(right_x,inner_y,right_w,inner_h,{0.19,0.19,0.19},0.97)
+        -- Separate rows and a three-tab header follow the desktop screenshot.
+        local top_height=34
+        local tab_gap=left_w/3
         local tabs={"Basic","Custom","Online"}
-        for i,t in ipairs(tabs) do
-            plain_button(x+17+(i-1)*(w-34)/3,y+81,(w-43)/3,32,t,function()
-                if i~=1 then notice(t.." não possui dados locais nesta fase.") end
-            end,i==1)
+        for i,name in ipairs(tabs) do
+            local xx=inner_x+(i-1)*tab_gap
+            rectangle(xx,inner_y,tab_gap,top_height,
+                brush_tab==name and C.white or {0.64,0.64,0.64})
+            if brush_tab==name then
+                rectangle(xx,inner_y+top_height-3,tab_gap,3,C.blue)
+            end
+            label(name,xx+2,inner_y+9,tab_gap-4,"small","center",C.ink)
+            local chosen=name
+            hit(xx,inner_y,tab_gap,top_height,function()
+                brush_tab=chosen
+                brush_search=""
+                brush_search_active=false
+                brush_scroll=0
+            end,"brush_tab_"..name)
         end
-        local brush_names={"Dip Pen (Hard)","Dip Pen (Soft)","Digital Pen","Felt Tip Pen",
-            "Airbrush (Normal)","Pencil (#2)","Watercolor (Opaque)","Marker"}
-        local rowh=math.min(42,(h-210)/#brush_names)
-        for i,n in ipairs(brush_names) do
-            local yy=y+121+(i-1)*rowh
-            rectangle(x+15,yy,w*0.58,rowh-2,i==selected_brush and C.blue or C.white,
-                i==selected_brush and 0.45 or 0.10)
-            line(x+25,yy+rowh/2,x+85,yy+rowh/2,math.max(1.2,i*0.6),C.ink)
-            label(n,x+93,yy+rowh*0.30,w*0.58-105,"tiny","left",C.white)
-            local id=i
-            hit(x+15,yy,w*0.58,rowh,function() selected_brush=id end,"brush_preset")
+        local list_y=inner_y+top_height+1
+        local search_h=brush_search_active and 33 or 24
+        rectangle(inner_x,list_y,left_w,search_h,{0.94,0.94,0.94})
+        if brush_search_active then
+            rectangle(inner_x+8,list_y+5,left_w-43,24,C.white)
+            stroke(inner_x+8,list_y+5,left_w-43,24,C.blue)
+            label(brush_search~="" and brush_search or "Search brushes",
+                inner_x+15,list_y+11,left_w-57,"small","left",
+                brush_search~="" and C.ink or {0.60,0.60,0.60})
+        else
+            label("Brush Library",inner_x+9,list_y+5,left_w-52,
+                "small","left",C.ink)
         end
-        local rx=x+w*0.64
-        label("Thickness",rx,y+130,w*0.31,"small","left",C.white)
-        label(string.format("%.1fpx",state.brush_size),rx,y+160,w*0.31,"normal","center",C.white)
-        plain_button(rx,y+201,43,32,"-",function()
-            state:set_brush_size(math.max(0.1,state.brush_size-1))
-        end)
-        plain_button(rx+52,y+201,43,32,"+",function()
-            state:set_brush_size(math.min(1000,state.brush_size+1))
-        end)
-        label("Opacity: "..opacity.."%",rx,y+256,w*0.31,"small","left",C.white)
+        -- Magnifier drawn with LÖVE line work; not a captured proprietary icon.
+        local mag_x=inner_x+left_w-19
+        local mag_y=list_y+search_h/2-2
+        rgba(C.ink)
+        gx.setLineWidth(1.8)
+        gx.circle("line",mag_x-2,mag_y-2,5)
+        gx.line(mag_x+2,mag_y+2,mag_x+7,mag_y+7)
+        hit(inner_x+left_w-40,list_y,40,search_h,function()
+            brush_search_active=not brush_search_active
+            brush_search=""
+            brush_scroll=0
+        end,"brush_search_toggle")
+        local entries=BrushCatalog.search(brush_search)
+        local row_h=43
+        local list_top=list_y+search_h
+        local list_h=math.max(32,inner_y+inner_h-list_top-2)
+        local max_scroll=math.max(0,#entries*row_h-list_h)
+        brush_scroll=math.max(0,math.min(max_scroll,brush_scroll))
+        gx.setScissor(inner_x*scale,list_top*scale,
+            left_w*scale,list_h*scale)
+        if brush_tab~="Basic" then
+            label(brush_tab.." brushes are not included in this simulation.",
+                inner_x+12,list_top+40,left_w-24,"small","center",
+                {0.48,0.48,0.48})
+        elseif #entries==0 then
+            label("No matching brushes",inner_x+10,list_top+36,
+                left_w-20,"small","center",{0.43,0.43,0.43})
+        else
+            for i,item in ipairs(entries) do
+                local brush=item.brush
+                local yy=list_top+(i-1)*row_h-brush_scroll
+                if yy+row_h>list_top and yy<list_top+list_h then
+                    local selected=selected_brush==item.index
+                    rectangle(inner_x,yy,left_w,row_h-1,
+                        selected and {0.77,0.85,0.92} or C.white)
+                    line(inner_x,yy+row_h-1,inner_x+left_w,
+                        yy+row_h-1,1,{0.82,0.82,0.82})
+                    rectangle(inner_x+7,yy+5,17,17,C.white,1,9)
+                    stroke(inner_x+7,yy+5,17,17,
+                        selected and C.blue or {0.65,0.65,0.65})
+                    line(inner_x+12,yy+13,inner_x+19,yy+13,1.2,C.ink)
+                    line(inner_x+15,yy+10,inner_x+15,yy+16,1.2,C.ink)
+                    label(brush.label,inner_x+29,yy+3,left_w-83,
+                        "tiny","left",C.ink)
+                    label(tostring(brush.size)..".0",inner_x+left_w-42,
+                        yy+6,36,"tiny","right",{0.39,0.39,0.39})
+                    -- Deterministic synthetic sample strokes, no canvas engine.
+                    draw_brush_sample(inner_x+36,yy+30,left_w-80,
+                        7,brush.kind,false)
+                    local index=item.index
+                    local hit_y=math.max(yy,list_top)
+                    local hit_bottom=math.min(yy+row_h,list_top+list_h)
+                    if hit_bottom>hit_y then
+                        hit(inner_x,hit_y,left_w,hit_bottom-hit_y,function()
+                            selected_brush=index
+                            local chosen=BrushCatalog.get(index)
+                            state:set_brush_size(chosen.size)
+                        end,"brush_preset_"..index)
+                    end
+                end
+            end
+        end
+        gx.setScissor()
+        if max_scroll>0 and brush_tab=="Basic" then
+            local track_x=inner_x+left_w-4
+            local thumb_h=math.max(22,list_h*list_h/(list_h+max_scroll))
+            local thumb_y=list_top+(list_h-thumb_h)*brush_scroll/max_scroll
+            rectangle(track_x,list_top,3,list_h,{0.82,0.82,0.82})
+            rectangle(track_x,thumb_y,3,thumb_h,{0.52,0.52,0.52})
+        end
+        -- Dark properties area, including stroke preview and active brush data.
+        local active=BrushCatalog.get(selected_brush)
+        local rx=right_x+10
+        local rw=right_w-20
+        rectangle(right_x,inner_y,right_w,top_height,{0.27,0.27,0.27})
+        label(active.label,right_x+6,inner_y+9,right_w-12,
+            "small","center",C.white)
+        local sample_y=inner_y+43
+        local sample_h=92
+        rectangle(rx,sample_y,rw,sample_h,{0.91,0.91,0.91},1,2)
+        for row=0,5 do for col=0,10 do
+            if (row+col)%2==0 then
+                rectangle(rx+col*rw/11,sample_y+row*sample_h/6,
+                    rw/11+0.1,sample_h/6+0.1,{0.95,0.95,0.95})
+            end
+        end end
+        draw_brush_sample(rx+17,sample_y+sample_h*0.54,rw-34,34,
+            active.kind,true)
+        rectangle(rx,sample_y+sample_h+2,rw,25,{0.25,0.25,0.25})
+        label("Brush properties",rx+5,sample_y+sample_h+9,
+            rw-10,"small","center",C.white)
+        local control_y=sample_y+sample_h+42
+        local function value_slider(yoff,title,value,suffix,kind)
+            local yy=control_y+yoff
+            label(title,rx+4,yy,rw-8,"small","left",C.white)
+            label(tostring(value)..suffix,rx+5,yy+22,
+                rw-10,"small","right",C.white)
+            local track_y=yy+43
+            local px=rx+11
+            local pw=rw-22
+            local fraction=kind=="size" and math.min(1,value/100)
+                or value/100
+            rectangle(px,track_y,pw,4,{0.62,0.62,0.62},0.68,2)
+            rectangle(px,track_y,pw*fraction,4,C.blue,1,2)
+            rgba(C.white)
+            gx.circle("fill",px+pw*fraction,track_y+2,7)
+            local function update_mouse()
+                local mx=pointer()
+                local f=math.max(0,math.min(1,(mx-px)/pw))
+                if kind=="size" then
+                    state:set_brush_size(math.max(0.1,math.floor(f*1000+0.5)/10))
+                else opacity=math.floor(f*100+0.5) end
+            end
+            hit(px,track_y-10,pw,25,function()
+                update_mouse()
+                brush_drag={kind=kind,x=px,w=pw}
+            end,"brush_"..kind.."_slider")
+        end
+        value_slider(0,"Thickness",math.floor(state.brush_size*10+0.5)/10,
+            " px","size")
+        value_slider(79,"Opacity",opacity,"%","opacity")
+        local by=control_y+174
+        rectangle(rx,by,rw,32,{0.34,0.34,0.34},0.96,3)
+        label("Reset",rx+8,by+8,rw-16,"small","center",C.white)
+        hit(rx,by,rw,32,function()
+            local selected=BrushCatalog.get(selected_brush)
+            state:set_brush_size(selected.size)
+            opacity=100
+        end,"brush_reset")
+        -- Show what the selected brush looks like without claiming to paint.
+        label("Preview only — no painting engine",
+            rx,inner_y+inner_h-32,rw,"tiny","center",C.soft)
     elseif name=="color" then
         label("Color",x+10,y+47,w-20,"normal","center",C.white)
         local sw=28
@@ -1382,6 +1577,10 @@ function love.load()
             preset_selected=10;active_dpi=300
             local wi,he=CanvasPresets.pixels(presets[10],active_dpi)
             current_width=tostring(wi);current_height=tostring(he)
+        elseif smoke_screen=="brush_search" then
+            state:open_gallery();state:open_new_canvas();state:create_canvas(1800,2400)
+            selected_brush=7;state:set_brush_size(8)
+            panel="brush";brush_search_active=true;brush_search="Airbrush"
         elseif smoke_screen=="editor" then
             state:open_gallery();state:open_new_canvas();state:create_canvas(1800,2400)
         elseif smoke_screen=="layer" or smoke_screen=="color" or smoke_screen=="brush" then
@@ -1463,6 +1662,14 @@ function love.mousepressed(rx,ry,button)
     elseif panel then panel=nil;state.active_panel=nil;layer_blend_open=false end
 end
 function love.mousemoved(rx,ry,dx,dy)
+    if brush_drag and panel=="brush" then
+        local fraction=math.max(0,math.min(1,
+            (rx/scale-brush_drag.x)/brush_drag.w))
+        if brush_drag.kind=="size" then
+            state:set_brush_size(math.max(0.1,
+                math.floor(fraction*1000+0.5)/10))
+        else opacity=math.floor(fraction*100+0.5) end
+    end
     if drag_layer and panel=="layer" then
         layer_position={x=rx/scale-drag_layer.dx,y=ry/scale-drag_layer.dy}
     end
@@ -1492,6 +1699,7 @@ end
 function love.mousereleased(rx,ry,button)
     if button~=1 then return end
     drag_dimension=nil
+    brush_drag=nil
     drag_layer=nil
     drag_layer_resize=nil
     drag_opacity=nil
@@ -1513,6 +1721,14 @@ function love.wheelmoved(dx,dy)
         local last=80+128+#presets*row_h
         gallery_scroll=math.max(0,math.min(
             math.max(0,last-(H-42)+6),gallery_scroll-dy*28))
+    elseif state.screen=="editor" and panel=="brush" then
+        local entries=brush_tab=="Basic" and BrushCatalog.search(brush_search) or {}
+        local bw=math.min(565,W-math.min(185,math.max(66,W*0.16))-34)
+        local bh=math.min(H-107,660)
+        local rows_h=math.max(32,bh-46-34-1-
+            (brush_search_active and 33 or 24)-2)
+        local maximum=math.max(0,#entries*43-rows_h)
+        brush_scroll=math.max(0,math.min(maximum,brush_scroll-dy*39))
     elseif state.screen=="gallery" and not gallery_dialog and not gallery_menu then
         local items=gallery:items()
         local columns=math.max(1,math.floor((W-58+19)/(166+19)))
@@ -1532,6 +1748,13 @@ function love.wheelmoved(dx,dy)
     end
 end
 function love.textinput(t)
+    if state.screen=="editor" and panel=="brush" and brush_search_active then
+        if #brush_search+#t<=64 then
+            brush_search=brush_search..t
+            brush_scroll=0
+        end
+        return
+    end
     if gallery_dialog and state.screen=="gallery" then
         if t~="" and #gallery_input+#t<=100 then
             gallery_input=gallery_input_replace and t or gallery_input..t
@@ -1552,6 +1775,19 @@ function love.textinput(t)
 end
 function love.keypressed(key)
     if key=="f12" then capture_requested=true;return end
+    if state.screen=="editor" and panel=="brush" and brush_search_active then
+        if key=="backspace" then
+            local index=utf8.offset(brush_search,-1)
+            brush_search=index and brush_search:sub(1,index-1) or ""
+            brush_scroll=0
+            return
+        elseif key=="escape" then
+            brush_search_active=false
+            brush_search=""
+            brush_scroll=0
+            return
+        end
+    end
     if gallery_dialog and state.screen=="gallery" then
         if key=="escape" then gallery_dialog=nil
         elseif key=="backspace" then
