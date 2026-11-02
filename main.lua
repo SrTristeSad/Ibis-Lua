@@ -18,7 +18,7 @@ local current_width, current_height = "1000", "1000"
 local focus, opacity, size_zoom = nil, 100, 100
 local input_replace = true
 local layer_press = nil
-local layer_position, drag_layer, drag_opacity = nil, nil, nil
+local layer_position, layer_size, drag_layer, drag_layer_resize, drag_opacity = nil, nil, nil, nil, nil
 local layer_blend_open = false
 local selected_brush, palette_index = 1, 1
 local toast, toast_until = nil, 0
@@ -683,7 +683,8 @@ function draw_editor_panel()
         w=math.min(370,W-90);h=440
         x=W-w-20;y=50
     elseif name=="layer" then
-        w=math.min(408,W-110);h=math.min(468,H-125)
+        w=math.max(310,math.min(layer_size and layer_size.w or 408,W-110))
+        h=math.max(360,math.min(layer_size and layer_size.h or 468,H-125))
         x=layer_position and layer_position.x or W-w-18
         y=layer_position and layer_position.y or H-h-91
         x=math.max(63,math.min(W-w-5,x))
@@ -894,6 +895,13 @@ function draw_editor_panel()
                 state:set_background(mode)
             end,"background_"..mode)
         end
+        -- Floating Layer Window grip: size-adjustment is documented for PCs.
+        line(x+w-17,y+h-5,x+w-5,y+h-17,1.2,C.white)
+        line(x+w-11,y+h-5,x+w-5,y+h-11,1.2,C.white)
+        hit(x+w-24,y+h-24,24,24,function()
+            local mx,my=pointer()
+            drag_layer_resize={start_x=mx,start_y=my,w=w,h=h}
+        end,"layer_resize")
         if layer_blend_open then
             local opts={"Normal","Multiply","Screen","Overlay","Darken","Lighten",
                 "Color Burn","Color Dodge","Soft Light"}
@@ -1090,6 +1098,12 @@ function love.load()
             state:open_gallery();state:open_new_canvas();state:create_canvas(1800,2400)
             state:add_layer();state:toggle_layer_solo(1)
             set_panel("layer")
+        elseif smoke_screen=="layer_floating" then
+            state:open_gallery();state:open_new_canvas();state:create_canvas(1800,2400)
+            state:add_layer()
+            layer_size={w=340,h=390}
+            layer_position={x=128,y=86}
+            set_panel("layer")
         elseif smoke_screen=="layer_properties" or smoke_screen=="layer_blend"
             or smoke_screen=="transparent" then
             state:open_gallery();state:open_new_canvas();state:create_canvas(1800,2400)
@@ -1154,6 +1168,13 @@ function love.mousemoved(rx,ry,dx,dy)
     if drag_layer and panel=="layer" then
         layer_position={x=rx/scale-drag_layer.dx,y=ry/scale-drag_layer.dy}
     end
+    if drag_layer_resize and panel=="layer" then
+        local g=drag_layer_resize
+        layer_size={
+            w=math.max(310,math.min(W-110,g.w+rx/scale-g.start_x)),
+            h=math.max(360,math.min(H-125,g.h+ry/scale-g.start_y))
+        }
+    end
     if drag_opacity and panel=="layer" then
         local p=drag_opacity
         state:set_layer_opacity(p.id,math.floor(
@@ -1174,6 +1195,7 @@ function love.mousereleased(rx,ry,button)
     if button~=1 then return end
     drag_dimension=nil
     drag_layer=nil
+    drag_layer_resize=nil
     drag_opacity=nil
     view:end_pan()
     if layer_press then
@@ -1358,8 +1380,25 @@ function love.update()
         assert(state.background_mode=="transparent_dark",
             "UI e2e: transparência de fundo não alterada")
         e2e_stage=13
+    elseif e2e_stage==13 then
+        -- Drive actual mouse movement through the floating-window grip.
+        local resize
+        for i=#controls,1,-1 do
+            if controls[i].key=="layer_resize" then
+                resize=controls[i];break
+            end
+        end
+        assert(resize,"UI e2e: resize grip missing")
+        local mx=(resize.x+resize.w/2)*scale
+        local my=(resize.y+resize.h/2)*scale
+        love.mousepressed(mx,my,1)
+        love.mousemoved(mx-40*scale,my-30*scale,-40*scale,-30*scale)
+        love.mousereleased(mx-40*scale,my-30*scale,1)
+        assert(layer_size and layer_size.w<408 and layer_size.h<468,
+            "UI e2e: resize da janela Layer falhou")
+        e2e_stage=14
     else
-        print("PASS: UI LÖVE end-to-end (galeria, canvas, View e propriedades de camadas)")
+        print("PASS: UI LÖVE end-to-end (galeria, canvas, View e camadas flutuantes)")
         love.event.quit(0)
     end
 end
