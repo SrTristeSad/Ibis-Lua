@@ -41,31 +41,87 @@ local function titleScreen(w,h)
   U.button("Settings",w-128,14,110,29,enterSettings,false,{0.25,0.38,0.53})
 end
 local function galleryScreen(w,h)
+  -- Reference: ibisPaint for Windows My Gallery, screenshot of New Canvas
+  -- with title/plus/info/play/share/more/Select/Edit in the top band.
   U.rect(0,0,w,h,C.offwhite)
-  U.rect(0,0,w,42,{0.23,0.23,0.23})
-  U.text("My Gallery ("..#s.works..")",18,10,w*.4,C.white,"body","center")
-  U.button("+",w-205,5,40,32,function() Model.openNewCanvas(s) end,false,{0.25,0.25,0.25})
-  U.button("Select",w-160,5,72,32,function() s.menu=s.menu=="select" and nil or "select" end)
-  U.button("Edit",w-84,5,74,32,function() s.menu=s.menu=="edit" and nil or "edit" end)
-  U.text("Cloud Synchronization",15,58,180,C.gray,"small")
-  U.button("OFF",185,52,58,25,function() s.settings.cloud=not s.settings.cloud end,s.settings.cloud)
+  U.rect(0,0,w,42,{.19,.19,.19})
+  U.text("My Gallery ("..#s.works..")",20,12,330,C.white,"body")
+  local actions={
+    {"GalleryAdd",function() Model.openNewCanvas(s) end},
+    {"Info",function() s.notification="Gallery: "..#s.works.." work(s) stored in this session." end},
+    {"Play",function()
+      s.notification=#s.works>0 and "Playback requires image data." or "There is no artwork."
+    end},
+    {"Share",function()s.notification="Image sharing is unavailable without a painting engine."end},
+    {"More",function()s.galleryMore=not s.galleryMore end}
+  }
+  local firstX=w-326
+  for i,action in ipairs(actions) do
+    local cx=firstX+(i-1)*38
+    U.icon(action[1],cx,21,20,{.77,.77,.77})
+    U.hitbox(cx-15,4,30,34,action[2])
+  end
+  U.button("Select",w-141,5,63,31,function()
+    s.gallerySelect=not s.gallerySelect
+    s.galleryMore=false
+  end,s.gallerySelect,{.23,.23,.23})
+  U.button("Edit",w-75,5,68,31,function()
+    s.gallerySelect=true
+    s.galleryMore=not s.galleryMore
+  end,s.galleryMore,{.23,.23,.23})
+  U.text("Cloud Synchronization",14,56,166,C.gray,"small")
+  U.rect(169,51,43,24,s.settings.cloud and {.25,.61,.91} or {.72,.72,.72},12)
+  U.circle(s.settings.cloud and 200 or 181,63,10,C.white)
+  U.hitbox(169,51,43,24,function()s.settings.cloud=not s.settings.cloud end)
+  U.icon("Info",227,63,13,C.gray)
+  U.hitbox(217,52,23,23,function()s.notification="Cloud sync is unavailable in local visual demo."end)
   if #s.works==0 then
     U.text("There is no artwork.",0,h*.56,w,C.gray,"body","center")
-    U.text("Press '+' button to create a new artwork.",0,h*.56+24,w,C.gray,"small","center")
+    U.text("Press '+' button to create a new artwork.",0,h*.56+23,w,C.gray,"small","center")
   else
     local size=170;local gap=23
+    local columns=math.max(1,math.floor((w-25)/(size+gap)))
     for i,work in ipairs(s.works) do
-      local col=(i-1)%math.max(1,math.floor((w-25)/(size+gap)))
-      local row=math.floor((i-1)/math.max(1,math.floor((w-25)/(size+gap))))
+      local col=(i-1)%columns
+      local row=math.floor((i-1)/columns)
       local x=22+col*(size+gap);local y=120+row*(size+gap+36)
-      U.rect(x,y,size,size,{1,1,1})
-      U.stroke(x,y,size,size,{0.8,0.8,0.8})
+      U.rect(x,y,size,size,C.white)
+      U.stroke(x,y,size,size,{.8,.8,.8})
       U.text("Blank Canvas",x,y+size*.45,size,C.gray,"small","center")
+      if s.gallerySelect and s.selectedWork==i then
+        U.stroke(x-2,y-2,size+4,size+4,C.accent)
+      end
       U.text(work.title,x,y+size+8,size,C.ink,"body","center")
-      U.hitbox(x,y,size,size+33,function() Model.openWork(s,i) end)
+      U.hitbox(x,y,size,size+33,function()
+        if s.gallerySelect then s.selectedWork=i
+        else Model.openWork(s,i) end
+      end)
     end
   end
-  U.button("Back",15,h-42,90,30,back)
+  if s.galleryMore then
+    local mx=w-213
+    U.rect(mx,43,208,111,{.28,.28,.28,.97},3)
+    local items={
+      {"Duplicate Artwork",function()
+        if s.works[s.selectedWork or 1] then
+          local orig=s.works[s.selectedWork or 1]
+          table.insert(s.works,1,{title=orig.title.." Copy",w=orig.w,h=orig.h})
+        else s.notification="Select an artwork first." end
+      end},
+      {"Delete Artwork",function()
+        if s.works[s.selectedWork or 1] then
+          table.remove(s.works,s.selectedWork or 1)
+          s.selectedWork=nil
+        else s.notification="Select an artwork first." end
+      end},
+      {"Close",function() end}
+    }
+    for i,it in ipairs(items) do
+      local iy=45+(i-1)*36
+      U.text(it[1],mx+9,iy+9,194,C.white,"body")
+      U.hitbox(mx,iy,208,35,function()s.galleryMore=false;it[2]()end)
+    end
+  end
 end
 local function textField(label,value,x,y,width,key)
   U.text(label,x,y,width,C.ink,"small")
