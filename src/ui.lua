@@ -81,7 +81,7 @@ end
 U.hsv=hsv
 function U.colorWheel(cx,cy,r,selected)
   local oldR,oldG,oldB,oldA=lg.getColor()
-  local count=48
+  local count=96
   local inner=r*.58
   for k=0,count-1 do
     local a=-math.pi/2+2*math.pi*k/count
