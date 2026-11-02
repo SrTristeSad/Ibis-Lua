@@ -4,8 +4,10 @@
 -- Fidelity to version 14.1.4 is NOT yet certified. No paint/image engine.
 local Model = require("src.model")
 local Viewport = require("src.viewport")
+local ViewState = require("src.view_state")
 local state = Model.new()
 local view = Viewport.new()
+local visual = ViewState.new()
 local controls = {}
 local font = {}
 local scale, W, H = 1, 1024, 768
@@ -249,6 +251,11 @@ local function glyph(name,cx,cy,r)
         g.line(8*d,3*d,8*d,8*d,3*d,8*d)
         g.line(-8*d,3*d,-8*d,8*d,-3*d,8*d)
         g.line(8*d,-3*d,8*d,-8*d,3*d,-8*d)
+    elseif name=="view" then
+        g.rectangle("line",-9*d,-7*d,18*d,14*d)
+        g.line(-6*d,-3*d,6*d,-3*d)
+        g.line(-6*d,1*d,5*d,1*d)
+        g.line(-6*d,5*d,2*d,5*d)
     elseif name=="settings" then
         g.circle("line",0,0,8*d)
         g.circle("line",0,0,3*d)
@@ -529,6 +536,56 @@ local function draw_size_controls()
     end,"opacity_slider")
 end
 
+-- Os guias existem apenas na visualização: nenhum pixel de obra é modificado.
+-- Coordenadas em pixels do canvas; todo o conjunto herda pan/zoom/rotação.
+local function draw_view_guides(dw,dh,canvas_scale)
+    if visual.grid then
+        local function grid_pass(interval,shade,alpha)
+            -- Evitar milhares de linhas invisíveis em zooms muito baixos.
+            if interval*canvas_scale<6 then return end
+            rgba(shade,alpha)
+            love.graphics.setLineWidth(math.max(0.2,0.85/canvas_scale))
+            local begin_x=visual.offset_x%interval
+            local begin_y=visual.offset_y%interval
+            local x=begin_x
+            while x<dw do
+                love.graphics.line(x-dw/2,-dh/2,x-dw/2,dh/2)
+                x=x+interval
+            end
+            local y=begin_y
+            while y<dh do
+                love.graphics.line(-dw/2,y-dh/2,dw/2,y-dh/2)
+                y=y+interval
+            end
+        end
+        grid_pass(visual.grid1,C.dark,0.22)
+        grid_pass(visual.grid2,C.blue,0.54)
+    end
+    if visual.manga then
+        rgba({0.94,0.25,0.29},0.55)
+        love.graphics.setLineWidth(math.max(0.2,1.2/canvas_scale))
+        love.graphics.rectangle("line",-dw*0.47,-dh*0.47,dw*0.94,dh*0.94)
+        love.graphics.rectangle("line",-dw*0.40,-dh*0.40,dw*0.80,dh*0.80)
+    end
+end
+local function draw_reference_window()
+    local pw=210
+    local x,y=W-pw-14,53
+    local h=178
+    rectangle(x,y,pw,h,C.deep,0.94,3)
+    rectangle(x,y,pw,30,C.bar,0.98,3)
+    label("Reference Window",x+7,y+8,pw-48,"small","left",C.white)
+    icon_button(x+pw-31,y+2,27,26,"check",function()
+        visual:toggle_reference()
+    end)
+    rectangle(x+13,y+40,pw-26,111,C.light,0.97)
+    local dw,dh=state.document.width,state.document.height
+    local factor=math.min((pw-54)/dw,93/dh)
+    rectangle(x+pw/2-dw*factor/2,y+49+(93-dh*factor)/2,
+        dw*factor,dh*factor,C.white)
+    label("Canvas mode (simulado)",x+5,y+156,pw-10,"tiny","center",C.white)
+end
+
 local function editor_screen()
     rectangle(0,0,W,H,C.background)
     local right=W-5
@@ -547,9 +604,10 @@ local function editor_screen()
     local shadow=3/actual_scale
     rectangle(-dw/2-shadow,-dh/2-shadow,dw+shadow*2,dh+shadow*2,C.deep,0.16)
     rectangle(-dw/2,-dh/2,dw,dh,C.white)
+    draw_view_guides(dw,dh,actual_scale)
     love.graphics.pop()
     -- Top-right Windows editor controls, seen in product screenshot.
-    local tops={"settings","selection","stabilizer","shape","ruler","material"}
+    local tops={"view","selection","stabilizer","shape","ruler","material"}
     for i,name in ipairs(tops) do
         local x=right-34*(#tops-i+1)
         if over(x,9,31,31) then rectangle(x,9,31,31,C.dark,0.2,16) end
@@ -579,6 +637,7 @@ local function editor_screen()
             else panel=nil;state.active_panel=nil end
         end,key)
     end
+    if visual.reference then draw_reference_window() end
     draw_size_controls()
     label(string.format("%d%%",math.floor(view.zoom*100+0.5)),
         W-72,H-72,67,"small","right",C.ink)
@@ -601,6 +660,12 @@ function draw_editor_panel()
     local x,y,w,h
     if name=="brush" or name=="tools" or name=="color" then
         x=65;y=92;w=math.min(505,W-140);h=math.min(570,H-185)
+    elseif name=="view" then
+        w=math.min(350,W-90);h=342
+        x=W-w-20;y=50
+    elseif name=="grid_settings" then
+        w=math.min(370,W-90);h=440
+        x=W-w-20;y=50
     elseif name=="layer" then
         w=math.min(390,W-120);h=math.min(390,H-160)
         x=W-w-18;y=H-h-100
@@ -609,11 +674,77 @@ function draw_editor_panel()
         x=W-w-22;y=58
     end
     local titles={brush="Brush",tools="Tool Select",color="Color",layer="Layer",
-        back="Back",settings="View Menu",selection="Selection Area",
+        back="Back",view="View Menu",grid_settings="Grid Settings",
+        settings="Settings",selection="Selection Area",
         stabilizer="Stabilizer",shape="Shape",ruler="Ruler",material="Material",
         text="Text"}
     draw_panel_box(x,y,w,h,titles[name] or name)
-    if name=="layer" then
+    if name=="view" then
+        local bx=x+12
+        local function option(yy,text,is_enabled,action,key)
+            rectangle(bx,yy,w-24,36,C.white,over(bx,yy,w-24,36) and 0.18 or 0.07,2)
+            stroke(bx+9,yy+9,18,18,C.soft)
+            if is_enabled then
+                line(bx+12,yy+19,bx+16,yy+23,2,C.white)
+                line(bx+16,yy+23,bx+24,yy+12,2,C.white)
+            end
+            label(text,bx+38,yy+10,w-70,"small","left",C.white)
+            hit(bx,yy,w-24,36,action,key)
+        end
+        option(y+47,"Reference Window",visual.reference,
+            function() visual:toggle_reference() end,"view_reference")
+        option(y+87,"Grid",visual.grid,
+            function() visual:toggle_grid() end,"view_grid")
+        option(y+167,"Manga Manuscript",visual.manga,
+            function() visual:toggle_manga() end,"view_manga")
+        option(y+247,"Display when zoomed: "..visual.interpolation,false,
+            function() visual:toggle_interpolation() end,"view_interpolation")
+        local function section(yy,name,callback,key)
+            rectangle(bx+17,yy,w-41,33,C.deep,over(bx+17,yy,w-41,33) and 0.95 or 0.48,2)
+            label(name,bx+29,yy+9,w-67,"small","left",C.white)
+            label(">",bx+w-69,yy+9,20,"small","right",C.white)
+            hit(bx+17,yy,w-41,33,callback,key)
+        end
+        section(y+127,"Grid Settings",function() set_panel("grid_settings") end,
+            "view_grid_settings")
+        section(y+207,"Manga Manuscript Settings",function()
+            notice("Configurações detalhadas ainda sem referência Windows 14.1.4.")
+        end,"view_manga_settings")
+    elseif name=="grid_settings" then
+        local bx=x+13
+        local function switch(yy,name,value,key,minus,plus)
+            label(name,bx,yy,w-23,"small","left",C.white)
+            rectangle(bx,yy+22,w-26,38,C.white,0.06,2)
+            label(tostring(value).." px",bx+55,yy+32,w-145,"small","center",C.white)
+            plain_button(bx+4,yy+25,41,31,"-",minus)
+            plain_button(x+w-60,yy+25,41,31,"+",plus)
+            hit(x+w-60,yy+25,41,31,plus,"increase_"..key)
+        end
+        local function change_interval(key,d)
+            visual:set_interval(key,math.max(1,math.min(8192,visual[key]+d)))
+        end
+        switch(y+48,"Grid 1 Interval",visual.grid1,"grid1",
+            function() change_interval("grid1",-8) end,
+            function() change_interval("grid1",8) end)
+        switch(y+121,"Grid 2 Interval",visual.grid2,"grid2",
+            function() change_interval("grid2",-32) end,
+            function() change_interval("grid2",32) end)
+        label("Grid Origin",bx,y+203,w-26,"small","left",C.white)
+        plain_button(bx,y+229,(w-38)/2,33,
+            "X  "..visual.offset_x,function()
+                visual:set_origin(visual.offset_x+8,visual.offset_y)
+            end)
+        plain_button(bx+6+(w-38)/2,y+229,(w-38)/2,33,
+            "Y  "..visual.offset_y,function()
+                visual:set_origin(visual.offset_x,visual.offset_y+8)
+            end)
+        plain_button(bx,y+292,w-26,36,
+            "Reset Grid",function() visual:reset_grid() end)
+        -- Substitui um botão de cor ainda não pesquisado por estado documentado.
+        label(visual.grid and "Show Grid: On" or "Show Grid: Off",
+            bx,y+340,w-26,"small","center",C.soft)
+        hit(bx,y+330,w-26,35,function() visual:toggle_grid() end,"settings_grid_toggle")
+    elseif name=="layer" then
         local bx=x+12
         rectangle(bx,y+49,w-59,45,{0.76,0.76,0.76},0.3)
         label("Selection Layer",bx+38,y+61,w-106,"small","left",C.white)
