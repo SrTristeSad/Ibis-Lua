@@ -92,6 +92,57 @@ local function set_panel(name)
         state.active_panel=nil
     end
 end
+local picker_hue=0
+local function hsv_rgb(h,s,v)
+    h=(h%1)*6
+    local i=math.floor(h)
+    local f=h-i
+    local p=v*(1-s)
+    local q=v*(1-f*s)
+    local t=v*(1-(1-f)*s)
+    if i==0 then return {v,t,p}
+    elseif i==1 then return {q,v,p}
+    elseif i==2 then return {p,v,t}
+    elseif i==3 then return {p,q,v}
+    elseif i==4 then return {t,p,v}
+    else return {v,p,q} end
+end
+local function draw_hue_wheel(cx,cy,r)
+    local steps=72
+    for i=0,steps-1 do
+        local a=-math.pi/2+i*2*math.pi/steps
+        local b=-math.pi/2+(i+1)*2*math.pi/steps
+        rgba(hsv_rgb(i/steps,1,1))
+        love.graphics.polygon("fill",
+            cx+math.cos(a)*r,cy+math.sin(a)*r,
+            cx+math.cos(b)*r,cy+math.sin(b)*r,
+            cx+math.cos(b)*(r-17),cy+math.sin(b)*(r-17),
+            cx+math.cos(a)*(r-17),cy+math.sin(a)*(r-17))
+    end
+    local N=24
+    local radius=r-23
+    for i=0,N-1 do
+        for j=0,N-1 do
+            local u=(i+0.5)/N
+            local v=(j+0.5)/N
+            rgba(hsv_rgb(picker_hue,u,1-v))
+            local function q(uu,vv)
+                return cx+(uu-vv)*radius,cy+(uu+vv-1)*radius
+            end
+            local x1,y1=q(i/N,j/N)
+            local x2,y2=q((i+1)/N,j/N)
+            local x3,y3=q((i+1)/N,(j+1)/N)
+            local x4,y4=q(i/N,(j+1)/N)
+            love.graphics.polygon("fill",x1,y1,x2,y2,x3,y3,x4,y4)
+        end
+    end
+    rgba(C.white)
+    love.graphics.setLineWidth(1.4)
+    love.graphics.polygon("line",cx,cy-radius,cx+radius,cy,cx,cy+radius,cx-radius,cy)
+    local t=picker_hue*2*math.pi-math.pi/2
+    love.graphics.circle("line",cx+math.cos(t)*(r-8),cy+math.sin(t)*(r-8),6)
+end
+
 local function outline_circle(x,y,r,alpha)
     rgba(C.white,alpha or 0.8)
     love.graphics.setLineWidth(1.6)
@@ -567,12 +618,12 @@ function draw_editor_panel()
         end)
         label("Opacity: "..opacity.."%",rx,y+256,w*0.31,"small","left",C.white)
     elseif name=="color" then
-        label("Color",x+13,y+54,w-26,"normal","center",C.white)
-        local sw=34
+        label("Color",x+10,y+47,w-20,"normal","center",C.white)
+        local sw=28
         for i,c in ipairs(palette) do
             local col={c[1]/255,c[2]/255,c[3]/255}
-            local xx=x+19+(i-1)%6*(sw+9)
-            local yy=y+93+math.floor((i-1)/6)*(sw+9)
+            local xx=x+17+(i-1)%6*(sw+7)
+            local yy=y+86+math.floor((i-1)/6)*(sw+7)
             rectangle(xx,yy,sw,sw,col)
             if i==palette_index then stroke(xx-2,yy-2,sw+4,sw+4,C.white) end
             local id=i
@@ -581,13 +632,65 @@ function draw_editor_panel()
                 state:set_color(c[1],c[2],c[3])
             end,"color_swatch")
         end
-        -- Visible color panel is deliberately simpler than genuine picker:
-        -- no false implication of verified original hue-wheel geometry.
+        local wheel_x=x+w-132
+        local wheel_y=y+204
+        local radius=106
+        draw_hue_wheel(wheel_x,wheel_y,radius)
+        hit(wheel_x-radius,wheel_y-radius,radius*2,radius*2,function()
+            local mx,my=pointer()
+            local dx,dy=mx-wheel_x,my-wheel_y
+            local distance=math.sqrt(dx*dx+dy*dy)
+            if distance>radius-25 then
+                local a
+                if math.atan2 then
+                    a=math.atan2(dy,dx)
+                elseif dx~=0 then
+                    a=math.atan(dy/dx)
+                    if dx<0 then a=a+math.pi end
+                else
+                    a=dy>=0 and math.pi/2 or -math.pi/2
+                end
+                picker_hue=((a+math.pi/2)/(2*math.pi))%1
+                local rgb=hsv_rgb(picker_hue,1,1)
+                state:set_color(math.floor(rgb[1]*255+0.5),
+                    math.floor(rgb[2]*255+0.5),math.floor(rgb[3]*255+0.5))
+                palette_index=0
+            else
+                local u=(dx+dy)/((radius-23)*2)+0.5
+                local v=(dy-dx)/((radius-23)*2)+0.5
+                u=math.max(0,math.min(1,u))
+                v=math.max(0,math.min(1,v))
+                local rgb=hsv_rgb(picker_hue,u,1-v)
+                state:set_color(math.floor(rgb[1]*255+0.5),
+                    math.floor(rgb[2]*255+0.5),math.floor(rgb[3]*255+0.5))
+                palette_index=0
+            end
+        end,"hue_wheel")
         local rgb=state.color
-        label("R  "..rgb[1].."      G  "..rgb[2].."      B  "..rgb[3],
-            x+20,y+196,w-40,"normal","center",C.white)
-        rectangle(x+20,y+236,w-40,72,
+        label(string.format("#%02X%02X%02X",rgb[1],rgb[2],rgb[3]),
+            x+15,y+330,w-30,"normal","center",C.white)
+        rectangle(x+16,y+360,w-32,34,
             {rgb[1]/255,rgb[2]/255,rgb[3]/255})
+        local channel_names={"R","G","B"}
+        local sliders={{1,0,0},{0,1,0},{0,0,1}}
+        for i=1,3 do
+            local yy=y+418+(i-1)*36
+            label(channel_names[i],x+22,yy,w*0.17,"small","left",C.white)
+            rectangle(x+64,yy+4,w-141,5,C.soft,0.60)
+            local xx=x+64+(w-141)*rgb[i]/255
+            rectangle(x+64,yy+4,(w-141)*rgb[i]/255,5,sliders[i])
+            rgba(C.white);love.graphics.circle("fill",xx,yy+6,7)
+            label(tostring(rgb[i]),x+w-67,yy,w*0.1,"small","right",C.white)
+            local channel=i
+            hit(x+64,yy-6,w-141,25,function()
+                local mx=pointer()
+                local next_rgb={state.color[1],state.color[2],state.color[3]}
+                next_rgb[channel]=math.floor(math.max(0,
+                    math.min(1,(mx-x-64)/(w-141)))*255+0.5)
+                state:set_color(next_rgb[1],next_rgb[2],next_rgb[3])
+                palette_index=0
+            end,"rgb_slider")
+        end
     elseif name=="tools" then
         for i,item in ipairs(tools) do
             local bw=(w-24)/3
