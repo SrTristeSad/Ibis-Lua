@@ -46,7 +46,7 @@ function M.panel(name,v,columns)
     layers={w=311,h=360,side='right'},
     color={w=371,h=395,side='right'},
     settings={w=445,h=390,side='center'},
-    canvas_new={w=409,h=398,side='center'},
+    canvas_new={w=409,h=430,side='center'},
     back={w=329,h=220,side='center'},
     view={w=275,h=275,side='right'},
     selection={w=320,h=320,side='right'},
