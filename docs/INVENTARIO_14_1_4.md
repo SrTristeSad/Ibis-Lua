@@ -14,7 +14,7 @@ Legenda:
 | Pincel e opções | R3 | Evidência Windows sem versão; medidas/ícones pendentes |
 | Borracha | R3 | Evidência Windows sem versão |
 | Cor / seletor / paleta | R3 | Evidência Windows sem versão |
-| Camadas e blending | R4, R6 | Pendente |
+| Camadas e blending | R4, R6 e Layer Window Details oficial (no=156) | Janela e controles interativos demonstrativos; composição real e geometria 14.1.4 pendentes |
 | Transformação / seleção | R3, R4 | Pendente |
 | Preenchimento / filtros | R3, R4 | Pendente |
 | Texto / formas / réguas | R3, R4 | Pendente |

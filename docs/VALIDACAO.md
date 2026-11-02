@@ -46,3 +46,10 @@
 - Módulo testado: `luajit tests/test_view_state.lua`, cobrindo toggles, intervalos, cores demonstrativas, interpolação explícita e reset.
 - Integração `IBIS_LUA_E2E=1 love .`: após criar canvas e abrir Layer, abre View Menu, alterna Grid e Reference Window, escolhe Pixelated, abre Grid Settings, incrementa Grid 1 Interval e testa Reset.
 - Pipeline: 13 capturas de estados de UI, ainda em Linux/Xvfb; **não constituem provas de correspondência de pixels com o aplicativo Windows original**.
+
+## Layer Window — testes e limites da etapa
+
+- `luajit tests/test_layer_properties.lua`: operações de dados para opacidade, blending, clipping, alpha lock, lock, rename e modos de fundo; recusa valores inválidos.
+- `IBIS_LUA_E2E=1 love .`: testes adicionais por clique real nos controles do painel de camada.
+- GitHub Actions salva capturas de 16 estados, incluindo popup de modos de mesclagem e representação de fundo transparente.
+- Nenhuma imagem original do Windows 14.1.4 foi comparada pixel a pixel. Aprovado em CI não significa layout equivalente ou efeitos reais implementados.

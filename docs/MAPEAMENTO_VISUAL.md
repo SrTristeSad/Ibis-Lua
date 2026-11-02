@@ -107,3 +107,17 @@ Referências oficiais de nomenclatura e funcionamento:
 **Implementado agora**: ViewState independente de motor de pintura, opções com controles de estado, guias renderizadas sobre o canvas respeitando zoom/rotação, janela de referência demonstrativa em modo Canvas, seleção Smooth/Pixelated, botões para intervalos, origem e cores de exemplo. Novos testes de modelo e cliques reais de integração (incluindo View Menu e Grid Settings); quatro capturas adicionais incorporadas ao CI.
 
 **Pendências**: seletor real de cores de guia, edição fina/drag dos parâmetros da grade, proporções exatas, toda a janela real de referência e referência Windows 14.1.4 em resolução, DPI e idioma medidos. Os controles de interpolação mudam apenas o estado porque não existe motor de imagens.
+
+## W10 — Layer Window Details: estrutura e interação
+
+**Fonte principal oficial:** https://ibispaint.com/lecture/index.jsp?no=156
+
+**Referência Windows com versão não comprovada:** https://ibis-paint.en.uptodown.com/windows, captura do painel Layer.
+
+**Componentes fundamentados:** Selection Layer, itens de camada com miniatura, controle de visibilidade, Add Layer, Clipping, Alpha Lock, Opacity, Blending Mode e janela Layer flutuante móvel em PC. O manual oficial descreve também ferramentas com impacto em pixels, mas elas **não** foram implementadas.
+
+**Implementação:** novos estados de camada em `src/model.lua` com opacidade 0–100, blending simulado, clipping, alpha lock, lock, rename, modos de fundo branco/transparente claro/transparente escuro. Em `main.lua`: painel flutuante arrastável, lista de camadas demonstrativas, popup de blending, sliders de opacidade, opções de fundo e padrão de xadrez apenas visual.
+
+**Teste:** `tests/test_layer_properties.lua` para propriedades e limites; E2E LÖVE para adicionar camada, alternar clipping/Alpha Lock, ajustar opacidade, escolher Multiply e fundo transparente escuro.
+
+**Incertezas:** screenshots públicos da edição Windows não certificam a compilação **14.1.4**, nem medidas exatas de janela, tipografia ou ícones. Miniaturas não contêm obras, e blending não é aplicado aos pixels. O desenho e a geometria permanecem classificados como **provisórios**, não como reprodução fiel.
