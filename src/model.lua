@@ -87,7 +87,11 @@ end
 function Model:toggle_panel(panel)
     require_screen(self, "editor")
     assert(valid_panels[panel], "Painel não documentado no modelo")
-    self.active_panel = self.active_panel == panel and nil or panel
+    if self.active_panel == panel then
+        self.active_panel = nil
+    else
+        self.active_panel = panel
+    end
 end
 
 function Model:set_brush_size(size)
