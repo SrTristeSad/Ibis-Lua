@@ -1,0 +1,31 @@
+name: Lua model and screenshot tooling
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Lua and screenshot test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y luajit love xvfb
+          python -m pip install -r requirements-dev.txt
+      - name: Check syntax of every Lua source
+        run: |
+          while IFS= read -r file; do
+            luajit -e 'assert(loadfile(arg[1]))' "$file"
+          done < <(find . -name '*.lua' -type f | sort)
+        shell: bash
+      - name: Run state model tests
+        run: luajit tests/test_model.lua
+      - name: Run screenshot comparator tests
+        run: python -m unittest discover -s tests -p 'test_compare.py' -v
+      - name: Start LÖVE in headless display and capture diagnostic image
+        run: |
+          timeout 20s xvfb-run -a env IBIS_LUA_SMOKE=1 love .
+          find "$HOME/.local/share/love" -name ci-smoke.png -size +100c -print -quit | grep -q ci-smoke.png

@@ -1,0 +1,7 @@
+*.love
+*.log
+__pycache__/
+*.pyc
+reference_private/
+comparison_output/
+ci-smoke.png
