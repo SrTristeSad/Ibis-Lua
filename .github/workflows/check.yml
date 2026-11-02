@@ -21,8 +21,11 @@ jobs:
             luajit -b "$file" /dev/null
           done < <(find . -name '*.lua' -type f | sort)
         shell: bash
-      - name: Run state model tests
-        run: luajit tests/test_model.lua
+      - name: Run state, viewport and solo layer tests
+        run: |
+          luajit tests/test_model.lua
+          luajit tests/test_viewport.lua
+          luajit tests/test_layer_solo.lua
       - name: Run screenshot comparator tests
         run: python -m unittest discover -s tests -p 'test_compare.py' -v
       - name: Run LÖVE and capture seven actual UI screens
