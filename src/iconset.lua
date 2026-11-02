@@ -220,6 +220,26 @@ renderers["Down"] = function()
 end
 renderers["Minus"] = function() W(2.2) L(-7,0,7,0) end
 renderers["Plus"] = function() W(2.2) L(-7,0,7,0) L(0,-7,0,7) end
+renderers["Info"] = function()
+  W(1.6)
+  S(0,0,10)
+  F(0,-5,1.2)
+  L(0,-2,0,7)
+end
+renderers["Play"] = function()
+  P(-6,-10,10,0,-6,10)
+end
+renderers["Share"] = function()
+  W(1.8)
+  O(-10,0,-10,10,9,10,9,0)
+  L(-2,4,10,-8)
+  L(3,-8,10,-8,10,-1)
+end
+renderers["GalleryAdd"] = function()
+  W(2)
+  L(-9,0,9,0)
+  L(0,-9,0,9)
+end
 renderers["Camera"] = function()
   W(1.75)
   O(-11,-7,-5,-7,-3,-10,4,-10,6,-7,11,-7,11,9,-11,9)
