@@ -152,6 +152,35 @@ function U.icon(name,cx,cy,size,colour)
     U.color(c);lg.polygon("line",cx-6,cy-1,cx+1,cy-8,cx+8,cy-1,cx+1,cy+6)
   elseif name=="Vector" then
     U.color(c);lg.polygon("line",cx-6,cy-10,cx-6,cy+9,cx,cy+3,cx+7,cy+4)
+  elseif name=="Layer" then
+    U.stroke(cx-9,cy-6,15,14,c)
+    U.stroke(cx-5,cy-9,15,14,c)
+  elseif name=="Undo" or name=="Redo" then
+    U.color(c)
+    lg.arc("line","open",cx,cy+2,8,math.pi*.2,math.pi*1.75)
+    if name=="Undo" then
+      U.line(cx-9,cy-7,cx-11,cy+1,c)
+      U.line(cx-9,cy-7,cx-1,cy-7,c)
+    else
+      U.line(cx+9,cy-7,cx+11,cy+1,c)
+      U.line(cx+9,cy-7,cx+1,cy-7,c)
+    end
+  elseif name=="Full Screen" then
+    U.line(cx-8,cy-3,cx-8,cy-8,c);U.line(cx-8,cy-8,cx-3,cy-8,c)
+    U.line(cx+8,cy-3,cx+8,cy-8,c);U.line(cx+8,cy-8,cx+3,cy-8,c)
+    U.line(cx-8,cy+3,cx-8,cy+8,c);U.line(cx-8,cy+8,cx-3,cy+8,c)
+    U.line(cx+8,cy+3,cx+8,cy+8,c);U.line(cx+8,cy+8,cx+3,cy+8,c)
+  elseif name=="Back" then
+    U.line(cx+9,cy,cx-8,cy,c,2)
+    U.line(cx-8,cy,cx-1,cy-7,c,2)
+    U.line(cx-8,cy,cx-1,cy+7,c,2)
+  elseif name=="Tool Select" then
+    U.stroke(cx-8,cy-8,6,6,c);U.stroke(cx+2,cy-8,6,6,c)
+    U.stroke(cx-8,cy+2,6,6,c);U.stroke(cx+2,cy+2,6,6,c)
+  elseif name=="Properties" then
+    U.line(cx-9,cy-5,cx+9,cy-5,c)
+    U.line(cx-9,cy+5,cx+9,cy+5,c)
+    U.circle(cx-2,cy-5,3,c);U.circle(cx+5,cy+5,3,c)
   elseif name=="Text" then
     U.text("T",cx-a,cy-a-2,s,c,"heading","center")
   elseif name=="Frame Divider" or name=="Canvas" then
