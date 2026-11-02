@@ -34,6 +34,8 @@ local toast, toast_until = nil, 0
 local smoke = os.getenv("IBIS_LUA_SMOKE") == "1"
 local e2e = os.getenv("IBIS_LUA_E2E") == "1"
 local e2e_stage = 0
+local gallery_e2e = os.getenv("IBIS_LUA_GALLERY_E2E") == "1"
+local gallery_e2e_stage = 0
 local smoke_screen = os.getenv("IBIS_LUA_SCREEN") or "title"
 local capture_requested, capture_done, capture_pending, capture_error = false, false, false, nil
 local C = {
@@ -1321,6 +1323,24 @@ function love.load()
     end
     if smoke then
         if smoke_screen=="gallery" then state:open_gallery()
+        elseif smoke_screen=="gallery_new" then
+            state:open_gallery();gallery_menu="new"
+        elseif smoke_screen=="gallery_folders" then
+            state:open_gallery()
+            gallery:add_folder("Projects")
+            gallery:add_folder("Archive")
+            gallery:add_artwork(1024,768,"Untitled 1")
+        elseif smoke_screen=="gallery_inside" then
+            state:open_gallery()
+            local fid=gallery:add_folder("Projects")
+            gallery:enter(fid)
+            gallery:add_artwork(900,600,"Study")
+        elseif smoke_screen=="gallery_selection" then
+            state:open_gallery()
+            gallery:add_folder("Projects")
+            local id=gallery:add_artwork(900,600,"Study")
+            gallery_selecting=true
+            gallery:select(id)
         elseif smoke_screen=="new_canvas" then state:open_gallery();state:open_new_canvas()
         elseif smoke_screen=="new_canvas_dpi" then
             state:open_gallery();state:open_new_canvas()
@@ -1568,13 +1588,109 @@ local function click_control(key)
     love.mousereleased(x,y,1)
 end
 
+local function gallery_e2e_update()
+    if gallery_e2e_stage==0 then
+        click_control("brush")
+        assert(state.screen=="gallery")
+        gallery_e2e_stage=1
+    elseif gallery_e2e_stage==1 then
+        click_control("plus")
+        assert(gallery_menu=="new")
+        gallery_e2e_stage=2
+    elseif gallery_e2e_stage==2 then
+        click_control("new_folder")
+        assert(gallery_dialog and gallery_dialog.mode=="create")
+        gallery_e2e_stage=3
+    elseif gallery_e2e_stage==3 then
+        for character in ("Projects"):gmatch(".") do love.textinput(character) end
+        click_control("folder_confirm")
+        assert(not gallery_dialog and #gallery:items()==1)
+        assert(gallery:get(1).name=="Projects")
+        gallery_e2e_stage=4
+    elseif gallery_e2e_stage==4 then
+        click_control("folder_1")
+        assert(gallery.current_folder==1)
+        gallery_e2e_stage=5
+    elseif gallery_e2e_stage==5 then
+        click_control("plus")
+        gallery_e2e_stage=6
+    elseif gallery_e2e_stage==6 then
+        click_control("new_canvas")
+        assert(state.modal=="new_canvas")
+        gallery_e2e_stage=7
+    elseif gallery_e2e_stage==7 then
+        click_control("OK")
+        assert(state.screen=="editor" and gallery:total_artworks()==1)
+        assert(gallery:get(2).parent==1)
+        gallery_e2e_stage=8
+    elseif gallery_e2e_stage==8 then
+        click_control("back")
+        assert(panel=="back")
+        gallery_e2e_stage=9
+    elseif gallery_e2e_stage==9 then
+        click_control("Back to My Gallery")
+        assert(state.screen=="gallery" and gallery.current_folder==1)
+        gallery_e2e_stage=10
+    elseif gallery_e2e_stage==10 then
+        click_control("gallery_select")
+        assert(gallery_selecting)
+        gallery_e2e_stage=11
+    elseif gallery_e2e_stage==11 then
+        click_control("artwork_2")
+        assert(#gallery:selection()==1)
+        gallery_e2e_stage=12
+    elseif gallery_e2e_stage==12 then
+        click_control("Move")
+        assert(gallery_menu=="move")
+        gallery_e2e_stage=13
+    elseif gallery_e2e_stage==13 then
+        click_control("move_to_0")
+        assert(gallery:get(2).parent==0 and not gallery_selecting)
+        gallery_e2e_stage=14
+    elseif gallery_e2e_stage==14 then
+        click_control("back")
+        assert(gallery.current_folder==0)
+        gallery_e2e_stage=15
+    elseif gallery_e2e_stage==15 then
+        click_control("artwork_2")
+        assert(state.screen=="editor" and state.document.width==1000)
+        gallery_e2e_stage=16
+    elseif gallery_e2e_stage==16 then
+        click_control("back")
+        gallery_e2e_stage=17
+    elseif gallery_e2e_stage==17 then
+        click_control("Back to My Gallery")
+        assert(state.screen=="gallery")
+        gallery_e2e_stage=18
+    elseif gallery_e2e_stage==18 then
+        click_control("folder_1")
+        assert(gallery.current_folder==1)
+        gallery_e2e_stage=19
+    elseif gallery_e2e_stage==19 then
+        click_control("gallery_edit")
+        assert(gallery_dialog and gallery_dialog.mode=="rename")
+        gallery_e2e_stage=20
+    elseif gallery_e2e_stage==20 then
+        for character in ("Ideas"):gmatch(".") do love.textinput(character) end
+        click_control("folder_confirm")
+        assert(gallery:get(1).name=="Ideas" and gallery_dialog==nil)
+        gallery_e2e_stage=21
+    else
+        print("PASS: My Gallery click E2E (folder, canvas, move, reopen, rename)")
+        love.event.quit(0)
+    end
+end
+
 function love.update()
     if smoke and capture_done then
         if capture_error then error("Screenshot: "..capture_error) end
         love.event.quit(0)
     end
-    -- Teste real de callbacks de UI: o próximo passo ocorre depois do draw
-    -- do frame anterior, para que os hitboxes correspondam à tela visível.
+    -- Each stage runs after a draw; hitboxes represent the visible UI.
+    if gallery_e2e and #controls>0 then
+        gallery_e2e_update()
+        return
+    end
     if not e2e or #controls==0 then return end
     if e2e_stage==0 then
         assert(state.screen=="title")
