@@ -236,34 +236,78 @@ local function brushPanel(w,h)
   end)
 end
 local function layerPanel(w,h)
-  local pw=304;local ph=math.min(573,h-92);local x=w-pw-12;local y=40
+  local pw=394
+  local ph=math.min(536,h-158)
+  local x=w-pw-15
+  local y=80
   panelBox(x,y,pw,ph,"Layer")
-  U.rect(x+9,y+42,pw-18,54,{0.9,0.9,0.9})
-  U.text("Selection Layer",x+54,y+61,pw-66,C.ink,"body")
-  U.stroke(x+14,y+54,28,28,C.gray)
-  local rows=math.min(#s.layers,math.floor((ph-230)/67))
-  for i=1,rows do
-    local ly=y+100+(i-1)*67
+  local innerY=y+38
+  local footerY=y+ph-100
+  local previewW=115
+  local toolbarW=34
+  local listX=x+previewW+8
+  local listW=pw-previewW-toolbarW-17
+  local toolsX=x+pw-toolbarW-5
+  U.rect(x+7,innerY,previewW,footerY-innerY,{.96,.96,.96})
+  U.stroke(x+7,innerY,previewW,footerY-innerY,C.gray)
+  U.text(s.workName,x+11,innerY+9,previewW-8,C.gray,"small","center")
+  U.text("Blank canvas",x+11,innerY+80,previewW-8,C.gray,"small","center")
+  U.rect(listX,innerY,listW,footerY-innerY,{.83,.83,.83})
+  U.rect(toolsX,innerY,toolbarW,footerY-innerY,{.05,.05,.05})
+  U.rect(listX+2,innerY+4,listW-4,50,{.96,.96,.96})
+  U.rect(listX+7,innerY+11,32,32,{.91,.72,.89})
+  U.stroke(listX+7,innerY+11,32,32,C.gray)
+  U.text("Selection Layer",listX+45,innerY+21,listW-50,C.ink,"small")
+  local itemHeight=59
+  local limit=math.min(#s.layers,math.max(1,math.floor((footerY-innerY-114)/itemHeight)))
+  for i=1,limit do
     local layer=s.layers[i]
-    U.rect(x+9,ly,pw-18,65,s.selectedLayer==i and {0.7,0.82,0.93} or {0.86,0.86,0.86})
-    U.rect(x+17,ly+6,50,50,C.white)
-    U.stroke(x+17,ly+6,50,50,C.gray)
-    U.text(layer.name,x+80,ly+10,132,C.ink,"body")
-    U.text(layer.opacity.."%   "..layer.blend,x+80,ly+33,145,C.ink,"small")
-    U.text(layer.visible and "eye" or "hide",x+242,ly+20,38,C.ink,"small")
-    U.hitbox(x+9,ly,pw-18,65,function() Model.selectLayer(s,i) end)
-    U.hitbox(x+234,ly+5,50,52,function() layer.visible=not layer.visible end)
+    local ly=innerY+58+(i-1)*itemHeight
+    U.rect(listX+2,ly,listW-4,itemHeight-2,
+      s.selectedLayer==i and {.68,.79,.91} or {.96,.96,.96})
+    -- Plain white thumbnail is intentional: processing / painting is out of scope.
+    U.rect(listX+8,ly+6,43,42,C.white)
+    U.stroke(listX+8,ly+6,43,42,{.70,.70,.70})
+    U.text(layer.name,listX+57,ly+8,105,C.ink,"body")
+    U.text(layer.opacity.."%",listX+57,ly+29,48,C.gray,"small")
+    U.text(layer.blend,listX+106,ly+29,70,C.gray,"small")
+    U.icon(layer.visible and "Eye" or "Selection",
+      listX+listW-17,ly+27,16,C.ink)
+    U.hitbox(listX+2,ly,listW-4,itemHeight-2,function() Model.selectLayer(s,i) end)
+    U.hitbox(listX+listW-30,ly+6,28,45,function()
+      layer.visible=not layer.visible
+    end)
   end
-  local fy=y+ph-117
-  U.button("+",x+10,fy,40,31,function() Model.addLayer(s) end)
-  U.button("Duplicate",x+55,fy,83,31,function() Model.duplicateLayer(s) end)
-  U.button("Delete",x+143,fy,77,31,function() Model.deleteLayer(s) end)
-  U.button("More",x+226,fy,68,31,function() s.menu=s.menu=="layerMore" and nil or "layerMore" end)
-  U.text("Blending Mode",x+14,fy+39,110,C.white,"small")
-  U.button(s.blend,x+126,fy+35,168,28,function()
+  local bgY=footerY-58
+  if bgY>innerY+60+limit*itemHeight then
+    U.rect(listX+2,bgY,listW-4,51,{.95,.95,.95})
+    U.text("Background",listX+46,bgY+18,listW-51,C.gray,"small")
+    U.rect(listX+8,bgY+7,29,29,C.white)
+    U.stroke(listX+8,bgY+7,29,29,C.gray)
+  end
+  local sideButtons={
+    {"Plus",function()Model.addLayer(s)end},
+    {"Duplicate",function()Model.duplicateLayer(s)end},
+    {"Folder",function()Model.addLayer(s,"folder")end},
+    {"Layer",function()Model.addLayer(s,"vector")end},
+    {"Trash",function()Model.deleteLayer(s)end},
+    {"More",function()s.menu=s.menu=="layerMore" and nil or "layerMore" end}
+  }
+  local sideH=36
+  for i,item in ipairs(sideButtons) do
+    local cy=innerY+18+(i-1)*sideH
+    U.icon(item[1],toolsX+toolbarW/2,cy,21)
+    U.hitbox(toolsX,cy-17,toolbarW,sideH,item[2])
+  end
+  U.rect(x+7,footerY,pw-12,95,{.08,.08,.08})
+  U.icon("Down",x+25,footerY+18,20)
+  U.text("Background",x+44,footerY+11,128,C.white,"small")
+  U.button(s.blend,x+208,footerY+5,161,27,function()
     s.menu=s.menu=="blend" and nil or "blend"
-  end)
-  U.slider("Opacity",x+14,fy+72,pw-28,s.layerOpacity,0,100,function(v) Model.setLayerOpacity(s,v) end)
+  end,false,{.28,.28,.28})
+  U.text("Opacity",x+15,footerY+43,102,C.white,"small")
+  U.slider("a",x+102,footerY+44,pw-124,s.layerOpacity,0,100,
+    function(v)Model.setLayerOpacity(s,v)end)
 end
 local swatches={
   {0,0,0},{1,1,1},{.9,.12,.18},{1,.47,.1},{1,.86,.2},{.2,.65,.3},
