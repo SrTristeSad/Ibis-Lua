@@ -64,3 +64,13 @@ Inclui mudanças em Settings/login, checkmark de alguns diálogos e status de nu
 - **Sem percentual de fidelidade**: falta referência original Windows **14.1.4** com DPI, resolução, idioma e estado registrados.
 
 A ferramenta de diff de screenshots permanece em tools/compare_screenshots.py; gerar métricas só quando existirem imagens realmente comparáveis.
+
+## W7 — Seletor de cor (captura publicada por usuário Windows)
+
+Página: https://note.com/nitijo_tubuyaki/n/nddff01f99a4f
+
+Referência visual pública: screenshot da janela Color com grade de amostras à esquerda, círculo de matiz à direita e losango interno de saturação e luminosidade, além de controles RGB/alpha.
+
+Implementação: draw_hue_wheel e draw_editor_panel(color): círculo HSV e losango reconstruídos geometricamente, interação de matiz/saturação/luminosidade, paleta demonstrativa, prévia hexadecimal e canais RGB.
+
+**Limites:** captura sem comprovação de ser Windows 14.1.4; não afirmar equivalência da paleta de amostras, da disposição dos canais ou das medidas. O alfa permanece simulado por opacidade do rodapé.
