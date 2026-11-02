@@ -379,7 +379,7 @@ local function drawBrushes()
     end
   end
   UI.rect(x,listY+areaH-13,sideW,13,{.14,.15,.16})
-  UI.text('⌄',x,listY+areaH-15,16,'white','center',sideW)
+  UI.text('v',x,listY+areaH-13,12,'white','center',sideW)
   UI.hit({x=x,y=listY+areaH-13,w=sideW,h=13},function()
     S.brushCategoryPage=(S.brushCategoryPage+1)%(categoryMax+1)
   end)
@@ -509,7 +509,7 @@ local function drawLayers()
     if #S.layers>1 then table.remove(S.layers,S.selectedLayer)
       S.selectedLayer=math.min(#S.layers,S.selectedLayer) end
   end,{font=11,bg='dark'})
-  UI.button('Normal ▾',x+195,fy+9,92,29,
+  UI.button('Normal v',x+195,fy+9,92,29,
     function()open('blend')end,{font=10,bg='dark'})
   UI.text('100%',x+7,fy+52,10,'white')
   local current=S.layers[S.selectedLayer]
@@ -538,7 +538,7 @@ local function drawColor()
   local previewW=(w-84)/2
   UI.rect(x+40,p.y+39,previewW,26,rgb,1)
   UI.rect(x+40+previewW,p.y+39,previewW,26,S.previousColor,1)
-  UI.text('◀',x+3,p.y+43,17,'white')
+  glyph('back',x+18,p.y+53,16)
   UI.hit({x=x,y=p.y+36,w=36,h=34},close)
   UI.rect(x+w-38,p.y+39,33,26,'dark',13)
   UI.text('›',x+w-35,p.y+40,20,'white','center',27)
