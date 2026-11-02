@@ -5,6 +5,10 @@ local s=Model.new()
 local lg=love.graphics
 local dragging=false
 local lastX,lastY=0,0
+-- Automated screenshot mode is opt-in and does not change normal execution.
+local screenshotMode=os.getenv("IBIS_LUA_SCREENSHOT")
+local screenshotElapsed=0
+local screenshotTaken=false
 
 local function panelBox(x,y,w,h,title)
   U.rect(x,y,w,h,C.panel,5)
@@ -336,6 +340,25 @@ function love.load()
   love.window.setTitle("Ibis-Lua | Windows UI reference 14.1.4")
   love.window.setMode(1280,800,{resizable=true,minwidth=880,minheight=610})
   U.init()
+  if screenshotMode=="gallery" or screenshotMode=="newCanvas" then
+    Model.openGallery(s)
+    if screenshotMode=="newCanvas" then Model.openNewCanvas(s) end
+  elseif screenshotMode=="editor" or screenshotMode=="brush"
+      or screenshotMode=="layer" or screenshotMode=="color" then
+    Model.openGallery(s)
+    Model.createCanvas(s)
+    if screenshotMode~="editor" then s.panel=screenshotMode end
+  end
+end
+function love.update(dt)
+  if not screenshotMode then return end
+  screenshotElapsed=screenshotElapsed+dt
+  if screenshotElapsed>0.35 and not screenshotTaken then
+    lg.captureScreenshot("ibis-lua-"..screenshotMode..".png")
+    screenshotTaken=true
+  elseif screenshotElapsed>1.35 and screenshotTaken then
+    love.event.quit()
+  end
 end
 function love.draw()
   local w,h=lg.getDimensions()
