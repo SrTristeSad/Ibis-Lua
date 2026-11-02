@@ -28,6 +28,8 @@ jobs:
           luajit tests/test_layer_solo.lua
       - name: Run screenshot comparator tests
         run: python -m unittest discover -s tests -p 'test_compare.py' -v
+      - name: Exercise real LÖVE click callbacks end-to-end
+        run: timeout 20s xvfb-run -a env IBIS_LUA_E2E=1 love .
       - name: Run LÖVE and capture nine actual UI states
         run: |
           mkdir -p screenshots
