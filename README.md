@@ -5,8 +5,11 @@ Protótipo **exclusivamente de interface** para Windows, desenvolvido em **Lua +
 ## Executar
 
 1. Instale [LÖVE 11.5](https://love2d.org/).
-2. Abra a pasta deste repositório com `love .` (no Windows, arraste a pasta sobre `love.exe`).
-3. Selecione **Minha Galeria**, clique em **+**, escolha uma dimensão e confirme. Isso cria apenas uma tela demonstrativa em memória.
+2. **Windows:** dê dois cliques em `testar.bat` na raiz do repositório. O script encontra `love.exe` na pasta do projeto, em instalações comuns do Windows ou no `PATH` e abre a casca visual. Se não encontrar, informa como instalar. Opcionalmente, defina a variável de ambiente `LOVE_EXE` com o caminho completo do executável.
+3. Alternativa pelo terminal: `love .` (ou arraste a pasta do projeto sobre `love.exe`).
+4. Selecione **Minha Galeria**, clique em **+**, escolha uma dimensão e confirme. Isso cria apenas uma tela demonstrativa em memória.
+
+**Observação:** `testar.bat` abre a interface para inspeção manual; não executa os testes Lua automaticamente e não adiciona motor de desenho.
 
 ## O que funciona visualmente
 
