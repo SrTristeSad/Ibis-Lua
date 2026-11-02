@@ -1090,6 +1090,19 @@ function love.load()
             state:open_gallery();state:open_new_canvas();state:create_canvas(1800,2400)
             state:add_layer();state:toggle_layer_solo(1)
             set_panel("layer")
+        elseif smoke_screen=="layer_properties" or smoke_screen=="layer_blend"
+            or smoke_screen=="transparent" then
+            state:open_gallery();state:open_new_canvas();state:create_canvas(1800,2400)
+            state:add_layer()
+            state:set_layer_opacity(2,63)
+            state:toggle_layer_clipping(2)
+            state:toggle_layer_alpha_lock(2)
+            state:set_layer_blending(2,"Multiply")
+            state:set_background("transparent_dark")
+            if smoke_screen~="transparent" then
+                set_panel("layer")
+                layer_blend_open=smoke_screen=="layer_blend"
+            end
         elseif smoke_screen=="view" or smoke_screen=="grid_settings"
             or smoke_screen=="grid" or smoke_screen=="reference" then
             state:open_gallery();state:open_new_canvas();state:create_canvas(1800,2400)
@@ -1314,8 +1327,39 @@ function love.update()
         assert(visual.grid1==64 and visual.grid2==256,
             "UI e2e: Reset Grid não restaurou os intervalos")
         e2e_stage=8
+    elseif e2e_stage==8 then
+        love.keypressed("escape")
+        click_control("layer")
+        assert(panel=="layer","UI e2e: retorno ao painel Layer falhou")
+        e2e_stage=9
+    elseif e2e_stage==9 then
+        click_control("layer_add")
+        assert(#state.layers==2,"UI e2e: Add Layer falhou")
+        e2e_stage=10
+    elseif e2e_stage==10 then
+        click_control("layer_clipping")
+        click_control("layer_alpha_lock")
+        assert(state:active_layer().clipping and state:active_layer().alpha_lock,
+            "UI e2e: clipping ou alpha lock falhou")
+        click_control("layer_opacity")
+        assert(state:active_layer().opacity<100,
+            "UI e2e: controle de opacidade falhou")
+        click_control("layer_blend")
+        assert(layer_blend_open,"UI e2e: lista de blending não abriu")
+        e2e_stage=11
+    elseif e2e_stage==11 then
+        click_control("blend_Multiply")
+        assert(state:active_layer().blending=="Multiply",
+            "UI e2e: modo Multiply não selecionado")
+        assert(not layer_blend_open)
+        e2e_stage=12
+    elseif e2e_stage==12 then
+        click_control("background_transparent_dark")
+        assert(state.background_mode=="transparent_dark",
+            "UI e2e: transparência de fundo não alterada")
+        e2e_stage=13
     else
-        print("PASS: UI LÖVE end-to-end (galeria, canvas, camadas, zoom e View Menu)")
+        print("PASS: UI LÖVE end-to-end (galeria, canvas, View e propriedades de camadas)")
         love.event.quit(0)
     end
 end
