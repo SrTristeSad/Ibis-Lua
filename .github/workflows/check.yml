@@ -25,14 +25,19 @@ jobs:
         run: luajit tests/test_model.lua
       - name: Run screenshot comparator tests
         run: python -m unittest discover -s tests -p 'test_compare.py' -v
-      - name: Start LÖVE in headless display and capture diagnostic image
+      - name: Run LÖVE and capture five actual UI screens
         run: |
-          timeout 20s xvfb-run -a env IBIS_LUA_SMOKE=1 love .
-          find "$HOME/.local/share/love" -name ci-smoke.png -size +100c -print -quit | grep -q ci-smoke.png
-      - name: Save LÖVE screenshot for visual inspection
+          mkdir -p screenshots
+          for screen in title gallery new_canvas editor layer; do
+            echo "Capturing UI state: $screen"
+            timeout 20s xvfb-run -a env IBIS_LUA_SMOKE=1 IBIS_LUA_SCREEN="$screen" love .
+            cp "$HOME/.local/share/love/ibis-lua-fidelity/ci-smoke.png" "screenshots/$screen.png"
+            test -s "screenshots/$screen.png"
+          done
+      - name: Save screenshots for visual inspection
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ibis-lua-title-smoke
-          path: ~/.local/share/love/ibis-lua-fidelity/ci-smoke.png
+          name: ibis-lua-windows-ui-smoke
+          path: screenshots/*.png
           if-no-files-found: warn
