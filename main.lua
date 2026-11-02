@@ -11,6 +11,7 @@ local S={screen='home',popup=nil,tool='brush',rail='left',columns=2,
   colorTab='HSB',colorValue={.18,.51,.91},
   works={},project=nil,layers={},canvasPreset=1,
   optionChoice=1,collectionTab='Básico',toolPage=1,
+  brushSearchOpen=false,brushQuery='',
   brushCategory='Todos',brushCategoryPage=1,brushScroll=0,drag=nil}
 local V
 local function inside(r,x,y) return Layout.contains(r,x,y) end
@@ -296,86 +297,146 @@ local function drawTools()
   end
 end
 local function drawBrushes()
-  local p=panelBase('brushes','Pincel ('..S.brush..')')
-  -- Interface 14.x: categorias verticais escuras, prévia e itens claros.
-  local side=p.x+9
-  UI.rect(p.x+9,p.y+34,p.w-18,p.h-126,{.96,.96,.96},1)
-  UI.rect(side,p.y+88,72,p.h-215,{.055,.059,.063},1)
-  local contentX=p.x+86
-  local contentW=p.w-98
-  UI.checker(contentX,p.y+39,contentW,45,8)
-  UI.color('ink');lg.setLineWidth(3)
-  local wave={}
-  for i=0,34 do
-    wave[#wave+1]=contentX+10+i*(contentW-20)/34
-    wave[#wave+1]=p.y+61+math.sin(i*.29)*6
+  local catalog=require('src.brush_catalog')
+  local p=panelBase('brushes','Pincel')
+  local x,y=p.x+8,p.y+34
+  local innerW=p.w-16
+  local previewH=50
+  -- Imagem de amostra com fundo xadrez da janela original.
+  UI.checker(x,y,innerW,previewH,9)
+  UI.rect(x,y,innerW,previewH,'line',0,true)
+  UI.color('ink');lg.setLineWidth(2.1)
+  local pts={}
+  for k=0,100 do
+    local t=k/100
+    pts[#pts+1]=x+10+t*(innerW-22)
+    pts[#pts+1]=y+25-math.sin(t*math.pi*2)*7
   end
-  lg.line(wave)
+  lg.line(pts)
+  if S.brushSearchOpen then
+    UI.rect(x+3,y+3,innerW-6,previewH-6,'white',2)
+    UI.text('Pesquisar: '..(S.brushQuery or '')..'|',
+      x+15,y+17,13,'ink')
+  end
+  local top=y+previewH+2
+  local sideW=56
+  local mainX=x+sideW
+  local mainW=innerW-sideW
+  UI.rect(x,top,innerW,29,'toolbar')
   local tabs={'Básico','Personalizado','Online'}
+  local tabW=(mainW-30)/3
   for i,title in ipairs(tabs) do
-    local tw=(contentW-7)/3
-    local tx=contentX+(i-1)*tw
-    UI.rect(tx,p.y+89,tw-1,25,
-      S.collectionTab==title and 'white' or {.68,.68,.68},1)
-    UI.text(title,tx+1,p.y+95,10,'ink','center',tw-2)
-    UI.hit({x=tx,y=p.y+89,w=tw,h=26},
-      function()S.collectionTab=title end)
+    local tx=mainX+(i-1)*tabW
+    UI.rect(tx,top,tabW-1,27,
+      S.collectionTab==title and 'white' or {.55,.56,.57},0)
+    UI.text(title,tx,top+9,10,
+      S.collectionTab==title and 'ink' or 'white','center',tabW)
+    UI.hit({x=tx,y=top,w=tabW,h=27},function()
+      S.collectionTab=title;S.brushScroll=0
+    end)
   end
-  local categories={'Todos','Simples','Esboço','Quadrinho','Tinta','Vetor',
-    'Aerógrafo'}
-  S.brushCategory=S.brushCategory or 'Todos'
-  for i,title in ipairs(categories) do
-    local yy=p.y+120+(i-1)*26
-    if title==S.brushCategory then
-      UI.rect(side+1,yy,70,25,{.20,.30,.37},1)
+  UI.rect(x,top,sideW,27,{.10,.11,.12})
+  glyph('brush',x+sideW/2,top+13,17)
+  UI.rect(x+innerW-30,top,30,27,{.08,.08,.09})
+  glyph('search',x+innerW-15,top+13,19)
+  UI.hit({x=x+innerW-30,y=top,w=30,h=27},function()
+    S.brushSearchOpen=not S.brushSearchOpen
+    S.brushQuery=''
+    S.brushScroll=0
+  end)
+  local listY=top+29
+  local footerY=p.y+p.h-91
+  local areaH=footerY-listY
+  UI.rect(x,listY,sideW,areaH,{.065,.068,.074},0)
+  UI.rect(mainX,listY,mainW,areaH,{.96,.96,.96},0)
+  -- A versão 14 inclui uma coluna compacta de categorias com ícones.
+  local categoryRows=math.floor((areaH-13)/40)
+  local categoryMax=math.max(0,#catalog.categories-categoryRows)
+  S.brushCategoryPage=math.max(0,math.min(S.brushCategoryPage,categoryMax))
+  for i=1,categoryRows do
+    local cat=catalog.categories[i+S.brushCategoryPage]
+    if cat then
+      local cy=listY+2+(i-1)*40
+      if S.brushCategory==cat[1] then
+        UI.rect(x+1,cy,sideW-2,39,{.28,.35,.43},0)
+        UI.rect(x,cy,3,39,'blue',0)
+      end
+      glyph(cat[2],x+sideW/2,cy+14,19,
+        S.brushCategory==cat[1] and 'blue' or 'white')
+      UI.text(cat[1],x+2,cy+25,7,'white','center',sideW-4)
+      UI.hit({x=x,y=cy,w=sideW,h=40},function()
+        S.brushCategory=cat[1];S.brushScroll=0
+      end)
     end
-    UI.text(title,side+2,yy+7,9,
-      title==S.brushCategory and 'blue' or 'white','center',68)
-    UI.hit({x=side,y=yy,w=72,h=26},function()S.brushCategory=title end)
   end
-  local brushes={
-    {'Caneta (Dura)','Simples'},{'Caneta (Suave)','Simples'},
-    {'Caneta (Tinta)','Tinta'},{'Lápis (Grafite)','Esboço'},
-    {'Pincel (Duro)','Tinta'},{'Aerógrafo (Normal)','Aerógrafo'},
-    {'Caneta Vetorial','Vetor'},{'Caneta para mangá','Quadrinho'}}
+  UI.rect(x,listY+areaH-13,sideW,13,{.14,.15,.16})
+  UI.text('⌄',x,listY+areaH-15,16,'white','center',sideW)
+  UI.hit({x=x,y=listY+areaH-13,w=sideW,h=13},function()
+    S.brushCategoryPage=(S.brushCategoryPage+1)%(categoryMax+1)
+  end)
   if S.collectionTab=='Básico' then
-    local visible=0
-    for i,item in ipairs(brushes) do
-      if S.brushCategory=='Todos' or S.brushCategory==item[2] then
-        visible=visible+1
-        if visible<=6 then
-          local y=p.y+118+(visible-1)*32
-          UI.rect(contentX,y,contentW,31,
-            S.brush==item[1] and {.79,.87,.97} or 'white',1)
-          UI.line(contentX,y+31,contentX+contentW,y+31,{.80,.80,.80},.65)
-          UI.color('ink');lg.setLineWidth(1+visible*.25)
-          local pts={}
-          for k=0,22 do
-            pts[#pts+1]=contentX+6+k*2.3
-            pts[#pts+1]=y+19+math.sin(k*.33)*4
-          end
-          lg.line(pts)
-          UI.text(item[1],contentX+64,y+8,10,'ink')
-          UI.text('›',contentX+contentW-18,y+4,18,'ink')
-          UI.hit({x=contentX,y=y,w=contentW,h=31},function()
-            S.brush=item[1];S.optionChoice=i
-          end)
+    local data=catalog.filter(S.brushCategory,S.brushQuery)
+    local rowH=32
+    local rows=math.floor(areaH/rowH)
+    local maxScroll=math.max(0,#data-rows)
+    S.brushScroll=math.max(0,math.min(S.brushScroll,maxScroll))
+    for i=1,rows do
+      local entry=data[i+S.brushScroll]
+      if entry then
+        local ry=listY+(i-1)*rowH
+        local selected=S.brush==entry[1]
+        UI.rect(mainX,ry,mainW,rowH-1,
+          selected and {.81,.88,.97} or 'white',0)
+        if selected then UI.rect(mainX,ry,2,rowH,'blue',0) end
+        UI.text(entry[1],mainX+9,ry+2,9,'ink')
+        UI.color('ink')
+        local thickness=math.max(.8,math.min(6,entry[3]/8))
+        lg.setLineWidth(thickness)
+        local curve={}
+        for k=0,33 do
+          local t=k/33
+          curve[#curve+1]=mainX+9+t*(mainW-72)
+          curve[#curve+1]=ry+23+math.sin(t*6.3)*2.2
         end
+        lg.line(curve)
+        UI.text(('%.1f'):format(entry[3]),mainX+mainW-38,ry+2,8,'ink')
+        UI.text('›',mainX+mainW-20,ry+7,16,'ink')
+        UI.hit({x=mainX,y=ry,w=mainW,h=rowH},function()
+          S.brush=entry[1];S.size=entry[3]
+        end)
       end
     end
+    if #data>rows then
+      UI.rect(mainX+mainW-3,listY+2,3,areaH-4,{.79,.79,.79})
+      UI.rect(mainX+mainW-3,listY+2+
+        S.brushScroll/math.max(1,maxScroll)*(areaH-33),
+        3,29,{.40,.40,.40})
+    end
   else
-    UI.text(S.collectionTab=='Personalizado' and 'Sem pincéis personalizados'
-      or 'Biblioteca online indisponível',contentX+7,p.y+138,11,'ink')
+    UI.text(S.collectionTab=='Personalizado' and
+      'Sem pincéis personalizados' or 'Galeria online indisponível',
+      mainX+9,listY+20,12,'ink')
   end
-  local fy=p.y+p.h-126
-  UI.rect(p.x+9,fy,p.w-18,126,'toolbar',1)
-  UI.text(('Tamanho     %.1f px'):format(S.size),p.x+20,fy+12,11,'white')
-  UI.slider(p.x+134,fy+12,p.w-158,S.size/100,
-    function(t)S.size=math.floor((.1+t*99.9)*10)/10 end)
-  UI.text(('Opacidade  %d%%'):format(S.opacity),p.x+20,fy+48,11,'white')
-  UI.slider(p.x+134,fy+48,p.w-158,S.opacity/100,
-    function(t)S.opacity=math.floor(t*100+.5)end)
+  -- Rodapé fixo: espessura e opacidade; não executa pinceladas.
+  UI.rect(x,footerY,innerW,90,{.43,.44,.45},0)
+  UI.text('Espessura',x+10,footerY+7,11,'white')
+  UI.text(('%.1f px'):format(S.size),x+innerW-84,footerY+7,11,'white')
+  UI.rect(x+6,footerY+26,18,18,{.20,.21,.22},10)
+  UI.text('−',x+6,footerY+25,16,'white','center',18)
+  UI.hit({x=x+6,y=footerY+26,w=18,h=18},function()
+    S.size=math.max(.1,S.size-1) end)
+  UI.slider(x+32,footerY+27,innerW-64,S.size/100,function(t)
+    S.size=math.floor((.1+t*99.9)*10)/10 end)
+  UI.rect(x+innerW-24,footerY+26,18,18,{.20,.21,.22},10)
+  UI.text('+',x+innerW-24,footerY+25,15,'white','center',18)
+  UI.hit({x=x+innerW-24,y=footerY+26,w=18,h=18},function()
+    S.size=math.min(100,S.size+1) end)
+  UI.text('Opacidade',x+10,footerY+47,11,'white')
+  UI.text(S.opacity..'%',x+innerW-58,footerY+47,11,'white')
+  UI.slider(x+32,footerY+69,innerW-64,S.opacity/100,function(t)
+    S.opacity=math.floor(t*100+.5)end)
 end
+
 local function drawLayers()
   local p=panelBase('layers','Camadas')
   local x=p.x+9
@@ -726,11 +787,30 @@ function love.mousereleased(x,y,button)
   if button==2 then S.drag=nil end
 end
 function love.wheelmoved(dx,dy)
+  if S.popup=='brushes' then
+    local catalog=require('src.brush_catalog')
+    local entries=catalog.filter(S.brushCategory,S.brushQuery)
+    S.brushScroll=math.max(0,math.min(math.max(0,#entries-6),
+      S.brushScroll-(dy>0 and 1 or dy<0 and -1 or 0)))
+    return
+  end
   if S.screen=='editor' and not S.popup then
     S.zoom=math.max(.25,math.min(3,S.zoom*(dy>0 and 1.1 or .9)))
   end
 end
+function love.textinput(char)
+  if S.popup=='brushes' and S.brushSearchOpen then
+    S.brushQuery=(S.brushQuery or '')..char
+    S.brushScroll=0
+  end
+end
 function love.keypressed(key)
+  if S.popup=='brushes' and S.brushSearchOpen and key=='backspace' then
+    local q=S.brushQuery or ''
+    S.brushQuery=q:sub(1,-2)
+    S.brushScroll=0
+    return
+  end
   if key=='escape' then
     if S.popup then close()
     elseif S.screen=='editor' and S.fullscreen then S.fullscreen=false
