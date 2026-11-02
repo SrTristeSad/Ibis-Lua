@@ -106,7 +106,7 @@ local function newCanvasDialog(w,h)
 end
 
 local function drawCanvas(w,h)
-  local left=49;local top=31;local bottom=h-53
+  local left=49;local top=72;local bottom=h-82
   U.rect(left,top,w-left,bottom-top,{0.72,0.72,0.72})
   local maxW=w-left-100;local maxH=bottom-top-48
   local ratio=s.w/s.h
@@ -121,44 +121,84 @@ local function drawCanvas(w,h)
   U.stroke(x,y,cw,ch,{0.55,0.55,0.55})
 end
 local function editorBar(w,h)
-  local top=31;local bottom=h-51
-  U.rect(0,0,w,top,{0.89,0.89,0.89})
-  U.text("ibisPaint  |  "..s.workName,55,8,w*.58,C.ink,"small")
-  U.rect(0,top,49,bottom-top,{0.43,0.43,0.43})
-  local stride=math.min(46,(bottom-top)/#Model.tools)
+  -- Windows build: toolbar at left, six round actions in the top-right,
+  -- separate sliders above the actual main toolbar.
+  local top=72
+  local bottom=h-82
+  U.rect(0,0,w,28,{.94,.94,.94})
+  U.text("ibisPaint",12,7,130,C.ink,"small")
+  U.rect(0,28,w,44,{.77,.77,.77})
+  U.rect(0,top,49,bottom-top,{.42,.42,.42})
+  local stride=(bottom-top)/#Model.tools
   for i,name in ipairs(Model.tools) do
     local yy=top+(i-1)*stride
-    U.toolButton(name,0,yy,49,stride,s.tool==name,function() Model.setTool(s,name) end)
+    U.toolButton(name,0,yy,49,stride,s.tool==name,function()
+      Model.setTool(s,name)
+    end)
   end
-  U.rect(0,bottom,w,h-bottom,{0.42,0.42,0.42})
-  local span=w-49;local cy=bottom+25
-  local function glyph(name,pos,callback)
-    local x=49+span*pos
-    U.icon(name,x,cy,19)
-    U.hitbox(x-22,bottom+2,44,46,callback)
+  local actions={
+    {"View",function() s.menu=s.menu=="view" and nil or "view" end},
+    {"Selection",function() Model.togglePanel(s,"selection") end},
+    {"Stabilizer",function() Model.togglePanel(s,"stabilizer") end},
+    {"Shape",function() Model.togglePanel(s,"shape") end},
+    {"Ruler",function() Model.togglePanel(s,"ruler") end},
+    {"Material",function() Model.togglePanel(s,"material") end}
+  }
+  for i,action in ipairs(actions) do
+    local x=w-290+(i-1)*45
+    U.circle(x,49,17,{.60,.60,.60})
+    U.icon(action[1],x,49,20)
+    U.hitbox(x-20,29,40,41,action[2])
   end
-  glyph(s.tool=="Eraser" and "Eraser" or "Brush",.037,function()
-    Model.setTool(s,s.tool=="Brush" and "Eraser" or "Brush")
-  end)
-  glyph("Tool Select",.10,function() Model.togglePanel(s,"tools") end)
-  glyph("Properties",.16,function() Model.togglePanel(s,"brush") end)
-  U.slider("Size (px)",49+span*.208,bottom+7,span*.14,s.brushSize,1,120,
+  -- Windows screenshot structure has two control rows under canvas.
+  U.rect(0,bottom,w,44,{.69,.69,.69})
+  U.text(string.format("%.1f",s.brushSize),6,bottom+2,44,C.ink,"small","center")
+  U.circle(34,bottom+27,10,C.ink)
+  U.icon("Minus",34,bottom+27,12)
+  U.hitbox(23,bottom+16,22,22,function() Model.setBrushSize(s,s.brushSize-1) end)
+  U.slider("Brush size",55,bottom+2,w*.38,s.brushSize,1,120,
     function(v) Model.setBrushSize(s,v) end)
-  U.slider("Opacity %",49+span*.382,bottom+7,span*.135,s.brushOpacity,0,100,
+  local plusA=63+w*.38
+  U.circle(plusA,bottom+27,10,C.ink)
+  U.icon("Plus",plusA,bottom+27,12)
+  U.hitbox(plusA-11,bottom+16,22,22,function() Model.setBrushSize(s,s.brushSize+1) end)
+  local bx=w*.53
+  U.text(s.brushOpacity.."%",bx-35,bottom+2,46,C.ink,"small","center")
+  U.circle(bx,bottom+27,10,C.ink)
+  U.icon("Minus",bx,bottom+27,12)
+  U.hitbox(bx-11,bottom+16,22,22,function() Model.setBrushOpacity(s,s.brushOpacity-1) end)
+  U.slider("Opacity",bx+19,bottom+2,w*.35,s.brushOpacity,0,100,
     function(v) Model.setBrushOpacity(s,v) end)
-  local cx=49+span*.567
-  U.circle(cx,cy,16,s.color)
-  U.circle(cx,cy,16,C.white,true)
-  U.hitbox(cx-22,bottom+1,44,48,function() Model.togglePanel(s,"color") end)
-  glyph("Full Screen",.64,function() s.notification="Full-screen preview is not yet simulated." end)
-  glyph("Undo",.715,function() s.notification="No painting engine: nothing to undo." end)
-  glyph("Redo",.79,function() s.notification="No painting engine: nothing to redo." end)
-  glyph("Layer",.86,function() Model.togglePanel(s,"layer") end)
-  glyph("Back",.955,function() s.menu=s.menu=="back" and nil or "back" end)
-  U.button("View",w-248,2,55,26,function() s.menu=s.menu=="view" and nil or "view" end)
-  U.button("Select",w-190,2,60,26,function() Model.togglePanel(s,"selection") end)
-  U.button("Ruler",w-127,2,58,26,function() Model.togglePanel(s,"ruler") end)
-  U.button("...",w-64,2,54,26,function() s.menu=s.menu=="more" and nil or "more" end)
+  local plusB=bx+27+w*.35
+  U.circle(plusB,bottom+27,10,C.ink)
+  U.icon("Plus",plusB,bottom+27,12)
+  U.hitbox(plusB-11,bottom+16,22,22,function() Model.setBrushOpacity(s,s.brushOpacity+1) end)
+
+  local bottomY=h-38
+  U.rect(0,bottomY,w,38,{.42,.42,.42})
+  local cy=bottomY+19
+  local function glyph(name,position,callback,active)
+    local x=w*position
+    if active then U.rect(x-22,bottomY,44,38,{.33,.33,.33}) end
+    U.icon(name,x,cy,22)
+    U.hitbox(x-25,bottomY,50,38,callback)
+  end
+  glyph("Tool Select",.027,function() Model.togglePanel(s,"tools") end,s.panel=="tools")
+  glyph(s.tool=="Eraser" and "Eraser" or "Brush",.109,function()
+    Model.togglePanel(s,s.tool=="Brush" and "brush" or "size")
+  end,s.panel=="brush")
+  local colorX=w*.215
+  U.colorWheel(colorX,cy,15,s.color)
+  U.hitbox(colorX-22,bottomY,44,38,function()Model.togglePanel(s,"color")end)
+  local sampleX=w*.305
+  U.rect(sampleX-13,cy-13,26,26,s.color)
+  U.stroke(sampleX-13,cy-13,26,26,C.white)
+  U.hitbox(sampleX-22,bottomY,44,38,function()Model.togglePanel(s,"color")end)
+  glyph("Down",.44,function() s.notification="No painting engine; no canvas operation." end)
+  glyph("Undo",.55,function() s.notification="Nothing to undo (visual-only mode)." end)
+  glyph("Redo",.66,function() s.notification="Nothing to redo (visual-only mode)." end)
+  glyph("Layer",.79,function() Model.togglePanel(s,"layer") end,s.panel=="layer")
+  glyph("Back",.94,function() s.menu=s.menu=="back" and nil or "back" end)
 end
 local function brushPanel(w,h)
   local pw=math.min(620,w-70);local ph=math.min(604,h-115)
