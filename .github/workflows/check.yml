@@ -26,6 +26,7 @@ jobs:
           luajit tests/test_model.lua
           luajit tests/test_viewport.lua
           luajit tests/test_layer_solo.lua
+          luajit tests/test_layer_properties.lua
           luajit tests/test_view_state.lua
       - name: Run screenshot comparator tests
         run: python -m unittest discover -s tests -p 'test_compare.py' -v
