@@ -373,20 +373,22 @@ local function gallery_header()
         {"material",function() notice("Export requires image processing.") end},
         {"more",function() gallery_menu=gallery_menu=="more" and nil or "more" end}
     }
-    local start=W-270
+    -- Reserve separate non-overlapping slots for 5 icons + Select + Edit.
+    -- The previous W-270 origin let the "more" icon overlap Select.
+    local start=W-340
     for i,a in ipairs(actions) do
         icon_button(start+(i-1)*42,4,39,40,a[1],a[2])
     end
     label(gallery_selecting and "Done" or "Select",
-        W-81,14,50,"small","center",C.white)
-    hit(W-86,4,55,40,function()
+        W-111,14,53,"small","center",C.white)
+    hit(W-115,4,60,40,function()
         gallery_selecting=not gallery_selecting
         if not gallery_selecting then
             gallery:clear_selection();gallery_menu=nil
         end
     end,"gallery_select")
-    label("Edit",W-38,14,37,"small","center",C.white)
-    hit(W-42,4,40,40,function()
+    label("Edit",W-51,14,45,"small","center",C.white)
+    hit(W-54,4,50,40,function()
         if gallery.current_folder~=0 then
             gallery_open_dialog("rename",gallery.current_folder)
         else
@@ -1635,6 +1637,23 @@ local function gallery_e2e_update()
         assert(state.screen=="gallery")
         gallery_e2e_stage=1
     elseif gallery_e2e_stage==1 then
+        -- Screenshot inspection revealed overlapping header hitboxes.
+        local header={"plus","settings","play","material","more",
+            "gallery_select","gallery_edit"}
+        local slots={}
+        for _,name in ipairs(header) do
+            for _,control in ipairs(controls) do
+                if control.key==name then
+                    slots[#slots+1]=control;break
+                end
+            end
+        end
+        assert(#slots==#header,"UI e2e: missing Gallery header control")
+        for i=1,#slots do for j=i+1,#slots do
+            local x1,y1=slots[i],slots[j]
+            assert(x1.x+x1.w<=y1.x or y1.x+y1.w<=x1.x,
+                "UI e2e: overlapping Gallery header hitboxes")
+        end end
         click_control("plus")
         assert(gallery_menu=="new")
         gallery_e2e_stage=2
