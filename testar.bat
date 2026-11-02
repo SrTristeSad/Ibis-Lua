@@ -25,21 +25,21 @@ if not defined LOVE_EXE if exist "%LOCALAPPDATA%\Programs\LOVE\love.exe" set "LO
 if not defined LOVE_EXE for /f "delims=" %%F in ('where love.exe 2^>nul') do if not defined LOVE_EXE set "LOVE_EXE=%%F"
 
 if not defined LOVE_EXE (
-    echo [ERRO] LÖVE nao foi encontrado.
-    echo Instale o LÖVE 11.5 em https://love2d.org/ e execute testar.bat de novo.
-    echo Alternativa: coloque love.exe e as DLLs do LÖVE na pasta do projeto.
+    echo [ERRO] LOVE nao foi encontrado.
+    echo Instale o LOVE 11.5 em https://love2d.org/ e execute testar.bat de novo.
+    echo Alternativa: coloque love.exe e as DLLs do LOVE na pasta do projeto.
     pause
     exit /b 1
 )
 
 echo [Ibis-Lua] Executando interface visual com:
-echo %LOVE_EXE%
+echo "%LOVE_EXE%"
 echo.
 "%LOVE_EXE%" "%CD%"
 set "RESULT=%ERRORLEVEL%"
 if not "%RESULT%"=="0" (
     echo.
-    echo [ERRO] O LÖVE encerrou com codigo %RESULT%.
+    echo [ERRO] O LOVE encerrou com codigo %RESULT%.
     echo Confira a mensagem de erro exibida pelo aplicativo.
     pause
 )
