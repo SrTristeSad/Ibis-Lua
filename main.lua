@@ -366,7 +366,7 @@ local function colorPanel(w,h)
   -- Diamond-shaped saturation/value area, matching color picker structure.
   U.circle(cx,cy,75,{.31,.31,.31})
   local diamond=61
-  local step=6
+  local step=3
   for iy=-diamond,diamond,step do
     for ix=-diamond,diamond,step do
       if math.abs(ix)+math.abs(iy)<=diamond-step then
