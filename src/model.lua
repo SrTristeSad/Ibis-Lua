@@ -10,6 +10,13 @@ local valid_tools = {
     frame_divider = true, eyedropper = true, canvas = true
 }
 local valid_panels = { brush = true, color = true, layer = true }
+-- Only the selection state of these documented modes is reproduced;
+-- no compositing or raster effect is performed.
+local blend_modes = {
+    Normal = true, Multiply = true, Screen = true, Overlay = true,
+    Darken = true, Lighten = true, ["Color Burn"] = true,
+    ["Color Dodge"] = true, ["Soft Light"] = true
+}
 
 local function require_screen(self, screen)
     assert(self.screen == screen, "Operação inválida fora da tela: " .. screen)
@@ -35,7 +42,8 @@ function Model.new()
         active_layer_id = nil,
         next_layer_id = 1,
         solo_layer_id = nil,
-        solo_before = nil
+        solo_before = nil,
+        background_mode = "white"
     }, Model)
 end
 
@@ -65,7 +73,12 @@ function Model:add_layer()
     self.layers[#self.layers + 1] = {
         id = id,
         name = "Camada demonstrativa " .. tostring(id),
-        visible = true
+        visible = true,
+        opacity = 100,
+        blending = "Normal",
+        clipping = false,
+        alpha_lock = false,
+        locked = false
     }
     self.active_layer_id = id
     return id
@@ -85,6 +98,7 @@ function Model:create_canvas(width, height)
     self.next_layer_id = 1
     self.solo_layer_id = nil
     self.solo_before = nil
+    self.background_mode = "white"
     self:add_layer()
 end
 
@@ -122,6 +136,65 @@ end
 
 -- Long press no controle de visibilidade alterna modo solo (14.1.0+).
 -- O snapshot evita perder o estado de visibilidade anterior das camadas.
+function Model:get_layer(id)
+    require_screen(self, "editor")
+    for _,layer in ipairs(self.layers) do
+        if layer.id==id then return layer end
+    end
+    error("Camada inexistente")
+end
+
+function Model:active_layer()
+    return self:get_layer(self.active_layer_id)
+end
+
+function Model:set_layer_opacity(id,opacity)
+    local layer=self:get_layer(id)
+    assert(type(opacity)=="number" and opacity==opacity
+        and opacity>=0 and opacity<=100, "Opacidade inválida")
+    layer.opacity=math.floor(opacity+0.5)
+end
+
+function Model:set_layer_blending(id,mode)
+    local layer=self:get_layer(id)
+    assert(blend_modes[mode], "Modo de mesclagem desconhecido")
+    layer.blending=mode
+end
+
+function Model:toggle_layer_clipping(id)
+    local layer=self:get_layer(id)
+    layer.clipping=not layer.clipping
+    return layer.clipping
+end
+
+function Model:toggle_layer_alpha_lock(id)
+    local layer=self:get_layer(id)
+    layer.alpha_lock=not layer.alpha_lock
+    return layer.alpha_lock
+end
+
+function Model:toggle_layer_lock(id)
+    local layer=self:get_layer(id)
+    layer.locked=not layer.locked
+    return layer.locked
+end
+
+function Model:rename_layer(id,name)
+    local layer=self:get_layer(id)
+    assert(type(name)=="string" and #name>=1 and #name<=80
+        and not name:match("^%s*$"), "Nome de camada inválido")
+    layer.name=name
+end
+
+function Model:set_background(mode)
+    require_screen(self, "editor")
+    assert(mode=="white" or mode=="transparent_light"
+        or mode=="transparent_dark","Fundo inválido")
+    self.background_mode=mode
+end
+
+-- A tela não tem pixels editáveis: mudanças abaixo afetam somente a
+-- simulação de hierarquia e as propriedades do painel.
 function Model:toggle_layer_solo(id)
     require_screen(self, "editor")
     local found=false
