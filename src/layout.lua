@@ -24,7 +24,10 @@ function M.contains(r,x,y)
 end
 function M.rail(i,position,v)
   assert(i>=1 and i<=#M.TOOLS,'Índice da ferramenta inválido')
-  return rect(position=='right' and v.w-49 or 0, 22+(i-1)*26,49,26)
+  local top,row=22,26
+  if position=='right' then top,row=58,23 end
+  return rect(position=='right' and v.w-49 or 0,
+    top+(i-1)*row,49,row)
 end
 function M.dock(i,v)
   assert(i>=1 and i<=#M.DOCK,'Comando inferior inválido')
