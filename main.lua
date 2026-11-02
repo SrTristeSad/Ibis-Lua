@@ -18,6 +18,8 @@ local current_width, current_height = "1000", "1000"
 local focus, opacity, size_zoom = nil, 100, 100
 local input_replace = true
 local layer_press = nil
+local layer_position, drag_layer, drag_opacity = nil, nil, nil
+local layer_blend_open = false
 local selected_brush, palette_index = 1, 1
 local toast, toast_until = nil, 0
 local smoke = os.getenv("IBIS_LUA_SMOKE") == "1"
@@ -603,7 +605,21 @@ local function editor_screen()
     love.graphics.scale(actual_scale)
     local shadow=3/actual_scale
     rectangle(-dw/2-shadow,-dh/2-shadow,dw+shadow*2,dh+shadow*2,C.deep,0.16)
-    rectangle(-dw/2,-dh/2,dw,dh,C.white)
+    if state.background_mode=="white" then
+        rectangle(-dw/2,-dh/2,dw,dh,C.white)
+    else
+        -- Checkerboard visual only: no image compositing or raster engine.
+        local count=14
+        local rows=math.max(2,math.floor(count*dh/dw+0.5))
+        local tw,th=dw/count,dh/rows
+        for i=0,count-1 do for j=0,rows-1 do
+            local dark=state.background_mode=="transparent_dark"
+            local level=(i+j)%2==0 and (dark and 0.25 or 0.78)
+                or (dark and 0.38 or 0.94)
+            rectangle(-dw/2+i*tw,-dh/2+j*th,tw+0.1,th+0.1,
+                {level,level,level})
+        end end
+    end
     draw_view_guides(dw,dh,actual_scale)
     love.graphics.pop()
     -- Top-right Windows editor controls, seen in product screenshot.
@@ -667,8 +683,11 @@ function draw_editor_panel()
         w=math.min(370,W-90);h=440
         x=W-w-20;y=50
     elseif name=="layer" then
-        w=math.min(390,W-120);h=math.min(390,H-160)
-        x=W-w-18;y=H-h-100
+        w=math.min(408,W-110);h=math.min(468,H-125)
+        x=layer_position and layer_position.x or W-w-18
+        y=layer_position and layer_position.y or H-h-91
+        x=math.max(63,math.min(W-w-5,x))
+        y=math.max(3,math.min(H-h-54,y))
     else
         w=math.min(320,W-90);h=math.min(330,H-160)
         x=W-w-22;y=58
@@ -781,31 +800,119 @@ function draw_editor_panel()
         plain_button(bx,y+367,w-26,33,
             "Reset Grid",function() visual:reset_grid() end)
     elseif name=="layer" then
-        local bx=x+12
-        rectangle(bx,y+49,w-59,45,{0.76,0.76,0.76},0.3)
-        label("Selection Layer",bx+38,y+61,w-106,"small","left",C.white)
-        for i=#state.layers,1,-1 do
-            local ly=y+100+(#state.layers-i)*53
-            if ly<y+h-93 then
-                local layer=state.layers[i]
-                rectangle(bx,ly,w-58,50,layer.id==state.active_layer_id and C.blue or C.light,
-                    layer.id==state.active_layer_id and 0.53 or 0.20)
-                rectangle(bx+4,ly+4,42,41,C.white)
-                label(tostring(layer.id),bx+51,ly+5,34,"small","center",C.white)
-                label("100%",bx+96,ly+3,60,"small","center",C.white)
-                label("Normal",bx+96,ly+25,72,"small","center",C.white)
-                local id=layer.id
-                hit(bx+1,ly+1,w-97,49,function() state:select_layer(id) end,"select_layer")
-                glyph("eye",x+w-31,ly+24,13)
-                hit(x+w-48,ly+4,36,41,function()
-                    layer_press={id=id,started=love.timer.getTime()}
-                end,"visibility")
-                if not layer.visible then rectangle(bx,ly,w-58,50,C.deep,0.40) end
+        hit(x+3,y+2,w-48,32,function()
+            local mx,my=pointer()
+            drag_layer={dx=mx-x,dy=my-y}
+        end,"layer_drag")
+        local bx=x+10
+        rectangle(bx,y+43,w-53,37,C.light,0.20,2)
+        label("Selection Layer",bx+40,y+54,w-101,"small","left",C.white)
+        rectangle(bx+7,y+48,25,25,C.white)
+        local max_rows=math.max(1,math.floor((h-269)/52))
+        for slot=1,math.min(#state.layers,max_rows) do
+            local index=#state.layers-slot+1
+            local layer=state.layers[index]
+            local yy=y+85+(slot-1)*52
+            local active=layer.id==state.active_layer_id
+            rectangle(bx,yy,w-53,50,
+                active and C.blue or C.light,active and 0.72 or 0.15,2)
+            -- Transparent thumbnails: artwork pixels are not implemented.
+            for i=0,3 do for j=0,3 do
+                local v=(i+j)%2==0 and 0.87 or 0.65
+                rectangle(bx+4+i*10,yy+5+j*10,10,10,{v,v,v})
+            end end
+            stroke(bx+4,yy+5,40,40,C.soft,0.7)
+            label(tostring(index),bx+48,yy+4,30,"small","center",C.white)
+            label(layer.name,bx+79,yy+4,w-185,"tiny","left",C.white)
+            label(tostring(layer.opacity).."%   "..layer.blending,
+                bx+79,yy+24,w-172,"small","left",C.white)
+            local id=layer.id
+            hit(bx,yy,w-98,50,function() state:select_layer(id) end,
+                "select_layer")
+            glyph("eye",x+w-29,yy+25,12)
+            hit(x+w-48,yy+3,41,44,function()
+                layer_press={id=id,started=love.timer.getTime()}
+            end,"visibility")
+            if not layer.visible then
+                rectangle(bx,yy,w-53,50,C.deep,0.34)
             end
         end
-        label(state.solo_layer_id and "Solo Mode" or "Hold eye icon: Solo Mode",
-            x+13,y+h-76,w-26,"small","center",C.white)
-        plain_button(x+13,y+h-46,w-28,36,"+   Add Layer",function() state:add_layer() end)
+        icon_button(x+w-39,y+44,31,31,"plus",function()
+            state:add_layer()
+        end)
+        hit(x+w-39,y+44,31,31,function() state:add_layer() end,
+            "layer_add")
+        local active=state:active_layer()
+        local foot=y+h-174
+        line(x+8,foot-8,x+w-8,foot-8,1,C.soft,0.3)
+        label("Opacity",x+13,foot,w-40,"small","left",C.white)
+        label(active.opacity.."%",x+w-53,foot,45,"small","right",C.white)
+        local slider_x=x+94
+        local slider_w=w-157
+        rectangle(slider_x,foot+12,slider_w,4,C.soft,0.58)
+        rectangle(slider_x,foot+12,slider_w*active.opacity/100,4,C.blue)
+        rgba(C.white)
+        love.graphics.circle("fill",slider_x+slider_w*active.opacity/100,foot+14,7)
+        hit(slider_x,foot+2,slider_w,27,function()
+            local mx=pointer()
+            state:set_layer_opacity(active.id,
+                math.floor(math.max(0,math.min(1,(mx-slider_x)/slider_w))*100+0.5))
+            drag_opacity={id=active.id,x=slider_x,w=slider_w}
+        end,"layer_opacity")
+        local bw=(w-29)/2
+        local function toggle(xx,name,enabled,fn,key)
+            rectangle(xx,foot+37,bw,30,enabled and C.blue or C.deep,0.92,2)
+            label(name,xx+1,foot+45,bw-2,"small","center",C.white)
+            hit(xx,foot+37,bw,30,fn,key)
+        end
+        toggle(x+10,"Clipping",active.clipping,function()
+            state:toggle_layer_clipping(active.id)
+        end,"layer_clipping")
+        toggle(x+19+bw,"Alpha Lock",active.alpha_lock,function()
+            state:toggle_layer_alpha_lock(active.id)
+        end,"layer_alpha_lock")
+        rectangle(x+10,foot+72,w-20,30,C.deep,0.86,2)
+        label("Blending Mode   "..active.blending.."   ▾",
+            x+19,foot+80,w-38,"small","left",C.white)
+        hit(x+10,foot+72,w-20,30,function()
+            layer_blend_open=not layer_blend_open
+        end,"layer_blend")
+        label("Background",x+10,foot+109,w-20,"small","left",C.white)
+        local backgrounds={
+            {"White","white"},{"Light","transparent_light"},
+            {"Dark","transparent_dark"}
+        }
+        for i,option in ipairs(backgrounds) do
+            local ww=(w-24)/3
+            local xx=x+9+(i-1)*ww
+            local enabled=state.background_mode==option[2]
+            rectangle(xx,foot+128,ww-3,31,
+                enabled and C.blue or C.deep,enabled and 0.96 or 0.79,2)
+            label(option[1],xx+1,foot+136,ww-5,"small","center",C.white)
+            local mode=option[2]
+            hit(xx,foot+128,ww-3,31,function()
+                state:set_background(mode)
+            end,"background_"..mode)
+        end
+        if layer_blend_open then
+            local opts={"Normal","Multiply","Screen","Overlay","Darken","Lighten",
+                "Color Burn","Color Dodge","Soft Light"}
+            local popup_x=x+w-210
+            local popup_y=y+35
+            rectangle(popup_x,popup_y,201,#opts*27+6,C.deep,0.99,2)
+            hit(popup_x,popup_y,201,#opts*27+6,function() end,"blend_surface")
+            for i,mode in ipairs(opts) do
+                local yy=popup_y+3+(i-1)*27
+                if active.blending==mode then
+                    rectangle(popup_x+2,yy,197,26,C.blue,0.80,2)
+                end
+                label(mode,popup_x+11,yy+7,174,"small","left",C.white)
+                hit(popup_x+3,yy,195,26,function()
+                    state:set_layer_blending(state.active_layer_id,mode)
+                    layer_blend_open=false
+                end,"blend_"..mode)
+            end
+        end
     elseif name=="brush" then
         label("Brush",x+15,y+54,w-30,"normal","center",C.white)
         local tabs={"Basic","Custom","Online"}
@@ -1028,9 +1135,17 @@ function love.mousepressed(rx,ry,button)
     end
     if state.screen=="editor" and not panel and love.keyboard.isDown("space") then
         view:begin_pan(x,y)
-    elseif panel then panel=nil;state.active_panel=nil end
+    elseif panel then panel=nil;state.active_panel=nil;layer_blend_open=false end
 end
 function love.mousemoved(rx,ry,dx,dy)
+    if drag_layer and panel=="layer" then
+        layer_position={x=rx/scale-drag_layer.dx,y=ry/scale-drag_layer.dy}
+    end
+    if drag_opacity and panel=="layer" then
+        local p=drag_opacity
+        state:set_layer_opacity(p.id,math.floor(
+            math.max(0,math.min(1,(rx/scale-p.x)/p.w))*100+0.5))
+    end
     if drag_dimension and state.modal=="new_canvas" then
         local value=math.floor(1+math.max(0,math.min(1,
             (rx/scale-drag_dimension.sx)/drag_dimension.width))*8191+0.5)
@@ -1045,6 +1160,8 @@ end
 function love.mousereleased(rx,ry,button)
     if button~=1 then return end
     drag_dimension=nil
+    drag_layer=nil
+    drag_opacity=nil
     view:end_pan()
     if layer_press then
         if state.screen=="editor" and panel=="layer" then
@@ -1108,7 +1225,8 @@ function love.keypressed(key)
     end
     if key=="escape" then
         view:end_pan()
-        if panel then panel=nil;state.active_panel=nil
+        if layer_blend_open then layer_blend_open=false
+        elseif panel then panel=nil;state.active_panel=nil
         elseif state.screen=="editor" then set_panel("back")
         elseif state.screen=="gallery" then state.screen="title"
         else love.event.quit() end
