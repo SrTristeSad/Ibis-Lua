@@ -7,7 +7,7 @@
 Esta versão **já contém telas e controles clicáveis**. A reconstrução **não está concluída nem validada como cópia 1:1**. A maior parte das capturas Windows públicas consultadas não identifica a compilação 14.1.4.
 
 - **Tela inicial** com disposição orientada por referência Windows histórica (9.4.2). Sem Collection (função removida depois).
-- **My Gallery** com barra superior, controles de navegação e estado vazio.
+- **My Gallery** com barra superior, menu New, pastas e miniaturas demonstrativas, seleção, movimentação de itens, renomeação de pastas, navegação aninhada e rolagem.
 - **New Canvas lateral direito**, incluindo edição de dimensões, lista rolável de presets e criação de documento demonstrativo; substitui o diálogo central anterior.
 - **Editor** com faixa vertical de 15 ferramentas e respectivos ícones vetoriais próprios, controles inferiores, botões superiores, painéis de pincel, cor e camadas. Visualização do canvas com **zoom pelo scroll do mouse, rotação com Shift+scroll e pan com Espaço+arrastar**.
 - **Comportamentos simulados**: seleção de ferramenta, brush/eraser, dimensões, espessura, opacidade, paleta e camadas. Inclui **modo Solo**: manter pressionado o ícone de visibilidade da camada e soltar; pressionar de novo restaura os estados anteriores.
@@ -28,7 +28,7 @@ No programa: clique em My Gallery, +, escolha dimensões e clique OK. Os campos 
 - Comparador: python -m unittest discover -s tests -p "test_compare.py"
 - Diferença de imagens: python tools/compare_screenshots.py --reference original.png --actual copia.png --output-dir comparison_output
 
-O GitHub Actions realiza verificação sintática, testes do modelo, testes do comparador, integração por cliques e **captura dezoito estados no LÖVE** (título, galeria, novo canvas, novo canvas com DPI de papel, editor, camadas, janela flutuante redimensionada, propriedades de camadas, menu de blending, fundo transparente, pincéis, cor, zoom/rotação, modo Solo, View Menu, Grid Settings, grade e janela de referência). Capturas automatizadas não comprovam correspondência com o software original.
+O GitHub Actions realiza verificação sintática, testes do modelo, testes do comparador, integração por cliques e **captura vinte e três estados no LÖVE** (título, galeria, menu New, galeria com pastas, galeria dentro de pasta, seleção da galeria, galeria com muitos itens, novo canvas, novo canvas com DPI, editor, camadas, janela flutuante, propriedades, blending, fundo transparente, pincéis, cor, zoom/rotação, Solo, View Menu, Grid Settings, grade e janela de referência). Capturas automatizadas não comprovam correspondência com o software original.
 
 ## Pesquisa e qualidade
 
@@ -71,3 +71,15 @@ A lista agora é carregada de `src/canvas_presets.lua`, não de constantes escon
 Esta é uma **transcrição de uma captura pública de Windows de versão indeterminada**, não a comprovação dos modelos atuais da versão 14.1.4. A página que hospeda a captura atualmente identifica o pacote Windows 14.0.10.0; isso não certifica a data nem a versão da própria imagem. A inconsistência visível entre o rótulo `9 : 16 (SD)` e as dimensões `1280 x 720` permanece registrada como **pendência de verificação**, não como uma regra de proporção garantida.
 
 O CI executa `tests/test_canvas_presets.lua`, verifica seleção A4 e a mudança de DPI pelos callbacks reais, e testa a navegação em 1024×768 e 1600×900. A captura `new_canvas_dpi.png` fica disponível no artefato de screenshots do GitHub Actions.
+
+## My Gallery — pastas e navegação (atualização)
+
+A My Gallery foi atualizada para contemplar o recurso oficial **Artworks Folder** (adicionado ao ibisPaint 12.2.0). O botão `+` agora abre `New`, permitindo escolher `Canvas` ou `Folder (Pro)`. A versão Windows exige Pro Upgrade ou Premium Membership para habilitar Artworks Folder; neste protótipo a função é **uma simulação independente**, sem licenças, contas ou sincronização.
+
+Nesta etapa foram adicionados `src/gallery.lua` e `tests/test_gallery.lua`. O módulo fornece pastas aninhadas, obras demonstrativas com dimensões, seleção, renomeação, movimentação com prevenção de ciclos, hierarquia de navegação e cópias de leitura. `main.lua` agora apresenta uma grade de miniaturas e pastas, seleção múltipla, menu de destino de movimentação, formulário de pasta, retorno ao editor e rolagem vertical com recorte.
+
+**Persistência:** nenhum documento de obra, pasta ou miniatura é gravado em disco. Os itens da galeria existem **apenas durante a execução**. Reabrir uma obra inicia o estado demonstrativo do editor; não recupera pinturas, pois o projeto exclui motor de pintura.
+
+**Fidelidade:** geometria e ícones da galeria são desenhos de trabalho, **não** reproduções validadas da edição Windows 14.1.4. A fonte funcional é o tutorial oficial https://ibispaint.com/lecture/index.jsp?no=193; a fonte específica do produto Windows para o requisito de Pro/Premium é https://ibispaint.com/lecture/index.jsp?no=183.
+
+**Verificações adicionais:** `luajit tests/test_gallery.lua` e `IBIS_LUA_GALLERY_E2E=1 love .`, com o fluxo My Gallery → New → Folder → Canvas → Layer/Back → Select/Move → Rename → Scroll/Reopen. O teste de layout confirma que os sete controles do cabeçalho não possuem áreas clicáveis sobrepostas. O workflow produz **23 capturas** de estados diferentes.

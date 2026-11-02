@@ -137,3 +137,17 @@ A geometria de janela (largura/altura inicial, margens e hit area) continua prov
 - **Inconsistência da fonte:** a linha de rótulo `9 : 16 (SD)` acompanha `1280 x 720` na captura pequena. Não foi corrigida por suposição, e precisa ser confrontada com a interface oficial 14.1.4.
 - Melhorias atuais: escala vertical das linhas ao espaço disponível, controles de DPI, miniaturas vetoriais com aspecto de cada modelo, leitura de dimensões na faixa inferior e limites de rolagem definidos pela altura do conteúdo.
 - **Nenhuma comparação geométrica foi aprovada**: sem screenshot 14.1.4 capturado no mesmo DPI e resolução, fontes/ícones/tamanhos de linhas ainda são aproximações.
+
+## W13 — Artworks Folder Feature, origem e fidelidade Windows
+
+Fontes oficiais:
+- https://ibispaint.com/lecture/index.jsp?no=193 (pasta criada a partir do botão `+` e de uma opção `Folder` em uma janela `New`; navegação, pastas aninhadas, renomeação, seleção e movimentação de obras).
+- https://ibispaint.com/lecture/index.jsp?no=183 (o recurso Artworks Folder é uma funcionalidade Pro/Premium no Windows/Mac).
+- https://ibispaint.com/newFeature.jsp (introdução das pastas no ibisPaint 12.2.0 e remoção de Collection).
+- https://ibispaint.com/information.jsp?newsID=313331619 (mudanças na My Gallery da versão 14.1.4, incluindo o número de obras sincronizadas quando a sincronização é concluída; isso **não** foi simulado como se estivesse conectado a uma conta).
+
+**Implementado funcionalmente:** menu New (Canvas e Folder), diretórios em árvore, obras sem pixels, mover seleção, renomear, reabrir tela simulada, retornar ao diretório anterior, grade adaptada à largura e rolagem com recorte vertical. Fonte visual Windows histórica da galeria: W1.
+
+**Correção encontrada por inspeção de screenshot gerado:** as áreas de clique dos cinco ícones à direita da My Gallery entravam nas áreas de Select e Edit. Os botões foram redistribuídos, e um teste E2E verifica ausência dessa sobreposição.
+
+**Restrições:** não existe armazenamento, transferência real, login ou nuvem. A função de pastas é apresentada como demonstração e não prova um direito de uso adquirido pelo usuário. O visual de pastas e ícones não é validado para Windows 14.1.4. Nenhuma porcentagem de fidelidade pode ser inferida das capturas de smoke.

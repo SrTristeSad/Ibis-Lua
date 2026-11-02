@@ -66,3 +66,11 @@
 - A suíte de cliques `IBIS_LUA_E2E=1 love .` verifica preset A4, DPI de 150 para 300, edição dos campos numéricos e criação do documento simulado.
 - O CI executa também `IBIS_LUA_E2E=1 IBIS_LUA_E2E_RES=1600x900 love .` em Xvfb com resolução ajustada; isso verifica navegação e evita regressões em janelas largas, **não** fidelidade visual.
 - O workflow gera **18 capturas** e inclui o estado `new_canvas_dpi`.
+
+## Galeria — testes de organização e inspeção de screenshots
+
+- Modelo puro: `tests/test_gallery.lua` exercita hierarquia, pastas aninhadas, documentos demonstrativos, renomeação, prevenção de movimentos circulares, seleção e mudança de pasta. A lógica não escreve arquivos.
+- Integração LÖVE: `IBIS_LUA_GALLERY_E2E=1 love .` percorre cliques em New, Folder, campos de nome, Canvas, Return to My Gallery, Select, Move e Edit/Rename, depois testa a rolagem e a abertura de uma miniatura visível.
+- Uma verificação do cabeçalho detecta sobreposição de hitboxes dos ícones e das ações Select/Edit; foi introduzida após **inspeção de uma captura efetivamente gerada pelo LÖVE**.
+- Estados adicionais do CI: `gallery_new`, `gallery_folders`, `gallery_inside`, `gallery_selection` e `gallery_many`. Total **23 capturas**.
+- Continuam ausentes: captura original **Windows 14.1.4** na mesma resolução/DPI/idioma, diferenças medíveis de pixels, comparação de ícones e características de galeria em contas Pro/Premium reais.
