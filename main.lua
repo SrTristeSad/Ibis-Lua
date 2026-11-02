@@ -294,12 +294,25 @@ end
 local function genericPanel(w,h)
   local name=s.panel
   if name=="tools" then
-    local x=58;local y=52;local pw=227;local ph=math.min(h-115,640)
-    panelBox(x,y,pw,ph,"Tool Selection")
-    local rowH=(ph-48)/#Model.tools
+    local x=58;local y=82;local pw=268;local ph=math.min(h-160,452)
+    U.rect(x,y,pw,ph,{.34,.34,.34,.94},5)
+    U.hitbox(x,y,pw,ph,function() end)
+    local cols=2
+    local rows=math.ceil(#Model.tools/cols)
+    local cw=(pw-12)/cols
+    local ch=(ph-15)/rows
     for i,tool in ipairs(Model.tools) do
-      U.toolButton(tool,x+4,y+38+(i-1)*rowH,pw-8,rowH,s.tool==tool,
-        function() Model.setTool(s,tool) end)
+      local col=(i-1)%cols
+      local row=math.floor((i-1)/cols)
+      local xx=x+6+col*cw
+      local yy=y+6+row*ch
+      if s.tool==tool then U.rect(xx,yy,cw-2,ch-2,{.26,.47,.65,.75},3) end
+      U.icon(tool,xx+cw*.5,yy+15,24)
+      local label=tool=="Frame Divider" and "Frame Divider"
+        or tool=="Magic Wand" and "Magic Wand"
+        or tool=="Special" and "Special Pen" or tool
+      U.text(label,xx+3,yy+29,cw-6,C.white,"small","center")
+      U.hitbox(xx,yy,cw,ch,function() Model.setTool(s,tool) end)
     end
   elseif name=="size" then
     panelBox(172,h-181,290,125,"Brush Size")
