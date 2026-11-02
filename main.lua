@@ -3,7 +3,9 @@
 -- (Microsoft Store, independent Windows screenshots), official tool manual.
 -- Fidelity to version 14.1.4 is NOT yet certified. No paint/image engine.
 local Model = require("src.model")
+local Viewport = require("src.viewport")
 local state = Model.new()
+local view = Viewport.new()
 local controls = {}
 local font = {}
 local scale, W, H = 1, 1024, 768
@@ -11,6 +13,8 @@ local panel, gallery_menu = nil, nil
 local gallery_scroll, preset_selected = 0, 1
 local current_width, current_height = "1000", "1000"
 local focus, opacity, size_zoom = nil, 100, 100
+local input_replace = true
+local layer_press = nil
 local selected_brush, palette_index = 1, 1
 local toast, toast_until = nil, 0
 local smoke = os.getenv("IBIS_LUA_SMOKE") == "1"
@@ -370,12 +374,14 @@ end
 -- This side-aligned full-height panel follows the WINDOWS screenshot,
 -- replacing the ungrounded central modal used in prior commits.
 function draw_new_canvas()
-    local pw=math.min(600,math.max(410,W*0.62))
+    local pw=math.min(700,math.max(440,W*0.69))
     local px=W-pw-4
     rectangle(px-3,47,pw+7,H-48,C.deep,0.98,2)
     rectangle(px,50,pw,H-54,C.light)
     rectangle(px,50,pw,28,C.dark)
     label("New Canvas",px,55,pw,"small","center",C.white)
+    -- Bloqueio da tela sob o painel: o cabeçalho da galeria não recebe cliques.
+    hit(0,0,W,H,function() end,"canvas_panel_capture")
     hit(0,48,px-3,H-48,function()
         state:cancel_new_canvas();focus=nil
     end,"outside_canvas_panel")
@@ -402,7 +408,7 @@ function draw_new_canvas()
         rectangle(px+39,y,pw*0.25,24,C.white)
         stroke(px+39,y,pw*0.25,24,focus==f.key and C.blue or C.soft)
         label(f.value,px+43,y+3,pw*0.25-8,"small","center",C.ink)
-        hit(px+39,y,pw*0.25,24,function() focus=f.key end,"input_"..f.key)
+        hit(px+39,y,pw*0.25,24,function() focus=f.key;input_replace=true end,"input_"..f.key)
         local sx=px+pw*0.32
         line(sx,y+12,sx+pw*0.56,y+12,4,{0.68,0.68,0.68})
         rectangle(sx+pw*0.14,y+5,14,14,C.white,1,7)
@@ -422,7 +428,7 @@ function draw_new_canvas()
             hit(px+4,row_y,pw-8,29,function()
                 preset_selected=i
                 current_width=tostring(p[2]);current_height=tostring(p[3])
-                focus=nil
+                focus=nil;input_replace=true
             end,"preset_"..i)
         end
     end
@@ -437,6 +443,7 @@ function draw_new_canvas()
             return
         end
         state:create_canvas(ww,hh)
+        view:reset()
         panel=nil;gallery_menu=nil;focus=nil
     end,true)
 end
@@ -466,7 +473,8 @@ local function draw_editor_toolbar()
     for i,e in ipairs(entries) do
         local active=(i==1 and state.active_tool=="brush")
             or (i==8 and panel=="layer")
-        icon_button(start+(i-1)*gap+4,bottom+3,gap-8,45,e[1],e[2],active)
+        icon_button(start+(i-1)*gap+4,bottom+3,gap-8,45,
+            i==1 and (state.active_tool=="eraser" and "eraser" or "brush") or e[1],e[2],active)
     end
 end
 local function draw_size_controls()
@@ -500,9 +508,17 @@ local function editor_screen()
     local ah=H-111
     local dw,dh=state.document.width,state.document.height
     local canvas_scale=math.min(aw/dw,ah/dh,1.1)
-    local cw,ch=dw*canvas_scale,dh*canvas_scale
-    rectangle(space_left+(W-space_left-cw)/2-3,28+(ah-ch)/2-3,cw+6,ch+6,C.deep,0.15)
-    rectangle(space_left+(W-space_left-cw)/2,28+(ah-ch)/2,cw,ch,C.white)
+    local cx=space_left+(W-space_left)/2
+    local cy=28+ah/2
+    local actual_scale=canvas_scale*view.zoom
+    love.graphics.push()
+    love.graphics.translate(cx+view.pan_x,cy+view.pan_y)
+    love.graphics.rotate(view.rotation)
+    love.graphics.scale(actual_scale)
+    local shadow=3/actual_scale
+    rectangle(-dw/2-shadow,-dh/2-shadow,dw+shadow*2,dh+shadow*2,C.deep,0.16)
+    rectangle(-dw/2,-dh/2,dw,dh,C.white)
+    love.graphics.pop()
     -- Top-right Windows editor controls, seen in product screenshot.
     local tops={"settings","selection","stabilizer","shape","ruler","material"}
     for i,name in ipairs(tops) do
@@ -535,6 +551,8 @@ local function editor_screen()
         end,key)
     end
     draw_size_controls()
+    label(string.format("%d%%",math.floor(view.zoom*100+0.5)),
+        W-72,H-72,67,"small","right",C.ink)
     draw_editor_toolbar()
     if panel then draw_editor_panel() end
 end
@@ -544,6 +562,7 @@ local function draw_panel_box(x,y,w,h,title)
     rectangle(x,y,w,h,{0.31,0.31,0.31},0.89,3)
     rectangle(x,y,w,36,{0.38,0.38,0.38},0.96)
     label(title,x+9,y+8,w-53,"small","left",C.white)
+    hit(x,y,w,h,function() end,"panel_surface")
     icon_button(x+w-37,y+2,35,32,"check",function()
         panel=nil;state.active_panel=nil
     end)
@@ -582,10 +601,14 @@ function draw_editor_panel()
                 local id=layer.id
                 hit(bx+1,ly+1,w-97,49,function() state:select_layer(id) end,"select_layer")
                 glyph("eye",x+w-31,ly+24,13)
-                hit(x+w-48,ly+4,36,41,function() state:toggle_layer_visibility(id) end,"visibility")
+                hit(x+w-48,ly+4,36,41,function()
+                    layer_press={id=id,started=love.timer.getTime()}
+                end,"visibility")
                 if not layer.visible then rectangle(bx,ly,w-58,50,C.deep,0.40) end
             end
         end
+        label(state.solo_layer_id and "Solo Mode" or "Hold eye icon: Solo Mode",
+            x+13,y+h-76,w-26,"small","center",C.white)
         plain_button(x+13,y+h-46,w-28,36,"+   Add Layer",function() state:add_layer() end)
     elseif name=="brush" then
         label("Brush",x+15,y+54,w-30,"normal","center",C.white)
@@ -782,6 +805,7 @@ end
 
 function love.mousepressed(rx,ry,button)
     if button~=1 then return end
+    layer_press=nil
     local x,y=rx/scale,ry/scale
     for i=#controls,1,-1 do
         local b=controls[i]
@@ -790,39 +814,80 @@ function love.mousepressed(rx,ry,button)
             return
         end
     end
-    if panel then panel=nil;state.active_panel=nil end
+    if state.screen=="editor" and not panel and love.keyboard.isDown("space") then
+        view:begin_pan(x,y)
+    elseif panel then panel=nil;state.active_panel=nil end
+end
+function love.mousemoved(rx,ry,dx,dy)
+    if view.is_panning then
+        if love.keyboard.isDown("space") then view:pan_to(rx/scale,ry/scale)
+        else view:end_pan() end
+    end
+end
+function love.mousereleased(rx,ry,button)
+    if button~=1 then return end
+    view:end_pan()
+    if layer_press then
+        if state.screen=="editor" and panel=="layer" then
+            if love.timer.getTime()-layer_press.started>=0.55 then
+                state:toggle_layer_solo(layer_press.id)
+            else
+                state:toggle_layer_visibility(layer_press.id)
+            end
+        end
+        layer_press=nil
+    end
 end
 function love.wheelmoved(dx,dy)
     if state.screen=="gallery" and state.modal=="new_canvas" then
         gallery_scroll=math.max(0,math.min(300,gallery_scroll-dy*28))
+    elseif state.screen=="editor" and not panel then
+        if love.keyboard.isDown("lshift","rshift") then
+            view:rotate_wheel(dy)
+        else
+            local x,y=pointer()
+            local cx=62+(W-62)/2
+            local cy=28+(H-111)/2
+            view:zoom_at(dy,x,y,cx,cy)
+        end
     end
 end
 function love.textinput(t)
     if state.screen~="gallery" or state.modal~="new_canvas" or not focus then return end
     if not t:match("^%d+$") then return end
-    if focus=="width" then current_width=(current_width..t):sub(-5)
-    elseif focus=="height" then current_height=(current_height..t):sub(-5) end
+    if focus=="width" then
+        current_width=(input_replace and t or current_width..t):sub(-5)
+    elseif focus=="height" then
+        current_height=(input_replace and t or current_height..t):sub(-5)
+    end
+    input_replace=false
 end
 function love.keypressed(key)
     if key=="f12" then capture_requested=true;return end
     if state.modal=="new_canvas" then
         if key=="escape" then state:cancel_new_canvas();focus=nil;return end
         if key=="backspace" then
-            if focus=="width" then current_width=current_width:sub(1,-2)
-            elseif focus=="height" then current_height=current_height:sub(1,-2) end
+            if focus=="width" then current_width=input_replace and "" or current_width:sub(1,-2)
+            elseif focus=="height" then current_height=input_replace and "" or current_height:sub(1,-2) end
+            input_replace=false
             return
         end
-        if key=="tab" then focus=focus=="width" and "height" or "width";return end
+        if key=="tab" then
+            focus=focus=="width" and "height" or "width"
+            input_replace=true
+            return
+        end
         if key=="return" or key=="kpenter" then
             local ww,hh=tonumber(current_width),tonumber(current_height)
             if ww and hh and ww>=1 and hh>=1 and ww<=16384 and hh<=16384
             and ww==math.floor(ww) and hh==math.floor(hh) then
-                state:create_canvas(ww,hh);focus=nil;panel=nil
+                state:create_canvas(ww,hh);view:reset();focus=nil;panel=nil
             else notice("Dimensões inválidas") end
             return
         end
     end
     if key=="escape" then
+        view:end_pan()
         if panel then panel=nil;state.active_panel=nil
         elseif state.screen=="editor" then set_panel("back")
         elseif state.screen=="gallery" then state.screen="title"
