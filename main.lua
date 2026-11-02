@@ -1113,9 +1113,20 @@ function love.load()
     font.logo=love.graphics.newFont(65)
     font.icon=love.graphics.newFont(14)
     font.big_icon=love.graphics.newFont(26)
+    if e2e and os.getenv("IBIS_LUA_E2E_RES") then
+        local w,h=os.getenv("IBIS_LUA_E2E_RES"):match("^(%d+)x(%d+)$")
+        assert(w and h,"IBIS_LUA_E2E_RES deve ser largura x altura")
+        local ok=love.window.setMode(tonumber(w),tonumber(h),{resizable=true})
+        assert(ok,"Não foi possível configurar resolução de teste")
+    end
     if smoke then
         if smoke_screen=="gallery" then state:open_gallery()
         elseif smoke_screen=="new_canvas" then state:open_gallery();state:open_new_canvas()
+        elseif smoke_screen=="new_canvas_dpi" then
+            state:open_gallery();state:open_new_canvas()
+            preset_selected=10;active_dpi=300
+            local wi,he=CanvasPresets.pixels(presets[10],active_dpi)
+            current_width=tostring(wi);current_height=tostring(he)
         elseif smoke_screen=="editor" then
             state:open_gallery();state:open_new_canvas();state:create_canvas(1800,2400)
         elseif smoke_screen=="layer" or smoke_screen=="color" or smoke_screen=="brush" then
