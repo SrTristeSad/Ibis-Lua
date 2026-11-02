@@ -27,6 +27,15 @@ Legenda:
 | Hover, disabled, loading | R1 (mudanças gerais) | Pendente |
 | Iconografia ferramenta por ferramenta | R3 (visão parcial) | Pendente |
 
+## Situação de renderização (02/11/2026)
+
+- Título: **desenho vetorial experimental** de logo e botões guiado pela captura antiga Windows 9.4.2; não foi comparado com 14.1.4.
+- My Gallery: navegação e botão + funcionais; geometria provisória baseada em fonte Windows sem confirmação da versão.
+- Novo Canvas: formulário funcional simulado; medidas e rótulos aguardam referência Windows 14.1.4.
+- Editor: área de canvas e controles documentados, porém interface visual aproximada e incompleta, sem motor de pintura.
+- Ícones: apenas pincel e globo vetoriais preliminares. **Não aprovados como equivalentes aos oficiais**.
+- Resultado: nenhuma tela aprovada como fidelidade 1:1.
+
 ## Escopo do modelo Lua
 
 O modelo puro em src/model.lua implementa **simulação de estado**, não renderização ou comprovação de comportamento oficial. Inclui navegação conceitual título -> galeria -> diálogo novo canvas -> editor, escolha de pincel/borracha, painéis básicos, cores, espessura e camadas demonstrativas. Os testes comprovam apenas o funcionamento deste modelo.
