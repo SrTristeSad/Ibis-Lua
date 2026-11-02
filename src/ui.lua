@@ -13,6 +13,7 @@ local hits={}
 local fonts={}
 function U.init()
   fonts.tiny=lg.newFont(9)
+  fonts.micro=lg.newFont(8)
   fonts.small=lg.newFont(11)
   fonts.body=lg.newFont(14)
   fonts.heading=lg.newFont(19)
@@ -62,6 +63,43 @@ function U.dispatch(x,y)
     end
   end
   return false
+end
+local function hsv(h,s,v)
+  h=h%1
+  local i=math.floor(h*6)
+  local f=h*6-i
+  local p=v*(1-s)
+  local q=v*(1-f*s)
+  local t=v*(1-(1-f)*s)
+  if i==0 then return v,t,p end
+  if i==1 then return q,v,p end
+  if i==2 then return p,v,t end
+  if i==3 then return p,q,v end
+  if i==4 then return t,p,v end
+  return v,p,q
+end
+U.hsv=hsv
+function U.colorWheel(cx,cy,r,selected)
+  local oldR,oldG,oldB,oldA=lg.getColor()
+  local count=48
+  local inner=r*.58
+  for k=0,count-1 do
+    local a=-math.pi/2+2*math.pi*k/count
+    local b=-math.pi/2+2*math.pi*(k+1)/count
+    local red,green,blue=hsv(k/count,1,1)
+    lg.setColor(red,green,blue,1)
+    lg.polygon("fill",
+      cx+math.cos(a)*inner,cy+math.sin(a)*inner,
+      cx+math.cos(a)*r,cy+math.sin(a)*r,
+      cx+math.cos(b)*r,cy+math.sin(b)*r,
+      cx+math.cos(b)*inner,cy+math.sin(b)*inner)
+  end
+  local col=selected or {0,0,0}
+  lg.setColor(col[1],col[2],col[3],1)
+  lg.circle("fill",cx,cy,inner-1)
+  lg.setColor(1,1,1,0.65)
+  lg.circle("line",cx,cy,r)
+  lg.setColor(oldR,oldG,oldB,oldA)
 end
 function U.button(label,x,y,w,h,callback,selected,color)
   U.rect(x,y,w,h,selected and U.C.selected or (color or U.C.bar),4)
@@ -129,7 +167,8 @@ function U.toolButton(name,x,y,w,h,selected,callback)
   if selected then U.rect(x,y,w,h,U.C.accent) end
   U.icon(name,x+w*.5,y+14,17)
   local names={["Magic Wand"]="Magic Wand",["Frame Divider"]="Frame Divider"}
-  U.text(names[name] or name,x+1,y+28,w-2,U.C.white,"tiny","center")
+  local labels={["Magic Wand"]="Magic\nWand",["Frame Divider"]="Frame\nDivider",["Special"]="Special",["Eyedropper"]="Eyedropper"}
+  U.text(labels[name] or name,x+1,y+26,w-2,U.C.white,"micro","center")
   U.hitbox(x,y,w,h,callback)
 end
 function U.close(x,y,callback)
