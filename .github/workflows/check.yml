@@ -29,3 +29,10 @@ jobs:
         run: |
           timeout 20s xvfb-run -a env IBIS_LUA_SMOKE=1 love .
           find "$HOME/.local/share/love" -name ci-smoke.png -size +100c -print -quit | grep -q ci-smoke.png
+      - name: Save LÖVE screenshot for visual inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ibis-lua-title-smoke
+          path: ~/.local/share/love/ibis-lua-fidelity/ci-smoke.png
+          if-no-files-found: warn
