@@ -1,0 +1,27 @@
+name: Lua syntax and state tests
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        lua-version: ["5.1.5", "luajit-2.1"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: leafo/gh-actions-lua@v13
+        with:
+          luaVersion: ${{ matrix.lua-version }}
+      - name: Check Lua syntax
+        run: |
+          lua -e 'assert(loadfile("conf.lua"))'
+          lua -e 'assert(loadfile("main.lua"))'
+          lua -e 'assert(loadfile("src/ui.lua"))'
+          lua -e 'assert(loadfile("src/model.lua"))'
+          lua -e 'assert(loadfile("tests/test_model.lua"))'
+      - name: Run model regressions
+        run: lua tests/test_model.lua
