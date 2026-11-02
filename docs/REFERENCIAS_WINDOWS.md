@@ -47,6 +47,14 @@ A presença de uma captura numa fonte relativa ao Windows **NÃO prova** que a c
 - Mostra New Canvas e My Gallery no Windows em captura publicada por terceiro.
 - Limitação: versão e escala não verificadas. Não usar para afirmar layout 14.1.4.
 
+## R7 — Inventário oficial de ferramentas (multiplataforma)
+
+- URL: https://ibispaint.com/lecture/index.jsp?no=4
+- Confirma a sequência documentada de 15 ferramentas: Transform, Magic Wand, Lasso, Filter, Brush, Eraser, Smudge, Blur, Special Pen, Bucket, Vector, Text, Frame Divider, Eyedropper e Canvas.
+- Também documenta controles da toolbar principal e canto superior direito.
+- Limitação: o tutorial não é uma auditoria da build Windows 14.1.4; a sequência e as dimensões de barras e ícones precisam ser conferidas no aplicativo Windows da versão-alvo.
+- O modelo simulado oferece seleção lógica dessas 15 ferramentas, sem afirmar reproduzir layout ou comportamento completo.
+
 ## Evidências faltantes para construção fiel
 
 1. Capturas integrais da versão **Windows 14.1.4**, com resolução, DPI e idioma.
