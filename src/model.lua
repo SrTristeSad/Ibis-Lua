@@ -33,7 +33,9 @@ function Model.new()
         color = { 0, 0, 0 },
         layers = {},
         active_layer_id = nil,
-        next_layer_id = 1
+        next_layer_id = 1,
+        solo_layer_id = nil,
+        solo_before = nil
     }, Model)
 end
 
@@ -57,6 +59,7 @@ end
 
 function Model:add_layer()
     require_screen(self, "editor")
+    if self.solo_layer_id then self:toggle_layer_solo(self.solo_layer_id) end
     local id = self.next_layer_id
     self.next_layer_id = id + 1
     self.layers[#self.layers + 1] = {
@@ -80,6 +83,8 @@ function Model:create_canvas(width, height)
     self.layers = {}
     self.active_layer_id = nil
     self.next_layer_id = 1
+    self.solo_layer_id = nil
+    self.solo_before = nil
     self:add_layer()
 end
 
@@ -115,8 +120,39 @@ function Model:set_color(r, g, b)
     self.color = { r, g, b }
 end
 
+-- Long press no controle de visibilidade alterna modo solo (14.1.0+).
+-- O snapshot evita perder o estado de visibilidade anterior das camadas.
+function Model:toggle_layer_solo(id)
+    require_screen(self, "editor")
+    local found=false
+    for _,layer in ipairs(self.layers) do
+        if layer.id==id then found=true; break end
+    end
+    assert(found, "Camada inexistente")
+    if self.solo_layer_id==id then
+        for _,layer in ipairs(self.layers) do
+            layer.visible=self.solo_before[layer.id]
+        end
+        self.solo_layer_id=nil
+        self.solo_before=nil
+        return false
+    end
+    if not self.solo_before then
+        self.solo_before={}
+        for _,layer in ipairs(self.layers) do
+            self.solo_before[layer.id]=layer.visible
+        end
+    end
+    self.solo_layer_id=id
+    for _,layer in ipairs(self.layers) do
+        layer.visible=layer.id==id
+    end
+    return true
+end
+
 function Model:toggle_layer_visibility(id)
     require_screen(self, "editor")
+    if self.solo_layer_id then self:toggle_layer_solo(self.solo_layer_id) end
     for _, layer in ipairs(self.layers) do
         if layer.id == id then
             layer.visible = not layer.visible
