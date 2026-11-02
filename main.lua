@@ -752,9 +752,9 @@ function love.load()
         elseif smoke_screen=="new_canvas" then state:open_gallery();state:open_new_canvas()
         elseif smoke_screen=="editor" then
             state:open_gallery();state:open_new_canvas();state:create_canvas(1800,2400)
-        elseif smoke_screen=="layer" then
+        elseif smoke_screen=="layer" or smoke_screen=="color" or smoke_screen=="brush" then
             state:open_gallery();state:open_new_canvas();state:create_canvas(1800,2400)
-            set_panel("layer")
+            set_panel(smoke_screen)
         end
         capture_requested=true
     end
