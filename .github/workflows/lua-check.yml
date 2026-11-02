@@ -23,5 +23,8 @@ jobs:
           lua -e 'assert(loadfile("src/ui.lua"))'
           lua -e 'assert(loadfile("src/model.lua"))'
           lua -e 'assert(loadfile("tests/test_model.lua"))'
+          lua -e 'assert(loadfile("tests/test_icon_coverage.lua"))'
       - name: Run model regressions
-        run: lua tests/test_model.lua
+        run: |
+          lua tests/test_model.lua
+          lua tests/test_icon_coverage.lua
