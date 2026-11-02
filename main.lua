@@ -777,10 +777,11 @@ function love.load()
     if screenshotMode=="newCanvas" then Model.openNewCanvas(s) end
   elseif screenshotMode=="editor" or screenshotMode=="brush"
       or screenshotMode=="layer" or screenshotMode=="color"
-      or screenshotMode=="tools" then
+      or screenshotMode=="tools" or screenshotMode=="fullscreen" then
     Model.openGallery(s)
     Model.createCanvas(s)
-    if screenshotMode~="editor" then s.panel=screenshotMode end
+    if screenshotMode=="fullscreen" then s.fullscreenPreview=true
+    elseif screenshotMode~="editor" then s.panel=screenshotMode end
   end
 end
 function love.update(dt)
