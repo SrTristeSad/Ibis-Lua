@@ -272,24 +272,113 @@ local swatches={
   {.35,.58,.7},{.79,.29,.27},{.58,.66,.34},{.44,.38,.61}
 }
 local function colorPanel(w,h)
-  local pw=318;local ph=420;local x=w-pw-16;local y=46
+  local pw=418
+  local ph=math.min(h-108,526)
+  local x=w-pw-15
+  local y=80
   panelBox(x,y,pw,ph,"Color")
-  U.rect(x+16,y+49,280,124,{1,1,1})
-  for i=1,14 do
-    local r=i/14
-    U.rect(x+16+(i-1)*20,y+49,20,124,{r,0.32,1-r})
-  end
-  U.text("Palette",x+16,y+186,90,C.white,"body")
+  U.text("Palette",x+15,y+47,130,C.white,"body")
+  U.rect(x+13,y+75,150,202,{.82,.82,.82})
+  -- Palette from visual reference, not extracted pixels.
   for i,col in ipairs(swatches) do
-    local coln=(i-1)%6
+    local column=(i-1)%6
     local row=math.floor((i-1)/6)
-    local sx=x+16+coln*47;local sy=y+219+row*49
-    U.rect(sx,sy,39,39,col,3)
-    U.stroke(sx,sy,39,39,C.gray)
-    U.hitbox(sx,sy,39,39,function() Model.setColor(s,col[1],col[2],col[3]) end)
+    local px=x+19+column*24
+    local py=y+84+row*32
+    U.rect(px,py,22,28,col)
+    U.stroke(px,py,22,28,C.gray)
+    U.hitbox(px,py,22,28,function()
+      Model.setColor(s,col[1],col[2],col[3])
+    end)
   end
-  U.rect(x+17,y+369,47,32,s.color)
-  U.text("Current color",x+72,y+377,200,C.white,"body")
+  for i=1,6 do
+    local px=x+19+(i-1)*24
+    U.rect(px,y+84+3*32,22,28,{1,1,1})
+    U.stroke(px,y+84+3*32,22,28,C.gray)
+  end
+  U.text("Color History",x+16,y+285,142,C.white,"small")
+  for i=1,5 do
+    local col=swatches[math.min(i+1,#swatches)]
+    local px=x+18+(i-1)*29
+    U.rect(px,y+303,27,23,col)
+    U.hitbox(px,y+303,27,23,function()
+      Model.setColor(s,col[1],col[2],col[3])
+    end)
+  end
+
+  local cx=x+289
+  local cy=y+151
+  local radius=102
+  U.colorWheel(cx,cy,radius,s.color)
+  -- Diamond-shaped saturation/value area, matching color picker structure.
+  U.circle(cx,cy,75,{.31,.31,.31})
+  local diamond=61
+  local step=6
+  for iy=-diamond,diamond,step do
+    for ix=-diamond,diamond,step do
+      if math.abs(ix)+math.abs(iy)<=diamond-step then
+        local sat=math.max(0,math.min(1,(ix+diamond)/(2*diamond)))
+        local bright=math.max(0,math.min(1,1-(iy+diamond)/(2*diamond)))
+        local cr,cg,cb=U.hsv(s.hue,sat,bright)
+        U.rect(cx+ix-3,cy+iy-3,step,step,{cr,cg,cb})
+      end
+    end
+  end
+  U.stroke(cx-5,cy-5,10,10,C.white,2)
+  U.hitbox(cx-radius,cy-radius,2*radius,2*radius,function(rx,ry)
+    local dx=rx*2-1; local dy=ry*2-1
+    local dist=math.sqrt(dx*dx+dy*dy)
+    if dist>.68 then
+      local ang
+      if math.abs(dx)<.0001 then
+        ang=dy>=0 and math.pi*.5 or -math.pi*.5
+      else
+        ang=math.atan(dy/dx)
+        if dx<0 then ang=ang+math.pi end
+      end
+      s.hue=((ang+math.pi*.5)/(2*math.pi))%1
+      Model.setColor(s,U.hsv(s.hue,.95,1))
+    else
+      local sat=math.max(0,math.min(1,rx))
+      local v=math.max(0,math.min(1,1-ry))
+      Model.setColor(s,U.hsv(s.hue,sat,v))
+    end
+  end)
+  local red=math.floor(s.color[1]*255+.5)
+  local green=math.floor(s.color[2]*255+.5)
+  local blue=math.floor(s.color[3]*255+.5)
+  local colorCode=string.format("#%02X%02X%02X",red,green,blue)
+  U.rect(x+15,y+347,62,29,s.color)
+  U.text(colorCode,x+88,y+353,108,C.white,"body")
+  U.button(s.colorMode or "HSB",x+283,y+343,110,31,function()
+    s.colorMode=(s.colorMode=="RGB") and "HSB" or "RGB"
+  end,false,{.38,.38,.38})
+  local px=x+17;local py=y+388;local ww=pw-36
+  if s.colorMode=="RGB" then
+    U.slider("Red",px,py,ww,red,0,255,function(v)
+      Model.setColor(s,v/255,s.color[2],s.color[3])
+    end)
+    U.slider("Green",px,py+38,ww,green,0,255,function(v)
+      Model.setColor(s,s.color[1],v/255,s.color[3])
+    end)
+    U.slider("Blue",px,py+76,ww,blue,0,255,function(v)
+      Model.setColor(s,s.color[1],s.color[2],v/255)
+    end)
+  else
+    U.slider("H",px,py,ww,math.floor(s.hue*360),0,360,function(v)
+      s.hue=v/360
+      Model.setColor(s,U.hsv(s.hue,1,1))
+    end)
+    U.slider("S",px,py+38,ww,s.saturation or 100,0,100,function(v)
+      s.saturation=v
+      Model.setColor(s,U.hsv(s.hue,v/100,(s.brightness or 100)/100))
+    end)
+    U.slider("B",px,py+76,ww,s.brightness or 100,0,100,function(v)
+      s.brightness=v
+      Model.setColor(s,U.hsv(s.hue,(s.saturation or 100)/100,v/100))
+    end)
+  end
+  U.text("a: 100%",px,y+ph-24,120,C.white,"small")
 end
 local function genericPanel(w,h)
   local name=s.panel
