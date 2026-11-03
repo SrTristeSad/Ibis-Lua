@@ -37,7 +37,7 @@ A integração é feita por `src/raster_bridge.lua`. O modelo `src/model.lua` co
 - A espessura visual do Ibis-Lua pode exceder o limite do motor; no raster, é limitada a **256 px**.
 - Composição real **Normal**; opções Multiply/Screen/Overlay continuam estados de UI, sem algoritmo equivalente.
 - Histórico cobre **pinceladas e preenchimentos** e fica em memória, até 12 ações e 48 MiB.
-- Ainda não foram conectados o armazenamento de projetos RBD2, galeria persistente, exportação/importação, seleção por máscara, filtros, transformação, Windows Ink e demais funcionalidades avançadas do Rebuild.
+- RBD2 já salva e reabre obras raster; a **persistência completa da galeria visual** (pastas, movimento, ordem, miniaturas), exportação/importação, seleção por máscara, filtros, transformação, Windows Ink e demais funcionalidades avançadas do Rebuild ainda não foram conectados.
 - O modo `Solo` visual e a alteração de propriedades de camadas são preservados. O modo Solo atua na visibilidade usada pelo compositor quando renderizado.
 - O layout e os arquivos de ícones do Ibis-Lua permanecem como estavam. O conteúdo de exemplo nas capturas dos estados anteriores permanece demonstrativo.
 
@@ -72,7 +72,7 @@ O adaptador `src/project_persistence.lua` converte os IDs numéricos
 da UI para IDs persistentes de projeto e camada do Store. Salva
 nome, dimensões, ordem, seleção, visibilidade, opacidade, Alpha Lock
 e bytes RGBA. Abre projetos antigos RBD1 em memória sem alterar seu
-arquivo até um salvamento posterior. Rejeita salvar camadas com
+arquivo até um salvamento posterior. Ao criar um projeto já pintado, usa a extensão `Store:createLayeredProject` para publicá-lo diretamente como RBD2 com **uma única escrita atômica**, sem gerar um RBD1 vazio intermediário. A validação prévia também rejeita projetos acima de oito camadas ou do orçamento de arquivo de 64 MiB. Rejeita salvar camadas com
 blending não Normal, impedindo perda silenciosa de dados não suportados.
 
 **Fluxo da UI:** um novo desenho no canvas de até 2048x2048 px é
