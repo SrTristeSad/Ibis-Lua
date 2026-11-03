@@ -324,11 +324,20 @@ local function gallery_open_dialog(mode,id)
 end
 
 local function gallery_header()
-    rectangle(0,0,W,48,C.dark)
+    rectangle(0,0,W,54,C.topbar)
+    rectangle(0,52,W,2,C.accent,0.68)
     local folder=gallery:folder(gallery.current_folder)
-    label(folder.id==0 and ("My Gallery ("..gallery:total_artworks()..")")
-            or folder.name,74,12,math.max(180,W-475),"normal","left",C.white)
-    icon_button(8,3,48,42,"back",function()
+    local title=folder.id==0 and "A Minha Galeria" or folder.name
+    label(title,114,15,math.max(100,W-513),"header","left",C.white)
+    if W>800 then
+        label(string.format("%d obra(s)",gallery:total_artworks()),
+            115,37,math.max(100,W-513),"tiny","left",C.soft)
+    end
+    glyph_color=C.accent
+    glyph("back",18,24,12)
+    glyph_color=nil
+    label("Voltar",30,16,80,"normal","left",C.accent)
+    hit(8,6,96,42,function()
         if not gallery:back() then
             state.screen="title"
             gallery_selecting=false
@@ -336,84 +345,92 @@ local function gallery_header()
         gallery_item_scroll=0
         gallery_menu=nil
         gallery:clear_selection()
-    end)
-    -- The official 12.2+ New menu permits choosing Canvas or Folder.
+    end,"back")
     local actions={
         {"plus",function() gallery_menu=gallery_menu=="new" and nil or "new" end},
         {"settings",function() gallery_menu=gallery_menu=="cloud" and nil or "cloud" end},
-        {"play",function() notice("Time-lapse: unavailable without artwork engine.") end},
-        {"material",function() notice("Export requires image processing.") end},
+        {"play",function() notice("Time-lapse indisponível sem o motor de obras.") end},
+        {"material",function() notice("Exportação exige processamento de imagem.") end},
         {"more",function() gallery_menu=gallery_menu=="more" and nil or "more" end}
     }
-    -- Reserve separate non-overlapping slots for 5 icons + Select + Edit.
-    -- The previous W-270 origin let the "more" icon overlap Select.
-    local start=W-340
+    local start=W-392
+    glyph_color=C.accent
     for i,a in ipairs(actions) do
-        icon_button(start+(i-1)*42,4,39,40,a[1],a[2])
+        icon_button(start+(i-1)*42,7,39,40,a[1],a[2])
     end
-    label(gallery_selecting and "Done" or "Select",
-        W-111,14,53,"small","center",C.white)
-    hit(W-115,4,60,40,function()
+    glyph_color=nil
+    label(gallery_selecting and "Concluído" or "Selecionar",
+        W-152,17,92,"small","center",C.accent)
+    hit(W-156,7,100,40,function()
         gallery_selecting=not gallery_selecting
         if not gallery_selecting then
             gallery:clear_selection();gallery_menu=nil
         end
     end,"gallery_select")
-    label("Edit",W-51,14,45,"small","center",C.white)
-    hit(W-54,4,50,40,function()
+    label("Editar",W-52,17,50,"small","center",
+        gallery.current_folder~=0 and C.accent or {0.5,0.5,0.5})
+    hit(W-56,7,50,40,function()
         if gallery.current_folder~=0 then
             gallery_open_dialog("rename",gallery.current_folder)
         else
-            notice("Select an artwork or open a folder to edit its details.")
+            notice("Selecione uma obra ou abra uma pasta para editar.")
         end
     end,"gallery_edit")
 end
 
 local function gallery_item(tile,item)
     local x,y,w,h=tile.x,tile.y,tile.w,tile.h
-    rectangle(x,y,w,h,C.white,1,2)
-    stroke(x,y,w,h,{0.74,0.74,0.74},0.75)
+    local hovered=over(x,y,w,h) and not gallery_menu
+    soft_shadow(x,y,w,h,Theme.radius.card,hovered and 1.2 or 0.90)
+    rectangle(x,y,w,h,hovered and C.white or C.tile,1,Theme.radius.card)
+    inset_border(x,y,w,h,Theme.radius.card,hovered and 0.85 or 0.58)
+    rectangle(x+12,y+10,w-24,2,C.accent,hovered and 0.78 or 0.22,2)
     if item.type=="folder" then
-        -- Geometric placeholder; official 14.1.4 folder artwork unverified.
-        rectangle(x+26,y+23,w-52,107,{0.72,0.72,0.72},1,4)
-        rectangle(x+26,y+15,w*0.39,20,{0.78,0.78,0.78},1,3)
-        rectangle(x+30,y+30,w-60,94,{0.80,0.80,0.80},1,2)
-        label("Folder",x+20,y+132,w-40,"tiny","center",{0.43,0.43,0.43})
+        rectangle(x+25,y+53,w-50,h-99,C.accent_tint,1,10)
+        rectangle(x+40,y+44,w*0.40,21,C.accent_light,0.92,6)
+        rectangle(x+35,y+62,w-70,h-120,C.white,1,6)
+        stroke(x+35,y+62,w-70,h-120,C.card_border,0.8)
+        rectangle(x+49,y+76,w-98,4,C.card_border,0.6,2)
+        rectangle(x+49,y+91,w-116,4,C.card_border,0.6,2)
+        label("PASTA",x+19,y+22,w-38,"tiny","left",C.muted)
     else
-        -- The screenshot contains only the blank simulated canvas.
-        local avail_w,avail_h=w-29,h-63
+        local avail_w,avail_h=w-52,h-68
         local ratio=item.width/item.height
         local cw,ch=math.min(avail_w,avail_h*ratio),math.min(avail_h,avail_w/ratio)
-        rectangle(x+(w-cw)/2,y+14+(avail_h-ch)/2,cw,ch,C.paper)
-        stroke(x+(w-cw)/2,y+14+(avail_h-ch)/2,cw,ch,C.soft)
-        label(item.width.." x "..item.height,x+10,y+132,w-20,
-            "tiny","center",{0.55,0.55,0.55})
+        local px,py=x+(w-cw)/2,y+27+(avail_h-ch)/2
+        rectangle(px+2,py+4,cw,ch,C.deep,0.08,4)
+        rectangle(px,py,cw,ch,C.white,1,4)
+        stroke(px,py,cw,ch,C.card_border,0.95)
+        label(string.format("%d × %d",item.width,item.height),
+            x+10,y+h-24,w-20,"tiny","center",C.muted)
+        label("TELA",x+17,y+18,w-34,"tiny","left",C.muted)
     end
     local name=item.name
     if #name>22 then name=name:sub(1,20).."…" end
-    label(name,x+6,y+h-34,w-12,"small","center",C.ink)
+    label(name,x-8,y+h+7,w+16,"small","center",C.ink)
     if gallery.selected[item.id] then
-        rectangle(x,y,w,h,C.blue,0.22)
-        rectangle(x+w-31,y+7,24,24,C.blue,0.93,12)
-        glyph("check",x+w-19,y+19,12)
+        rectangle(x,y,w,h,C.accent,0.13,Theme.radius.card)
+        stroke(x+1,y+1,w-2,h-2,C.accent,0.85)
+        rectangle(x+w-34,y+9,24,24,C.accent,0.95,12)
+        glyph("check",x+w-22,y+21,11)
     end
     local id=item.id
     local visible_top=math.max(y,83)
     local visible_bottom=math.min(y+h,H-58)
     if visible_bottom>visible_top then
-    hit(x,visible_top,w,visible_bottom-visible_top,function()
-        if gallery_selecting then
-            gallery:select(id)
-        elseif item.type=="folder" then
-            gallery:enter(id)
-            gallery_item_scroll=0
-        else
-            state:reopen_canvas(item.width,item.height)
-            active_artwork_id=id
-            view:reset()
-        end
-        gallery_menu=nil
-    end,item.type.."_"..id)
+        hit(x,visible_top,w,visible_bottom-visible_top,function()
+            if gallery_selecting then
+                gallery:select(id)
+            elseif item.type=="folder" then
+                gallery:enter(id)
+                gallery_item_scroll=0
+            else
+                state:reopen_canvas(item.width,item.height)
+                active_artwork_id=id
+                view:reset()
+            end
+            gallery_menu=nil
+        end,item.type.."_"..id)
     end
 end
 
