@@ -84,6 +84,40 @@ function Model:add_layer()
     return id
 end
 
+-- A57: operações estruturais de camada, mantendo IDs estáveis.
+-- O histórico dos pixels é controlado pela ponte raster, não aqui.
+function Model:delete_layer(id)
+    require_screen(self,"editor")
+    assert(#self.layers>1,"Nao e permitido remover a ultima camada")
+    local index
+    for i,layer in ipairs(self.layers) do
+        if layer.id==id then index=i;break end
+    end
+    assert(index,"Camada inexistente")
+    if self.solo_layer_id then self:toggle_layer_solo(self.solo_layer_id) end
+    local removed=table.remove(self.layers,index)
+    if self.active_layer_id==id then
+        local selected=self.layers[math.min(index,#self.layers)]
+        self.active_layer_id=selected.id
+    end
+    return removed
+end
+function Model:move_layer(id,offset)
+    require_screen(self,"editor")
+    assert(offset==-1 or offset==1,"Direcao de camada invalida")
+    local index
+    for i,layer in ipairs(self.layers) do
+        if layer.id==id then index=i;break end
+    end
+    assert(index,"Camada inexistente")
+    local target=index+offset
+    if target<1 or target>#self.layers then return false end
+    if self.solo_layer_id then self:toggle_layer_solo(self.solo_layer_id) end
+    self.layers[index],self.layers[target]=
+        self.layers[target],self.layers[index]
+    return true
+end
+
 local function initialise_canvas(self,width,height)
     assert(uint(width,16384) and uint(height,16384),"Dimensões inválidas")
     self.document={width=width,height=height,simulated=true}
