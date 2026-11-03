@@ -11,7 +11,7 @@ Esta versão **já contém telas e controles clicáveis**. A reconstrução **n�
 - **New Canvas lateral direito**, incluindo edição de dimensões, lista rolável de presets e criação de documento demonstrativo; substitui o diálogo central anterior.
 - **Editor** com faixa vertical compacta de 15 ferramentas, ícones Lucide licenciados, controles inferiores, botões superiores, painéis de pincel, cor e camadas. Visualização do canvas com **zoom pelo scroll do mouse, rotação com Shift+scroll e pan com Espaço+arrastar**.
 - **Comportamentos simulados**: seleção de ferramenta, brush/eraser, dimensões, espessura, opacidade, paleta e camadas. Inclui **modo Solo**: manter pressionado o ícone de visibilidade da camada e soltar; pressionar de novo restaura os estados anteriores.
-- **Integração inicial do motor:** Pincel/Borracha desenham pixels RGBA8 reais, Balde preenche áreas contíguas, Conta-gotas lê a composição visível, Desfazer/Refazer revertem as edições raster, e camadas são compostas no modo Normal com visibilidade/opacidade. Filtros reais, mistura além de Normal, importação/exportação e persistência RBD2 **ainda não estão conectados** à interface.
+- **Integração inicial do motor:** Pincel/Borracha desenham pixels RGBA8 reais, Balde preenche áreas contíguas, Conta-gotas lê a composição visível, Desfazer/Refazer revertem as edições raster, e camadas são compostas no modo Normal com visibilidade/opacidade. Filtros reais, mistura além de Normal e importação/exportação **ainda não estão conectados**. Projetos RBD2 com camadas Normal agora podem ser salvos e reabertos pela galeria visual.
 
 **Nenhuma tela é certificada como visualmente equivalente ao original.** O desenho de diversos ícones, cores e subpainéis ainda precisa de comparação com a aplicação real versão 14.1.4.
 
@@ -21,11 +21,11 @@ Este branch mantém o **Paint Lua / Ibis-Lua como aplicativo principal**: identi
 
 **Funciona nesta primeira integração:** ao criar um canvas de até 2048 × 2048, clicar/arrastar com Pincel, Borracha ou Balde modifica pixels RGBA8, e Conta-gotas lê a cor composta. O canvas exibe uma textura LÖVE atualizada, inclusive com zoom/rotação/pan. Os botões Undo/Redo e Ctrl+Z (Shift+Ctrl+Z para refazer) operam sobre as pinceladas. Camadas visíveis em modo Normal, opacidade e Alpha Lock são considerados pelo rasterizador.
 
-**Ainda não funciona como editor completo:** a galeria e os nomes de obras continuam demonstrativos, sem salvar pixels. O formato RBD2, a persistência, projetos acima de 2048 pixels por eixo, transformações, efeitos, filtros, modos de mesclagem não-Normal e outros recursos do rebuild ainda precisam de adaptadores próprios. A interface continua permitindo dimensões maiores, mas nelas o rasterizador ainda não é ativado; um aviso explica a limitação quando o usuário tenta pintar.
+**Ainda não funciona como editor completo:** obras até 2048 px por eixo já podem salvar e recuperar pixels RBD2; pastas, ordem e miniaturas demonstrativas da galeria não são persistidas. Projetos maiores, transformações, efeitos, filtros, modos de mesclagem não-Normal e outros recursos do rebuild ainda precisam de adaptadores próprios. A interface continua permitindo dimensões maiores, mas nelas o rasterizador ainda não é ativado; um aviso explica a limitação quando o usuário tenta pintar.
 
 Esta integração não substitui a PR #66 nem descarta o motor original. Veja [plano de integração](docs/INTEGRACAO_REBUILD.md) para proveniência, testes e lacunas.
 
-**Testes específicos:** `luajit tests/test_raster_bridge.lua` e `PAINT_LUA_RASTER_E2E=1 love .`. O CI também gera `raster_painted.png` para inspeção.
+**Testes específicos:** `luajit tests/test_raster_bridge.lua`, `PAINT_LUA_RASTER_E2E=1 love .` e `PAINT_LUA_PERSISTENCE_E2E=write` seguido de `read` em duas execuções do LÖVE. O CI também gera `raster_painted.png` para inspeção.
 
 ## Execução
 
@@ -90,7 +90,7 @@ A My Gallery foi atualizada para contemplar o recurso oficial **Artworks Folder*
 
 Nesta etapa foram adicionados `src/gallery.lua` e `tests/test_gallery.lua`. O módulo fornece pastas aninhadas, obras demonstrativas com dimensões, seleção, renomeação, movimentação com prevenção de ciclos, hierarquia de navegação e cópias de leitura. `main.lua` agora apresenta uma grade de miniaturas e pastas, seleção múltipla, menu de destino de movimentação, formulário de pasta, retorno ao editor e rolagem vertical com recorte.
 
-**Persistência:** nenhum documento de obra, pasta ou miniatura é gravado em disco. Os itens da galeria existem **apenas durante a execução**. Reabrir uma obra cria novamente o canvas do editor: a ponte de pintura real **ainda não tem persistência**, portanto os pixels não são recuperados.
+**Persistência:** obras editadas no motor real são gravadas em arquivos RBD2 no diretório de dados do LÖVE ao usar `Ctrl+S`, **Back to My Gallery** ou fechar o editor. Seus pixels e metadados de camadas são recuperados na inicialização seguinte. Pastas, ordenação, movimentações e miniaturas da galeria continuam demonstrativas e não são recuperadas entre execuções.
 
 **Fidelidade:** geometria e ícones da galeria são desenhos de trabalho, **não** reproduções validadas da edição Windows 14.1.4. A fonte funcional é o tutorial oficial https://ibispaint.com/lecture/index.jsp?no=193; a fonte específica do produto Windows para o requisito de Pro/Premium é https://ibispaint.com/lecture/index.jsp?no=183.
 
