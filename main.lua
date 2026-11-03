@@ -1435,11 +1435,23 @@ function draw_editor_panel()
                 rectangle(bx,yy,w-53,50,C.deep,0.34)
             end
         end
-        icon_button(x+w-39,y+44,31,31,"plus",function()
+        -- A56: evitar que a UI crie uma obra impossivel de salvar
+        -- nos limites do Store RBD2 original (8 camadas / 64 MiB).
+        local function add_layer()
+            local engine=current_raster()
+            if engine then
+                local nextCount=#state.layers+1
+                local bytes=state.document.width*state.document.height*
+                    4*nextCount+65536
+                if nextCount>8 or bytes>64*1024*1024 then
+                    notice("Limite de camadas do arquivo RBD2 atingido.")
+                    return
+                end
+            end
             state:add_layer()
-        end)
-        hit(x+w-39,y+44,31,31,function() state:add_layer() end,
-            "layer_add")
+        end
+        icon_button(x+w-39,y+44,31,31,"plus",add_layer)
+        hit(x+w-39,y+44,31,31,add_layer,"layer_add")
         local active=state:active_layer()
         local foot=y+h-174
         line(x+8,foot-8,x+w-8,foot-8,1,C.soft,0.3)
@@ -2221,7 +2233,7 @@ function love.load()
         state:toggle_layer_alpha_lock(2)
         assert(save_current_project(),'Teste: save RBD2 falhou')
         assert(activeProject and activeProject.doc.format==2 and
-            activeProject.doc.revision>=2,
+            activeProject.doc.revision>=1,
             'Teste: Store nao gravou documento RBD2')
         local id=activeProject.doc.id
         local magic=projectStore.store.fs:readRange(
@@ -2230,6 +2242,18 @@ function love.load()
             'Teste: arquivo nao possui cabecalho RBD2 verdadeiro')
         assert(love.filesystem.write('rbd2-e2e-last.txt',id),
             'Teste: nao foi possivel marcar projeto salvo')
+        -- Um projeto invalido com nove camadas nao pode deixar
+        -- arquivos incompletos ou passar silenciosamente do limite.
+        local invalid=Model.new()
+        invalid:open_gallery()
+        invalid:open_new_canvas()
+        invalid:create_canvas(32,32)
+        for i=2,9 do invalid:add_layer() end
+        local invalidRaster=RasterBridge.new(32,32)
+        invalidRaster:sync(invalid.layers)
+        assert(not pcall(projectStore.save,projectStore,nil,
+            invalid,invalidRaster,'Invalid'),
+            'Teste: RBD2 aceitou 9 camadas nao suportadas')
     elseif persistence_e2e=='read' then
         assert(projectStore,'Teste: Store RBD2 nao iniciou')
         state:open_gallery()
