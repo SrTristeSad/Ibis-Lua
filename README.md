@@ -11,7 +11,7 @@ Esta versão **já contém telas e controles clicáveis**. A reconstrução **n�
 - **New Canvas lateral direito**, incluindo edição de dimensões, lista rolável de presets e criação de documento demonstrativo; substitui o diálogo central anterior.
 - **Editor** com faixa vertical compacta de 15 ferramentas, ícones Lucide licenciados, controles inferiores, botões superiores, painéis de pincel, cor e camadas. Visualização do canvas com **zoom pelo scroll do mouse, rotação com Shift+scroll e pan com Espaço+arrastar**.
 - **Comportamentos simulados**: seleção de ferramenta, brush/eraser, dimensões, espessura, opacidade, paleta e camadas. Inclui **modo Solo**: manter pressionado o ícone de visibilidade da camada e soltar; pressionar de novo restaura os estados anteriores.
-- **Integração inicial do motor:** Pincel/Borracha desenham pixels RGBA8 reais, Desfazer/Refazer revertem pinceladas, e camadas são compostas no modo Normal com visibilidade/opacidade. Filtros reais, mistura além de Normal, importação/exportação e persistência RBD2 **ainda não estão conectados** à interface.
+- **Integração inicial do motor:** Pincel/Borracha desenham pixels RGBA8 reais, Balde preenche áreas contíguas, Conta-gotas lê a composição visível, Desfazer/Refazer revertem as edições raster, e camadas são compostas no modo Normal com visibilidade/opacidade. Filtros reais, mistura além de Normal, importação/exportação e persistência RBD2 **ainda não estão conectados** à interface.
 
 **Nenhuma tela é certificada como visualmente equivalente ao original.** O desenho de diversos ícones, cores e subpainéis ainda precisa de comparação com a aplicação real versão 14.1.4.
 
@@ -19,9 +19,9 @@ Esta versão **já contém telas e controles clicáveis**. A reconstrução **n�
 
 Este branch mantém o **Paint Lua / Ibis-Lua como aplicativo principal**: identidade, galeria, editor, ferramentas, painéis, iconografia Lucide e layout continuam os do projeto visual. O motor vem de [Ibis-Rebuild-Windows](https://github.com/SrTristeSad/Ibis-Rebuild-Windows/tree/migration/lua-only-engine), agora isolado em `src/engine/` (código LuaJIT/FFI, sem DLL proprietária), por meio do adaptador `src/raster_bridge.lua`.
 
-**Funciona nesta primeira integração:** ao criar um canvas de até 2048 × 2048, clicar/arrastar com Pincel ou Borracha modifica pixels RGBA8. O canvas exibe uma textura LÖVE atualizada, inclusive com zoom/rotação/pan. Os botões Undo/Redo e Ctrl+Z (Shift+Ctrl+Z para refazer) operam sobre as pinceladas. Camadas visíveis em modo Normal, opacidade e Alpha Lock são considerados pelo rasterizador.
+**Funciona nesta primeira integração:** ao criar um canvas de até 2048 × 2048, clicar/arrastar com Pincel, Borracha ou Balde modifica pixels RGBA8, e Conta-gotas lê a cor composta. O canvas exibe uma textura LÖVE atualizada, inclusive com zoom/rotação/pan. Os botões Undo/Redo e Ctrl+Z (Shift+Ctrl+Z para refazer) operam sobre as pinceladas. Camadas visíveis em modo Normal, opacidade e Alpha Lock são considerados pelo rasterizador.
 
-**Ainda não funciona como editor completo:** a galeria e os nomes de obras continuam demonstrativos, sem salvar pixels. O formato RBD2, a persistência, projetos acima de 2048 pixels por eixo, balde, transformações, efeitos, filtros, modos de mesclagem não-Normal e outros recursos do rebuild ainda precisam de adaptadores próprios. A interface continua permitindo dimensões maiores, mas nelas o rasterizador ainda não é ativado; um aviso explica a limitação quando o usuário tenta pintar.
+**Ainda não funciona como editor completo:** a galeria e os nomes de obras continuam demonstrativos, sem salvar pixels. O formato RBD2, a persistência, projetos acima de 2048 pixels por eixo, transformações, efeitos, filtros, modos de mesclagem não-Normal e outros recursos do rebuild ainda precisam de adaptadores próprios. A interface continua permitindo dimensões maiores, mas nelas o rasterizador ainda não é ativado; um aviso explica a limitação quando o usuário tenta pintar.
 
 Esta integração não substitui a PR #66 nem descarta o motor original. Veja [plano de integração](docs/INTEGRACAO_REBUILD.md) para proveniência, testes e lacunas.
 
