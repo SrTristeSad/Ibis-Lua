@@ -3069,6 +3069,23 @@ function love.update()
         love.mousereleased(x,y,1)
         assert(engine:buffer(state.active_layer_id).bytes[at]==0,
             "E2E: Borracha nao removeu o pixel")
+        state:set_tool("bucket")
+        state:set_color(12,34,56)
+        love.mousepressed(x,y,1)
+        love.mousereleased(x,y,1)
+        assert(engine:buffer(state.active_layer_id).bytes[3]>0,
+            "E2E: Balde nao preencheu pixels reais")
+        state:set_tool("eyedropper")
+        state:set_color(0,0,255)
+        love.mousepressed(x,y,1)
+        love.mousereleased(x,y,1)
+        assert(state.color[1]==12 and state.color[2]==34 and
+            state.color[3]==56,
+            "E2E: Conta-gotas nao atualizou a cor real da UI")
+        love.draw()
+        click_control("undo")
+        assert(engine:buffer(state.active_layer_id).bytes[3]==0,
+            "E2E: Undo nao reverteu preenchimento real")
         love.event.quit(0)
         return
     end
