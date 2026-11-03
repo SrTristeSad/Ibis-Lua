@@ -13,7 +13,7 @@ from PIL import Image
 REQUIRED = (
     "title", "gallery", "gallery_new", "gallery_folders", "gallery_inside",
     "gallery_selection", "gallery_many", "new_canvas", "new_canvas_dpi",
-    "editor", "layer", "layer_floating", "layer_properties", "layer_blend",
+    "editor", "editor_square", "layer", "layer_floating", "layer_properties", "layer_blend",
     "transparent", "brush", "brush_search", "color", "zoom", "solo",
     "view", "grid_settings", "grid", "reference",
     "color_palette", "color_hex", "color_floating", "color_rgb",

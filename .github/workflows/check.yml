@@ -37,25 +37,25 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Exercise real LÖVE click callbacks end-to-end
         run: |
-          timeout 20s xvfb-run -a env IBIS_LUA_E2E=1 love .
-          timeout 20s xvfb-run -a -s "-screen 0 1920x1080x24" env IBIS_LUA_E2E=1 IBIS_LUA_E2E_RES=1600x900 love .
+          timeout 20s xvfb-run -a env PAINT_LUA_E2E=1 love .
+          timeout 20s xvfb-run -a -s "-screen 0 1920x1080x24" env PAINT_LUA_E2E=1 PAINT_LUA_E2E_RES=1600x900 love .
       - name: Exercise Gallery folder creation, move and rename end-to-end
-        run: timeout 20s xvfb-run -a env IBIS_LUA_GALLERY_E2E=1 love .
+        run: timeout 20s xvfb-run -a env PAINT_LUA_GALLERY_E2E=1 love .
       - name: Exercise Settings and Tool Select layout end-to-end
         run: |
-          timeout 20s xvfb-run -a env IBIS_LUA_SETTINGS_E2E=1 love .
-          timeout 20s xvfb-run -a -s "-screen 0 1920x1080x24" env IBIS_LUA_SETTINGS_E2E=1 IBIS_LUA_E2E_RES=1600x900 love .
+          timeout 20s xvfb-run -a env PAINT_LUA_SETTINGS_E2E=1 love .
+          timeout 20s xvfb-run -a -s "-screen 0 1920x1080x24" env PAINT_LUA_SETTINGS_E2E=1 PAINT_LUA_E2E_RES=1600x900 love .
       - name: Exercise Color Window UI through real LÖVE controls
         run: |
-          timeout 20s xvfb-run -a env IBIS_LUA_COLOR_E2E=1 love .
-          timeout 20s xvfb-run -a -s "-screen 0 1920x1080x24" env IBIS_LUA_COLOR_E2E=1 IBIS_LUA_E2E_RES=1600x900 love .
-      - name: Run LÖVE and capture thirty-four UI states
+          timeout 20s xvfb-run -a env PAINT_LUA_COLOR_E2E=1 love .
+          timeout 20s xvfb-run -a -s "-screen 0 1920x1080x24" env PAINT_LUA_COLOR_E2E=1 PAINT_LUA_E2E_RES=1600x900 love .
+      - name: Run LÖVE and capture thirty-five UI states
         run: |
           mkdir -p screenshots
-          for screen in title gallery gallery_new gallery_folders gallery_inside gallery_selection gallery_many new_canvas new_canvas_dpi editor layer layer_floating layer_properties layer_blend transparent brush brush_search color color_palette color_hex color_floating color_rgb zoom solo view grid_settings grid reference editor_settings tool_popup_1 tool_popup_2 tool_popup_3 tool_right tool_labels_off; do
+          for screen in title gallery gallery_new gallery_folders gallery_inside gallery_selection gallery_many new_canvas new_canvas_dpi editor editor_square layer layer_floating layer_properties layer_blend transparent brush brush_search color color_palette color_hex color_floating color_rgb zoom solo view grid_settings grid reference editor_settings tool_popup_1 tool_popup_2 tool_popup_3 tool_right tool_labels_off; do
             echo "Capturing UI state: $screen"
-            timeout 20s xvfb-run -a env IBIS_LUA_SMOKE=1 IBIS_LUA_SCREEN="$screen" love .
-            cp "$HOME/.local/share/love/ibis-lua-fidelity/ci-smoke.png" "screenshots/$screen.png"
+            timeout 20s xvfb-run -a env PAINT_LUA_SMOKE=1 PAINT_LUA_SCREEN="$screen" love .
+            cp "$HOME/.local/share/love/paint-lua/ci-smoke.png" "screenshots/$screen.png"
             test -s "screenshots/$screen.png"
           done
       - name: Check structural screenshot regression
@@ -64,6 +64,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ibis-lua-windows-ui-smoke
+          name: paint-lua-ui-smoke
           path: screenshots/*.png
           if-no-files-found: warn
