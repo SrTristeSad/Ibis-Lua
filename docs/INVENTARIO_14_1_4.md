@@ -45,3 +45,7 @@ O modelo puro em src/model.lua implementa **simulação de estado**, não render
 
 Nenhuma tela passa a 'concluída' enquanto não forem registrados:
 versão exata; origem e licença das capturas; resolução; escala DPI; idioma; normal/hover/selecionado/disabled; medidas; captura renderizada pelo LÖVE; overlay/diff; desvios conhecidos.
+
+## Tool Select Position — etapa implementada
+
+Estado simulado e navegável: esquerda, direita, Popup com 1/2/3 colunas, rótulos visíveis/ocultos, mensagens de desfazer e direção da roda do mouse. Abrir pela ação Back → Settings. Referências oficiais: manuais no=4 e no=81. Capturas de Windows 14.1.4, DPI, idioma e tipografia originais continuam pendentes; **não classificar a tela como concluída**.

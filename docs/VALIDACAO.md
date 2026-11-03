@@ -79,12 +79,20 @@
 
 - `luajit tests/test_brush_catalog.lua` verifica catálogo de exemplos, filtro de busca sem distinção de maiúsculas/minúsculas, estados válidos e cópias defensivas.
 - A sequência end-to-end `IBIS_LUA_E2E=1 love .` também abre Brush, ativa a busca, filtra os resultados, seleciona um pincel e testa os sliders e Reset.
-- GitHub Actions captura `brush.png` e `brush_search.png`, totalizando **24 estados**.
+- GitHub Actions captura `brush.png` e `brush_search.png`, totalizando **30 estados**.
 - A evidência Windows é screenshot da Microsoft Store, sem identificação comprovada de build 14.1.4. Sem captura da mesma versão e resolução não existe resultado de fidelidade pixel a pixel.
 
 ## Verificador estrutural de screenshots
 
 - `python -m unittest discover -s tests -p 'test_*.py' -v`: roda os testes Python do comparador e do validador de layout.
-- `python tools/check_ui_screenshots.py screenshots`: verifica os 24 PNGs, resolução do CI e separação clara/escura do painel Brush.
+- `python tools/check_ui_screenshots.py screenshots`: verifica os 30 PNGs, resolução do CI e separação clara/escura do painel Brush.
 - O teste foi motivado por inspeção real dos screenshots gerados pelo LÖVE, incluindo correção dos traços de caneta que apareciam pontilhados.
 - **Não comparar os resultados desse verificador com uma avaliação de precisão visual contra o ibisPaint original.** São invariantes internos da reconstrução, não métricas de semelhança.
+
+## Editor: Tool Select Position e Settings
+
+- `luajit tests/test_editor_preferences.lua`: Left/Right/Popup, limites de 1–3 colunas, validação de configuração, visibilidade de rótulos e inversão da roda do mouse.
+- `IBIS_LUA_SETTINGS_E2E=1 love .`: Back → Settings → Popup 1 coluna → 15 ferramentas → alternar ferramenta → inverter zoom → Right → Popup 3 colunas → alternar ferramenta.
+- Mesmo E2E em 1600×900 para detectar falhas de posicionamento responsivo.
+- Capturas `editor_settings`, `tool_popup_1`, `tool_popup_2`, `tool_popup_3`, `tool_right` e `tool_labels_off` registram seis estados adicionais.
+- `python tools/check_ui_screenshots.py screenshots` inclui uma amostragem de pixels para detectar se o rail está à esquerda/direita ou ausente no Popup. Esta é uma verificação **interna** de layout, não comparação contra o ibisPaint original.

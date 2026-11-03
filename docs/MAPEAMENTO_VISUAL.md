@@ -164,3 +164,22 @@ Fontes oficiais:
 **O que NÃO está comprovado:** números/tipos exatos de pincéis da versão 14.1.4; tipografia, dimensões e alinhamento milimétricos; ícones oficiais; equivalência dos parâmetros avançados. Os valores de espessura e o desenho das miniaturas são demonstrativos. As abas Custom/Online são apenas superfícies indicativas sem acesso ao catálogo oficial.
 
 A documentação oficial dos parâmetros de pincel está em https://ibispaint.com/lecture/index.jsp?no=118. Ela corrobora os conceitos de Thickness, Opacity, Reset, Fade e Shape, mas não mede a posição exata dos controles na versão Windows-alvo.
+
+## W15 — Tool Select Position e Settings (fonte oficial)
+
+Fonte principal, com variações de colunas e instrução Back → Settings:
+https://ibispaint.com/lecture/index.jsp?no=4
+
+Documentação oficial detalhada de Settings, incluindo Invert Direction of Mouse Wheel disponível em Windows/Mac:
+https://ibispaint.com/lecture/index.jsp?no=81
+
+Imagem oficial do menu de Settings (não certificada como captura Windows 14.1.4):
+https://ibispaint.com/img/lecture/common/chapter_04_05.png
+
+**Conceitos comprovados:** Tool Select Position pode ser Left, Right ou Popup. No modo Popup, o número de colunas pode ser 1, 2 ou 3. Show Label in Tool Select alterna legendas, e Invert Direction of Mouse Wheel altera o sentido da navegação no Windows/Mac. São recursos de configuração da interface, não funcionalidades de pintura.
+
+**Implementação local:** `src/editor_preferences.lua` guarda preferências e valida o domínio de cada opção. `main.lua` posiciona a faixa de 15 ferramentas à esquerda/direita ou mostra seleção Popup; reorganiza a área do canvas e os seis botões superiores quando a barra está à direita; oferece Settings pelo menu Back; permite alternar rótulos, mensagens e sentido da roda do mouse.
+
+**Validação executável:** teste Lua do modelo, integração LÖVE em 1024×768/1600×900, seis screenshots novos (30 no total) e verificador de presença/ausência e lateralidade da faixa de ferramentas. Isso não valida espaçamento, iconografia ou equivalência pixel-perfect com Windows 14.1.4.
+
+**Incertezas preservadas:** ordem exata dos itens dentro da janela Settings na build-alvo, fontes, cores e dimensões dos menus Popup. Os elementos são protótipos vetoriais, sem assets do software proprietário.

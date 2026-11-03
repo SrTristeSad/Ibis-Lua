@@ -28,7 +28,7 @@ No programa: clique em My Gallery, +, escolha dimensões e clique OK. Os campos 
 - Comparador: python -m unittest discover -s tests -p "test_compare.py"
 - Diferença de imagens: python tools/compare_screenshots.py --reference original.png --actual copia.png --output-dir comparison_output
 
-O GitHub Actions realiza verificação sintática, testes do modelo, testes do comparador, integração por cliques e **captura vinte e quatro estados no LÖVE** (título, galeria, menu New, galeria com pastas, galeria dentro de pasta, seleção da galeria, galeria com muitos itens, novo canvas, novo canvas com DPI, editor, camadas, janela flutuante, propriedades, blending, fundo transparente, pincéis, cor, zoom/rotação, Solo, View Menu, Grid Settings, grade e janela de referência). Capturas automatizadas não comprovam correspondência com o software original.
+O GitHub Actions realiza verificação sintática, testes do modelo, testes do comparador, integração por cliques e **captura trinta estados no LÖVE** (título, galeria, menu New, galeria com pastas, galeria dentro de pasta, seleção da galeria, galeria com muitos itens, novo canvas, novo canvas com DPI, editor, camadas, janela flutuante, propriedades, blending, fundo transparente, pincéis, cor, zoom/rotação, Solo, View Menu, Grid Settings, grade e janela de referência). Capturas automatizadas não comprovam correspondência com o software original.
 
 ## Pesquisa e qualidade
 
@@ -102,6 +102,20 @@ Além dos testes Lua, o projeto inclui `tools/check_ui_screenshots.py`. Após ge
 python tools/check_ui_screenshots.py screenshots
 ```
 
-O programa verifica a presença e a integridade das **24 imagens PNG** produzidas pelo LÖVE no CI (1024×768) e examina a estrutura principal do painel Brush: **biblioteca clara à esquerda e propriedades escuras à direita**. A validação também tem testes unitários em `tests/test_ui_screenshots.py`; o GitHub Actions executa as verificações automaticamente.
+O programa verifica a presença e a integridade das **30 imagens PNG** produzidas pelo LÖVE no CI (1024×768) e examina a estrutura principal do painel Brush: **biblioteca clara à esquerda e propriedades escuras à direita**. A validação também tem testes unitários em `tests/test_ui_screenshots.py`; o GitHub Actions executa as verificações automaticamente.
 
 **Esse teste não mede a fidelidade 1:1 ao ibisPaint.** Para avaliar equivalência, ainda são necessárias capturas comparáveis do Windows 14.1.4 e uso do comparador `tools/compare_screenshots.py`. A arte final do painel Brush pode ser inspecionada nos artefatos da execução do CI.
+
+## Editor: Tool Select e Settings (etapa de 03/11/2026)
+
+A disposição da seleção de ferramentas pode ser ajustada em **Back → Settings**. As opções documentadas no ibisPaint são `Tool Select Position` (**Left**, **Right** e **Popup**) e, quando a posição é `Popup`, o `Number of Columns in Tool Select Popup` (**1**, **2**, **3**). O protótipo agora oferece essas variações de disposição e mantém os 15 instrumentos simulados acessíveis.
+
+Também estão disponíveis `Show Label in Tool Select`, `Show Message on Undo` e `Invert Direction of Mouse Wheel` (específica de Windows/Mac). A última opção muda a direção do zoom demonstrativo; **não** modifica o sistema operacional nem o dispositivo do usuário.
+
+- Estado editável e testável: `src/editor_preferences.lua`.
+- Teste do módulo Lua: `tests/test_editor_preferences.lua`.
+- Integração por cliques reais: `IBIS_LUA_SETTINGS_E2E=1 love .` (também testada em janela 1600×900).
+- Capturas: `editor_settings`, `tool_popup_1`, `tool_popup_2`, `tool_popup_3`, `tool_right` e `tool_labels_off`.
+- Inspeção estrutural: `tools/check_ui_screenshots.py` confirma que a barra fica à esquerda ou direita, ou desaparece quando `Popup` é escolhido.
+
+**Fontes oficiais de funcionamento:** https://ibispaint.com/lecture/index.jsp?no=4 e https://ibispaint.com/lecture/index.jsp?no=81. Essas fontes documentam a presença e a finalidade das opções, mas não certificam a geometria **Windows 14.1.4**. Os controles são desenhados com vetores próprios. Não foi implementado um motor de pintura.
