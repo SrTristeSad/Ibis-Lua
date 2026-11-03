@@ -2698,16 +2698,62 @@ local function color_e2e_update()
         click_control("color_add_swatch")
         assert(#colors:colors()==1)
     elseif color_e2e_stage==13 then
+        click_control("color_hex")
+        assert(color_dialog=="hex")
+    elseif color_e2e_stage==14 then
+        for ch in ("#FF0000"):gmatch(".") do love.textinput(ch) end
+        click_control("color_dialog_confirm")
+        assert(colors:hex()=="#FF0000")
+    elseif color_e2e_stage==15 then
+        click_control("color_add_swatch")
+        assert(#colors:colors()==2 and colors:colors()[2][1]==255)
+    elseif color_e2e_stage==16 then
+        local from,to
+        for _,control in ipairs(controls) do
+            if control.key=="color_swatch_1" then from=control
+            elseif control.key=="color_swatch_2" then to=control end
+        end
+        assert(from and to,"Color E2E: swatch move hitboxes missing")
+        local mx=(from.x+from.w/2)*scale
+        local my=(from.y+from.h/2)*scale
+        local tx=(to.x+to.w/2)*scale
+        local ty=(to.y+to.h/2)*scale
+        love.mouse.setPosition(mx,my)
+        love.mousepressed(mx,my,1)
+        love.mousemoved(tx,ty,tx-mx,ty-my)
+        love.mousereleased(tx,ty,1)
+        assert(colors:colors()[1][1]==255
+            and colors:colors()[2][1]~=255,
+            "Color E2E: swatch drag failed to reorder")
+    elseif color_e2e_stage==17 then
         click_control("color_rename_palette")
         assert(color_dialog=="rename_palette")
-    elseif color_e2e_stage==14 then
+    elseif color_e2e_stage==18 then
         for ch in ("Warm tones"):gmatch(".") do love.textinput(ch) end
         click_control("color_dialog_confirm")
         assert(colors:palettes_list()[2].name=="Warm tones")
-    elseif color_e2e_stage==15 then
+    elseif color_e2e_stage==19 then
+        click_control("color_new_palette")
+    elseif color_e2e_stage==20 then
+        for ch in ("Sketch"):gmatch(".") do love.textinput(ch) end
+        click_control("color_dialog_confirm")
+        assert(colors.active_palette==3)
+    elseif color_e2e_stage==21 then
+        click_control("color_new_palette")
+    elseif color_e2e_stage==22 then
+        for ch in ("Highlights"):gmatch(".") do love.textinput(ch) end
+        click_control("color_dialog_confirm")
+        assert(colors.active_palette==4 and color_palette_page==1)
+    elseif color_e2e_stage==23 then
+        click_control("color_palette_prev")
+        assert(color_palette_page==0)
+    elseif color_e2e_stage==24 then
+        click_control("color_palette_next")
+        assert(color_palette_page==1)
+    elseif color_e2e_stage==25 then
         click_control("color_float_toggle")
         assert(color_float)
-    elseif color_e2e_stage==16 then
+    elseif color_e2e_stage==26 then
         local b
         for _,c in ipairs(controls) do
             if c.key=="color_move_bar" then b=c;break end
@@ -2721,7 +2767,7 @@ local function color_e2e_update()
         love.mousereleased(mx+22*scale,my+14*scale,1)
         assert(color_position and color_position.x>290,
             "Color window not moved")
-    elseif color_e2e_stage==17 then
+    elseif color_e2e_stage==27 then
         local b
         for _,c in ipairs(controls) do
             if c.key=="color_resize" then b=c;break end
@@ -2735,11 +2781,11 @@ local function color_e2e_update()
         love.mousereleased(mx-25*scale,my-22*scale,1)
         assert(color_size and color_size.w<520 and color_size.h<635,
             "Color window not resized")
-    elseif color_e2e_stage==18 then
+    elseif color_e2e_stage==28 then
         click_control("check")
         assert(panel==nil)
     else
-        print("PASS: Color window E2E (HEX, RGB, palettes, floating drag/resize)")
+        print("PASS: Color E2E (HEX, RGB, swatch reorder, palette pages, floating UI)")
         love.event.quit(0)
     end
     color_e2e_stage=color_e2e_stage+1
