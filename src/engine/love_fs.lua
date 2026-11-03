@@ -77,7 +77,9 @@ function FS:readRange(relative,offset,count,maxFileBytes)
         'Leitura parcial de RBD2 falhou')
     return data
 end
+local winKernel
 local function windowsReplace(source,target)
+    if not winKernel then
     ffi.cdef[[
     int MultiByteToWideChar(unsigned int,unsigned long,
         const char*,int,unsigned short*,int);
@@ -85,7 +87,12 @@ local function windowsReplace(source,target)
         unsigned long);
     unsigned long GetLastError(void);
     ]]
-    local k=ffi.load('kernel32')
+    winKernel=ffi.load('kernel32')
+    end
+    local k=winKernel
+    -- A API de Windows trabalha com barras inversas e UTF-16.
+    source=source:gsub('/','\\\\')
+    target=target:gsub('/','\\\\')
     local function wide(text)
         local n=k.MultiByteToWideChar(65001,8,text,#text,nil,0)
         assert(n>0,'Caminho UTF-8 invalido')
