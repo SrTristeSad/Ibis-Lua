@@ -882,7 +882,10 @@ local function draw_editor_toolbar()
             "small","left",C.soft)
     end
     if W-dock.x-dock.w>110 then
-        label("SIMULAÇÃO",dock.x+dock.w+13,H-41,
+        -- O canvas possui raster real ate 2048; outros modos ainda
+        -- sao demonstrativos. Nao anunciar simulacao integral.
+        label(current_raster() and "RASTER BÁSICO" or "VISUAL",
+            dock.x+dock.w+13,H-41,
             math.max(65,W-dock.x-dock.w-20),"tiny","center",C.soft)
     end
 end
