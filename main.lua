@@ -3241,29 +3241,14 @@ function love.update()
         click_control("undo")
         assert(engine:buffer(state.active_layer_id).bytes[3]==0,
             "E2E: Undo nao reverteu preenchimento real")
-        -- A57: usar os botoes REAIS da janela Camadas com o mesmo
-        -- historico do dock, sem chamar diretamente o modelo.
+        -- O painel permanece exatamente como no Ibis-Lua:
+        -- so o botao + original e testado na interface visual.
+        -- Exclusao/reordem sao exercitadas nos testes do motor.
         click_control("layer")
         love.draw()
         click_control("layer_add")
         assert(#state.layers==2 and state.active_layer_id==2,
             "E2E: botao Mais nao adicionou camada raster")
-        love.draw()
-        click_control("layer_move_down")
-        assert(state.layers[1].id==2,
-            "E2E: mover camada para baixo falhou")
-        love.draw()
-        click_control("layer_delete")
-        assert(#state.layers==1 and not engine:buffer(2),
-            "E2E: botao Menos nao excluiu a camada ativa")
-        love.draw()
-        click_control("undo")
-        assert(#state.layers==2 and engine:buffer(2),
-            "E2E: desfazer exclusao nao restaurou camada")
-        love.draw()
-        click_control("undo")
-        assert(state.layers[1].id==1 and state.layers[2].id==2,
-            "E2E: desfazer movimento nao restaurou ordem")
         love.draw()
         click_control("undo")
         assert(#state.layers==1 and not engine:buffer(2),
