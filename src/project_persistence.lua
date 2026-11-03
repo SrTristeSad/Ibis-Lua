@@ -48,24 +48,27 @@ end
 function Project:save(record,model,engine,name)
     checkModel(model,engine)
     local layers,mapping,active=documentLayers(self,record,model,engine)
+    local w,h=model.document.width,model.document.height
+    -- O Store original limita cada escrita a 64 MiB. Validar ANTES
+    -- de tocar no disco, evitando obra parcialmente inicializada.
+    assert(w*h*4*#layers+65536<=64*1024*1024,
+        'RBD2: projeto excede o limite de arquivo de 64 MiB')
     local doc
     if record then
         doc=record.doc
-        assert(doc.width==model.document.width and
-            doc.height==model.document.height,
+        assert(doc.width==w and doc.height==h,
             'Documento nao pode mudar de tamanho durante save')
+        doc.name=name or doc.name
+        doc.layers=layers
+        doc.pixels=nil
+        doc.active_layer=active
+        self.store:saveProject(doc)
     else
-        -- API publicada do Store gera um ID de projeto valido. Converter
-        -- o primeiro snapshot RBD1 imediatamente para RBD2 layered.
-        doc=self.store:createProject(name or 'Untitled',
-            model.document.width,model.document.height,'',
-            layers[1].pixels)
+        -- Uma unica publicacao atomica em RBD2; nunca gravar um RBD1
+        -- em branco para converte-lo em seguida.
+        doc=self.store:createLayeredProject(name or 'Untitled',
+            w,h,'',layers,active)
     end
-    doc.name=name or doc.name
-    doc.layers=layers
-    doc.pixels=nil
-    doc.active_layer=active
-    self.store:saveProject(doc)
     return {doc=doc,layerIds=mapping}
 end
 function Project:load(id,model)
