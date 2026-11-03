@@ -4,6 +4,7 @@
 -- Fidelity to version 14.1.4 is NOT yet certified. Basic RGBA paint now
 -- uses the Rebuild LuaJIT engine; other visual tools remain simulated.
 local RasterBridge = require("src.raster_bridge")
+local ProjectStore = require("src.project_persistence")
 local Model = require("src.model")
 local Viewport = require("src.viewport")
 local ViewState = require("src.view_state")
@@ -43,6 +44,9 @@ local gallery_dialog=nil
 local gallery_input=""
 local gallery_input_replace=true
 local active_artwork_id=nil
+local projectStore=nil
+local projectForArtwork={}
+local activeProject=nil
 local controls = {}
 local font = {}
 local scale, W, H = 1, 1024, 768
@@ -187,6 +191,27 @@ local function canvas_point(x,y)
     if px>=0 and py>=0 and px<dw and py<dh and
         y>=35 and y<=H-66 then return px,py end
     return nil
+end
+-- Persistencia apenas dos documentos RBD2; os demais estados de galeria
+-- continuam UI demonstrativa ate o proximo incremento.
+local function save_current_project()
+    if not projectStore or not current() or not active_artwork_id then
+        return true
+    end
+    local engine=current_raster()
+    if not engine then return true end
+    local item=gallery:get(active_artwork_id)
+    if not item then return true end
+    local ok,record=pcall(projectStore.save,projectStore,
+        activeProject or projectForArtwork[active_artwork_id],
+        state,engine,item.name)
+    if not ok then
+        notice('Nao foi possivel salvar RBD2: '..tostring(record))
+        return false
+    end
+    activeProject=record
+    projectForArtwork[active_artwork_id]=record
+    return true
 end
 local picker_hue=0
 local function set_panel(name)
@@ -463,7 +488,22 @@ local function gallery_item(tile,item)
                 gallery:enter(id)
                 gallery_item_scroll=0
             else
-                state:reopen_canvas(item.width,item.height)
+                local persisted=projectForArtwork[id]
+                if persisted and projectStore then
+                    local ok,record,engine=pcall(
+                        projectStore.load,projectStore,persisted.doc.id,state)
+                    if not ok then
+                        notice('Falha ao abrir RBD2: '..tostring(record))
+                        return
+                    end
+                    raster=engine
+                    raster_doc=state.document
+                    activeProject=record
+                    projectForArtwork[id]=record
+                else
+                    state:reopen_canvas(item.width,item.height)
+                    raster=nil;raster_doc=nil;activeProject=nil
+                end
                 active_artwork_id=id
                 view:reset()
             end
@@ -650,6 +690,7 @@ local function finish_new_canvas(wi,he)
     state:create_canvas(wi,he)
     active_artwork_id=gallery:add_artwork(
         wi,he,"Untitled "..tostring(gallery:total_artworks()+1))
+    raster=nil;raster_doc=nil;activeProject=nil
     view:reset()
     panel=nil;gallery_menu=nil;focus=nil
     gallery_selecting=false
@@ -2013,6 +2054,7 @@ function draw_editor_panel()
     elseif name=="back" then
         label("Back",x+20,y+69,w-40,"normal","center",C.white)
         plain_button(x+20,y+127,w-40,42,"Back to My Gallery",function()
+            if not save_current_project() then return end
             state:open_gallery()
             panel=nil
         end,true)
@@ -2126,6 +2168,27 @@ function love.load()
     font.icon=love.graphics.newFont(14)
     font.big_icon=love.graphics.newFont(26)
     IconPack.load()
+    -- Testes de UI anteriores permanecem isolados e deterministas;
+    -- a execucao normal recupera os documentos RBD2 na galeria raiz.
+    if not (smoke or e2e or settings_e2e or gallery_e2e
+        or color_e2e or raster_e2e) then
+        local ok,result=pcall(ProjectStore.open)
+        if ok then
+            projectStore=result
+            local listed,rows=pcall(projectStore.list,projectStore)
+            if listed then
+                for _,doc in ipairs(rows) do
+                    local id=gallery:add_artwork(doc.width,doc.height,
+                        doc.name)
+                    projectForArtwork[id]={doc=doc}
+                end
+            else
+                notice('Falha ao listar projetos RBD2: '..tostring(rows))
+            end
+        else
+            notice('Falha ao iniciar RBD2: '..tostring(result))
+        end
+    end
     if not (smoke or e2e or settings_e2e or gallery_e2e) then
         local content=love.filesystem.read("editor-preferences.txt")
         if content then
@@ -2647,6 +2710,10 @@ function love.keypressed(key)
             else gallery_item_scroll=0 end
         else love.event.quit() end
     elseif state.screen=="editor" then
+        if key=="s" and love.keyboard.isDown("lctrl","rctrl") then
+            if save_current_project() then notice("Projeto RBD2 salvo") end
+            return
+        end
         if key=="z" and love.keyboard.isDown("lctrl","rctrl") then
             local engine=current_raster()
             if engine then
