@@ -27,6 +27,13 @@ Esta integração não substitui a PR #66 nem descarta o motor original. Veja [p
 
 **Testes específicos:** `luajit tests/test_raster_bridge.lua`, `PAINT_LUA_RASTER_E2E=1 love .` e `PAINT_LUA_PERSISTENCE_E2E=write` seguido de `read` em duas execuções do LÖVE. O CI também gera `raster_painted.png` para inspeção.
 
+**Regra visual da integração:** a interface original do Ibis-Lua
+é preservada. Não serão adicionados botões, indicadores, glifos ou
+novas posições no painel de Camadas para expor recursos do motor sem
+autorização explícita. O botão **+** e os controles de Undo/Redo já
+existentes continuam sendo usados. Excluir/reordenar camadas está no
+motor e nos testes, ainda **sem controles visuais novos**.
+
 ## Execução
 
 Instale LÖVE 11.5 (https://love2d.org/) e execute testar.bat na pasta do projeto.
