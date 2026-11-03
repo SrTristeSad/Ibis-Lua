@@ -73,4 +73,50 @@ function Preferences:wheel_steps(steps)
     return self.invert_wheel and -steps or steps
 end
 
+-- Editable, data-only file format. Never evaluate Lua source from disk.
+function Preferences:encode()
+    local yes=function(value) return value and "1" or "0" end
+    return table.concat({
+        "version=1",
+        "tool_position="..self.tool_position,
+        "popup_columns="..tostring(self.popup_columns),
+        "show_tool_labels="..yes(self.show_tool_labels),
+        "invert_wheel="..yes(self.invert_wheel),
+        "show_undo_message="..yes(self.show_undo_message),
+    },"\n").."\n"
+end
+
+function Preferences.decode(content)
+    assert(type(content)=="string" and #content<=4096,
+        "Configuração inválida ou excessivamente grande")
+    local values={}
+    local recognized={
+        version=true,tool_position=true,popup_columns=true,
+        show_tool_labels=true,invert_wheel=true,show_undo_message=true
+    }
+    for line in content:gmatch("[^\r\n]+") do
+        local key,value=line:match("^(%w+)=(%w+)$")
+        assert(key and recognized[key] and values[key]==nil,
+            "Entrada inválida na configuração de interface")
+        values[key]=value
+    end
+    assert(values.version=="1","Versão da configuração desconhecida")
+    local result=Preferences.new()
+    result:set_tool_position(values.tool_position)
+    -- Save the Popup column setting even when the currently docked
+    -- tool position is Left or Right.
+    local position=result.tool_position
+    result:set_tool_position("popup")
+    result:set_popup_columns(tonumber(values.popup_columns))
+    result:set_tool_position(position)
+    for _,field in ipairs({
+        "show_tool_labels","invert_wheel","show_undo_message"
+    }) do
+        local value=values[field]
+        assert(value=="1" or value=="0","Valor booleano inválido")
+        result[field]=value=="1"
+    end
+    return result
+end
+
 return Preferences
