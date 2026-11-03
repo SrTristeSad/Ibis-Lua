@@ -67,8 +67,11 @@ def check_tool_rail_layout(image: Image.Image, expected: str) -> None:
         raise ScreenshotCheckError(
             f"Tool rail structural check expects 1024x768: got {image.size}"
         )
-    left = rgb_luma(image, 20, 300)
-    right = rgb_luma(image, w - 19, 300)
+    # Sample rail edges away from white tool-icon strokes. The previous
+    # single pixel landed on a bright icon and produced a false negative.
+    ys = (279, 320, 510, 620)
+    left = sorted(rgb_luma(image, 5, y) for y in ys)[len(ys) // 2]
+    right = sorted(rgb_luma(image, w - 6, y) for y in ys)[len(ys) // 2]
     if expected == "left":
         correct = right - left >= 65
     elif expected == "right":
