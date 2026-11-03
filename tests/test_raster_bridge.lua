@@ -51,4 +51,21 @@ assert(b:buffer(2).alphaLock==true)
 assert(not pcall(Bridge.new,2049,5),'Motor nao suporta eixos > 2048')
 assert(not pcall(b.beginStroke,b,'bucket',1,2,2,2,0,0,0,1),
     'Ferramenta nao conectada nao deve pintar')
-print('OK: ponte raster, pincel, borracha, undo/redo e camadas Normais')
+-- Balde e conta-gotas reutilizam os algoritmos Rebuild sem UI duplicada.
+local c=Bridge.new(10,10)
+c:sync({{id=10,visible=true,opacity=100,
+    blending='Normal',alpha_lock=false}})
+assert(c:pick(4,4)==nil,'Conta-gotas deve ignorar transparencia')
+assert(c:bucket(10,4,4,12,34,56,1,0)==100,
+    'Balde contiguo nao preencheu o canvas transparente')
+local r,g,blue=c:pick(4,4)
+assert(r==12 and g==34 and blue==56,
+    'Conta-gotas nao amostrou RGB do compositor')
+assert(c:canUndo() and c:undo() and c:pick(4,4)==nil,
+    'Undo nao reverteu o balde')
+assert(c:redo() and select(1,c:pick(4,4))==12,
+    'Redo nao restaurou o balde')
+assert(not pcall(c.bucket,c,10,4,4,1,2,3,1,256),
+    'Balde deve rejeitar tolerancia invalida')
+print('OK: RGBA, brush, eraser, bucket, picker, undo/redo, layers')
+
