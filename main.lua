@@ -1662,7 +1662,7 @@ function love.load()
     font.logo=love.graphics.newFont(65)
     font.icon=love.graphics.newFont(14)
     font.big_icon=love.graphics.newFont(26)
-    if e2e and os.getenv("IBIS_LUA_E2E_RES") then
+    if (e2e or settings_e2e) and os.getenv("IBIS_LUA_E2E_RES") then
         local w,h=os.getenv("IBIS_LUA_E2E_RES"):match("^(%d+)x(%d+)$")
         assert(w and h,"IBIS_LUA_E2E_RES deve ser largura x altura")
         local ok=love.window.setMode(tonumber(w),tonumber(h),{resizable=true})
@@ -1705,6 +1705,29 @@ function love.load()
             state:open_gallery();state:open_new_canvas();state:create_canvas(1800,2400)
             selected_brush=7;state:set_brush_size(8)
             panel="brush";brush_search_active=true;brush_search="Airbrush"
+        elseif smoke_screen=="editor_settings"
+            or smoke_screen=="tool_popup_1"
+            or smoke_screen=="tool_popup_2"
+            or smoke_screen=="tool_popup_3"
+            or smoke_screen=="tool_right"
+            or smoke_screen=="tool_labels_off" then
+            state:open_gallery();state:open_new_canvas();state:create_canvas(1800,2400)
+            if smoke_screen=="editor_settings" then
+                set_panel("settings")
+            elseif smoke_screen=="tool_right" then
+                preferences:set_tool_position("right")
+            else
+                preferences:set_tool_position("popup")
+                if smoke_screen=="tool_popup_1" then
+                    preferences:set_popup_columns(1)
+                elseif smoke_screen=="tool_popup_2" then
+                    preferences:set_popup_columns(2)
+                else preferences:set_popup_columns(3) end
+                if smoke_screen=="tool_labels_off" then
+                    preferences:toggle_tool_labels()
+                end
+                set_panel("tools")
+            end
         elseif smoke_screen=="editor" then
             state:open_gallery();state:open_new_canvas();state:create_canvas(1800,2400)
         elseif smoke_screen=="layer" or smoke_screen=="color" or smoke_screen=="brush" then
@@ -2128,12 +2151,103 @@ local function gallery_e2e_update()
     end
 end
 
+local function settings_e2e_update()
+    if settings_e2e_stage==0 then
+        click_control("brush")
+        assert(state.screen=="gallery")
+    elseif settings_e2e_stage==1 then
+        click_control("plus")
+        assert(gallery_menu=="new")
+    elseif settings_e2e_stage==2 then
+        click_control("new_canvas")
+        assert(state.modal=="new_canvas")
+    elseif settings_e2e_stage==3 then
+        click_control("OK")
+        assert(state.screen=="editor")
+        assert(preferences:rail_x(W)==0)
+    elseif settings_e2e_stage==4 then
+        click_control("back")
+        assert(panel=="back")
+    elseif settings_e2e_stage==5 then
+        click_control("back_settings")
+        assert(panel=="settings")
+    elseif settings_e2e_stage==6 then
+        click_control("pref_position_popup")
+        assert(preferences.tool_position=="popup")
+    elseif settings_e2e_stage==7 then
+        click_control("pref_columns_1")
+        assert(preferences.popup_columns==1)
+    elseif settings_e2e_stage==8 then
+        click_control("pref_show_labels")
+        click_control("pref_invert_wheel")
+        assert(not preferences.show_tool_labels and preferences.invert_wheel)
+    elseif settings_e2e_stage==9 then
+        click_control("check")
+        assert(panel==nil)
+    elseif settings_e2e_stage==10 then
+        click_control("transform")
+        assert(panel=="tools")
+    elseif settings_e2e_stage==11 then
+        local n=0
+        for _,b in ipairs(controls) do
+            if b.key and b.key:match("^tool_choice_") then n=n+1 end
+        end
+        assert(n==15,"UI e2e: expected all 15 tools in 1-column popup")
+        click_control("tool_choice_bucket")
+        assert(state.active_tool=="bucket" and not panel)
+    elseif settings_e2e_stage==12 then
+        love.wheelmoved(0,1)
+        assert(view.zoom<1,"UI e2e: inverted mouse wheel failed")
+    elseif settings_e2e_stage==13 then
+        click_control("back")
+    elseif settings_e2e_stage==14 then
+        click_control("back_settings")
+        assert(panel=="settings")
+    elseif settings_e2e_stage==15 then
+        click_control("pref_position_right")
+        assert(preferences.tool_position=="right")
+    elseif settings_e2e_stage==16 then
+        local found=false
+        for _,b in ipairs(controls) do
+            if b.key=="bucket" and b.x>W-65 then found=true end
+        end
+        assert(found,"UI e2e: right-side tool rail not rendered")
+        click_control("pref_show_labels")
+        assert(preferences.show_tool_labels)
+    elseif settings_e2e_stage==17 then
+        click_control("pref_position_popup")
+        assert(preferences.tool_position=="popup")
+    elseif settings_e2e_stage==18 then
+        click_control("pref_columns_3")
+        assert(preferences.popup_columns==3)
+    elseif settings_e2e_stage==19 then
+        click_control("check")
+        assert(panel==nil)
+    elseif settings_e2e_stage==20 then
+        click_control("transform")
+        assert(panel=="tools")
+        local pw,ph=preferences:panel_size(W,H)
+        assert(pw<450 and ph<500,"UI e2e: 3-column popup incorrect size")
+    elseif settings_e2e_stage==21 then
+        click_control("tool_choice_text")
+        assert(state.active_tool=="text" and panel==nil)
+    else
+        print("PASS: Settings E2E (rail Left/Right/Popup, columns, labels, inverted zoom)")
+        love.event.quit(0)
+    end
+    settings_e2e_stage=settings_e2e_stage+1
+end
+
 function love.update()
     if smoke and capture_done then
         if capture_error then error("Screenshot: "..capture_error) end
         love.event.quit(0)
     end
     -- Each stage runs after a draw; hitboxes represent the visible UI.
+    if settings_e2e and #controls>0 then
+        settings_e2e_update()
+        return
+    end
     if gallery_e2e and #controls>0 then
         gallery_e2e_update()
         return
