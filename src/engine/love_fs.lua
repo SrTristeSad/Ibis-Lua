@@ -91,8 +91,8 @@ local function windowsReplace(source,target)
     end
     local k=winKernel
     -- A API de Windows trabalha com barras inversas e UTF-16.
-    source=source:gsub('/','\\\\')
-    target=target:gsub('/','\\\\')
+    source=source:gsub('/','\\')
+    target=target:gsub('/','\\')
     local function wide(text)
         local n=k.MultiByteToWideChar(65001,8,text,#text,nil,0)
         assert(n>0,'Caminho UTF-8 invalido')
