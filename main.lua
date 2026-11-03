@@ -851,7 +851,7 @@ local function draw_editor_toolbar()
         end},
         {"undo",function()
             local engine=current_raster()
-            if not engine or not engine:undo() then
+            if not engine or not engine:undo(state) then
                 if preferences.show_undo_message then
                     notice("Nenhuma pincelada para desfazer.")
                 end
@@ -859,7 +859,7 @@ local function draw_editor_toolbar()
         end},
         {"redo",function()
             local engine=current_raster()
-            if not engine or not engine:redo() then
+            if not engine or not engine:redo(state) then
                 if preferences.show_undo_message then
                     notice("Nenhuma pincelada para refazer.")
                 end
@@ -1404,7 +1404,7 @@ function draw_editor_panel()
         end,"layer_drag")
         local bx=x+10
         rectangle(bx,y+43,w-53,37,C.light,0.20,2)
-        label("Selection Layer",bx+40,y+54,w-101,"small","left",C.white)
+        label("Selection Layer",bx+40,y+54,w-193,"small","left",C.white)
         rectangle(bx+7,y+48,25,25,C.white)
         local max_rows=math.max(1,math.floor((h-269)/52))
         for slot=1,math.min(#state.layers,max_rows) do
@@ -1435,11 +1435,12 @@ function draw_editor_panel()
                 rectangle(bx,yy,w-53,50,C.deep,0.34)
             end
         end
-        -- A56: evitar que a UI crie uma obra impossivel de salvar
-        -- nos limites do Store RBD2 original (8 camadas / 64 MiB).
-        local function add_layer()
+        -- A57: a mesma pilha undo/redo grava pinceladas E estrutura,
+        -- preservando os IDs das camadas e os buffers RGBA removidos.
+        local function layer_action(action)
             local engine=current_raster()
-            if engine then
+            local id=state.active_layer_id
+            if action=='add' and engine then
                 local nextCount=#state.layers+1
                 local bytes=state.document.width*state.document.height*
                     4*nextCount+65536
@@ -1448,10 +1449,29 @@ function draw_editor_panel()
                     return
                 end
             end
-            state:add_layer()
+            local function change()
+                if engine then return engine:changeLayer(state,action,id) end
+                if action=='add' then return state:add_layer()
+                elseif action=='delete' then return state:delete_layer(id)
+                else return state:move_layer(id,action=='up' and 1 or -1) end
+            end
+            local ok,result=pcall(change)
+            if not ok then notice(tostring(result)) end
         end
-        icon_button(x+w-39,y+44,31,31,"plus",add_layer)
-        hit(x+w-39,y+44,31,31,add_layer,"layer_add")
+        -- Controles pequenos junto do "+" original, sem alterar
+        -- painel, dock ou posicionamento de suas areas principais.
+        plain_button(x+w-135,y+46,29,27,"▼",
+            function() layer_action('down') end,false,"layer_move_down")
+        plain_button(x+w-103,y+46,29,27,"▲",
+            function() layer_action('up') end,false,"layer_move_up")
+        icon_button(x+w-71,y+44,29,31,"minus",
+            function() layer_action('delete') end)
+        hit(x+w-71,y+44,29,31,
+            function() layer_action('delete') end,"layer_delete")
+        icon_button(x+w-39,y+44,31,31,"plus",
+            function() layer_action('add') end)
+        hit(x+w-39,y+44,31,31,
+            function() layer_action('add') end,"layer_add")
         local active=state:active_layer()
         local foot=y+h-174
         line(x+8,foot-8,x+w-8,foot-8,1,C.soft,0.3)
@@ -2771,8 +2791,8 @@ function love.keypressed(key)
         if key=="z" and love.keyboard.isDown("lctrl","rctrl") then
             local engine=current_raster()
             if engine then
-                if love.keyboard.isDown("lshift","rshift") then engine:redo()
-                else engine:undo() end
+                if love.keyboard.isDown("lshift","rshift") then engine:redo(state)
+                else engine:undo(state) end
             end
             return
         end
