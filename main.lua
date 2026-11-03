@@ -253,29 +253,64 @@ local function plain_button(x,y,w,h,name,fn,accent,key)
     hit(x,y,w,h,fn,key or name)
 end
 local function title_screen()
-    rectangle(0,0,W,H*0.66,C.title)
-    rectangle(0,H*0.66,W,H*0.34,C.ranking)
+    -- Independent Paint Lua visual identity; this is not the ibisPaint logo.
+    local hero_h=H*0.675
+    vertical_gradient(0,0,W,hero_h,
+        {0.160,0.240,0.365},C.deep,64)
+    rectangle(0,hero_h,W,H-hero_h,C.ranking)
+    rectangle(0,hero_h,W,3,C.accent,0.91)
+    rgba(C.white,0.035)
+    love.graphics.circle("fill",W*0.13,hero_h*0.25,145)
+    love.graphics.circle("fill",W*0.91,hero_h*0.83,210)
+    rgba(C.accent,0.17)
+    love.graphics.circle("line",W*0.91,hero_h*0.83,145)
+    love.graphics.circle("line",W*0.91,hero_h*0.83,161)
+    label("SEU ESTÚDIO CRIATIVO",0,hero_h*0.145,W,
+        "small","center",C.accent_light)
     local cx=W/2
-    label("ibis",cx-215,H*0.19,148,"logo","right",C.white)
-    glyph("color",cx-15,H*0.19+38,34)
-    label("Paint",cx+29,H*0.19,210,"logo","left",C.white)
-    label("Ver. 14.1.4",cx+82,H*0.19+85,150,"small","left",C.white)
-    local function circular(x,name,labeltext,fn)
-        local cy=H*0.43
-        rgba(C.white,over(x-52,cy-52,104,126) and 1 or 0.75)
-        love.graphics.setLineWidth(1.8)
-        love.graphics.circle("line",x,cy,50)
-        glyph(name,x,cy,27)
-        label(labeltext,x-105,cy+66,210,"normal","center",C.white)
-        hit(x-54,cy-54,108,138,fn,name)
+    love.graphics.setFont(font.logo)
+    local w1,w2=font.logo:getWidth("Paint "),font.logo:getWidth("Lua")
+    local lx=cx-(w1+w2)/2
+    local ly=hero_h*0.215
+    rgba(C.white);love.graphics.print("Paint ",lx,ly)
+    rgba(C.accent);love.graphics.print("Lua",lx+w1,ly)
+    rgba(C.accent)
+    love.graphics.circle("fill",lx+w1+w2+10,ly+13,5)
+    label("INTERFACE DEMONSTRATIVA · LÖVE 11.5",0,ly+81,W,
+        "tiny","center",C.soft)
+    local card_w=math.min(238,(W-70)/2)
+    local card_h=132
+    local card_y=hero_h*0.565
+    local function action_card(x,icon,title,subtitle,fn)
+        local hovered=over(x,card_y,card_w,card_h)
+        local round=Theme.radius.card
+        soft_shadow(x,card_y,card_w,card_h,round,hovered and 1.35 or 1)
+        rectangle(x,card_y,card_w,card_h,
+            hovered and C.hover or C.panel_head,0.98,round)
+        inset_border(x,card_y,card_w,card_h,round,0.20)
+        rectangle(x+16,card_y+15,47,47,
+            hovered and C.accent or C.top_button,0.99,12)
+        glyph(icon,x+39.5,card_y+38,15)
+        label(title,x+17,card_y+76,card_w-34,"normal","left",C.white)
+        label(subtitle,x+17,card_y+100,card_w-34,"small","left",C.soft)
+        glyph_color=hovered and C.accent_light or C.accent
+        glyph("arrow_right",x+card_w-23,card_y+29,12)
+        glyph_color=nil
+        hit(x,card_y,card_w,card_h,fn,icon)
     end
-    circular(cx-131,"brush","My Gallery",function() state:open_gallery() end)
-    circular(cx+131,"globe","Online Gallery",function()
-        love.system.openURL("https://ibispaint.com/")
-    end)
-    label("Daily Ranking",0,H*0.69,W,"header","center",C.white)
-    line(W*0.12,H*0.75,W*0.88,H*0.75,1,C.white,0.25)
-    label("Online Gallery",0,H*0.83,W,"normal","center",C.soft)
+    local gutter=16
+    local left=cx-card_w-gutter/2
+    action_card(left,"brush","A Minha Galeria","Criar e organizar telas",
+        function() state:open_gallery() end)
+    action_card(cx+gutter/2,"globe","Galeria Online","Visitar a comunidade",
+        function() love.system.openURL("https://ibispaint.com/") end)
+    label("CLASSIFICAÇÃO DIÁRIA",0,hero_h+26,W,
+        "header","center",C.white)
+    line(W*0.17,hero_h+61,W*0.83,hero_h+61,1,C.white,0.16)
+    label("A classificação online não é carregada nesta demonstração.",
+        0,hero_h+92,W,"small","center",C.soft)
+    label("Paint Lua  ·  Protótipo visual independente",0,H-29,W,
+        "tiny","center",C.soft)
 end
 
 -- Gallery layout inspired by a published Windows image and the official
