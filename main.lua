@@ -29,7 +29,8 @@ local color_drag=nil
 local color_resize=nil
 local color_slider_drag=nil
 local color_wheel_drag=nil
-local color_active_palette_index=1
+local color_palette_page=0
+local color_swatch_drag=nil
 local settings_e2e=os.getenv("IBIS_LUA_SETTINGS_E2E")=="1"
 local settings_e2e_stage=0
 local gallery_selecting=false
@@ -1650,11 +1651,16 @@ function draw_editor_panel()
             local active=colors.palettes[colors.active_palette]
             label("Color Palettes",x+20,y+167,w-40,"small","left",C.white)
             local pal_x=x+17
-            local tab_w=math.max(50,math.min(142,(w-34)/3))
             local pal_list=colors:palettes_list()
-            for i,item in ipairs(pal_list) do
-                if i<=3 then
-                    local px=pal_x+(i-1)*(tab_w+2)
+            local max_page=math.max(0,math.floor((#pal_list-1)/3))
+            color_palette_page=math.max(0,
+                math.min(max_page,color_palette_page))
+            local tab_w=math.max(50,math.min(132,(w-113)/3))
+            for j=1,3 do
+                local i=color_palette_page*3+j
+                local item=pal_list[i]
+                if item then
+                    local px=pal_x+(j-1)*(tab_w+2)
                     rectangle(px,y+190,tab_w,30,
                         colors.active_palette==i and C.blue or C.deep,
                         0.91,3)
@@ -1664,6 +1670,24 @@ function draw_editor_panel()
                         colors:choose_palette(id)
                     end,"color_palette_"..i)
                 end
+            end
+            local prev_x=x+w-70
+            local next_x=x+w-37
+            rectangle(prev_x,y+191,30,27,C.deep,
+                color_palette_page>0 and 0.94 or 0.46,2)
+            rectangle(next_x,y+191,30,27,C.deep,
+                color_palette_page<max_page and 0.94 or 0.46,2)
+            label("<",prev_x,y+197,30,"small","center",C.white)
+            label(">",next_x,y+197,30,"small","center",C.white)
+            if color_palette_page>0 then
+                hit(prev_x,y+191,30,27,function()
+                    color_palette_page=color_palette_page-1
+                end,"color_palette_prev")
+            end
+            if color_palette_page<max_page then
+                hit(next_x,y+191,30,27,function()
+                    color_palette_page=color_palette_page+1
+                end,"color_palette_next")
             end
             local current_name=active.name
             label(current_name.." ("..#active.colors..")",
@@ -1708,6 +1732,13 @@ function draw_editor_panel()
                 local id=i
                 hit(px,py,swatch_size,swatch_size,function()
                     colors:select_color(id);apply_color()
+                    color_swatch_drag={
+                        from=id,initial_x=px+swatch_size/2,
+                        initial_y=py+swatch_size/2,
+                        grid_x=x+17,grid_y=y+310,
+                        step=swatch_size+swatch_gap,
+                        columns=columns
+                    }
                 end,"color_swatch_"..i)
             end
             local recent=colors:history_list()
@@ -1762,7 +1793,8 @@ function draw_editor_panel()
                         colors:set_hex(color_input)
                         apply_color()
                     elseif color_dialog=="new_palette" then
-                        colors:create_palette(color_input)
+                        local id=colors:create_palette(color_input)
+                        color_palette_page=math.floor((id-1)/3)
                     else colors:rename_palette(colors.active_palette,color_input) end
                 end)
                 if ok then color_dialog=nil
@@ -2169,6 +2201,22 @@ function love.mousemoved(rx,ry,dx,dy)
 end
 function love.mousereleased(rx,ry,button)
     if button~=1 then return end
+    if color_swatch_drag and panel=="color" and colors.palette_mode then
+        local d=color_swatch_drag
+        local xx,yy=rx/scale,ry/scale
+        local dx=xx-d.initial_x
+        local dy=yy-d.initial_y
+        if dx*dx+dy*dy>=12*12 then
+            local col=math.floor((xx-d.grid_x)/d.step)
+            local row=math.floor((yy-d.grid_y)/40)
+            local target=row*d.columns+col+1
+            if col>=0 and col<d.columns and row>=0
+                and target>=1 and target<=#colors:colors() then
+                colors:move_color(d.from,target)
+            end
+        end
+    end
+    color_swatch_drag=nil
     drag_dimension=nil
     color_drag=nil
     color_resize=nil
@@ -2279,7 +2327,8 @@ function love.keypressed(key)
                     local h=colors:hsb()
                     picker_hue=(h%360)/360
                 elseif color_dialog=="new_palette" then
-                    colors:create_palette(color_input)
+                    local id=colors:create_palette(color_input)
+                    color_palette_page=math.floor((id-1)/3)
                 else
                     colors:rename_palette(colors.active_palette,color_input)
                 end
