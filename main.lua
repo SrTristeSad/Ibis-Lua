@@ -8,11 +8,15 @@ local ViewState = require("src.view_state")
 local CanvasPresets = require("src.canvas_presets")
 local Gallery = require("src.gallery")
 local BrushCatalog = require("src.brush_catalog")
+local EditorPreferences = require("src.editor_preferences")
 local utf8 = require("utf8")
 local state = Model.new()
 local view = Viewport.new()
 local visual = ViewState.new()
 local gallery = Gallery.new()
+local preferences=EditorPreferences.new()
+local settings_e2e=os.getenv("IBIS_LUA_SETTINGS_E2E")=="1"
+local settings_e2e_stage=0
 local gallery_selecting=false
 local gallery_dialog=nil
 local gallery_input=""
@@ -769,8 +773,16 @@ local function draw_editor_toolbar()
         {"fullscreen",function()
             love.window.setFullscreen(not love.window.getFullscreen())
         end},
-        {"undo",function() notice("Nenhuma alteração de pintura para desfazer.") end},
-        {"redo",function() notice("Nenhuma alteração de pintura para refazer.") end},
+        {"undo",function()
+            if preferences.show_undo_message then
+                notice("Nenhuma alteração de pintura para desfazer.")
+            end
+        end},
+        {"redo",function()
+            if preferences.show_undo_message then
+                notice("Nenhuma alteração de pintura para refazer.")
+            end
+        end},
         {"layer",function() set_panel("layer") end},
         {"back",function() set_panel("back") end}
     }
@@ -858,9 +870,10 @@ end
 
 local function editor_screen()
     rectangle(0,0,W,H,C.background)
-    local right=W-5
-    local space_left=62
-    local aw=W-space_left-34
+    local right=preferences.tool_position=="right" and W-65 or W-5
+    local space_left=preferences.tool_position=="left" and 62 or 0
+    local space_right=preferences.tool_position=="right" and 75 or 34
+    local aw=W-space_left-space_right
     local ah=H-111
     local dw,dh=state.document.width,state.document.height
     local canvas_scale=math.min(aw/dw,ah/dh,1.1)
@@ -900,26 +913,33 @@ local function editor_screen()
         glyph(name,x+15,24,15)
         hit(x,9,31,31,function() set_panel(name) end,name)
     end
-    -- Always-visible Windows tool selection strip, not fictional bottom text buttons.
-    rectangle(0,0,59,H-78,C.bar,0.98)
-    local top=8
-    local each=math.min(45,(H-99)/#tools)
-    for i,entry in ipairs(tools) do
-        local y=top+(i-1)*each
-        local selected=state.active_tool==entry[2]
-        if selected then rectangle(0,y,58,each,C.blue,0.85) end
-        if over(0,y,58,each) and not selected then
-            rectangle(0,y,58,each,C.white,0.12)
+    -- Left/Right rails and Popup are official alternative Tool Select positions.
+    local rail_x=preferences:rail_x(W)
+    if rail_x then
+        rectangle(rail_x,0,59,H-78,C.bar,0.98)
+        local top=8
+        local each=math.min(45,(H-99)/#tools)
+        for i,entry in ipairs(tools) do
+            local y=top+(i-1)*each
+            local selected=state.active_tool==entry[2]
+            if selected then rectangle(rail_x,y,58,each,C.blue,0.85) end
+            if over(rail_x,y,58,each) and not selected then
+                rectangle(rail_x,y,58,each,C.white,0.12)
+            end
+            glyph(entry[2],rail_x+29,
+                y+(preferences.show_tool_labels and each*0.38 or each*0.50),
+                math.min(17,each*0.35))
+            if preferences.show_tool_labels then
+                label(entry[1],rail_x,y+each*0.70,58,"tiny","center",C.white)
+            end
+            local key=entry[2]
+            hit(rail_x,y,58,each,function()
+                state:set_tool(key)
+                if key=="brush" or key=="eraser" then set_panel("brush")
+                elseif key=="text" then set_panel("text")
+                else panel=nil;state.active_panel=nil end
+            end,key)
         end
-        glyph(entry[2],29,y+each*0.38,math.min(17,each*0.35))
-        label(entry[1],0,y+each*0.70,58,"tiny","center",C.white)
-        local key=entry[2]
-        hit(0,y,58,each,function()
-            state:set_tool(key)
-            if key=="brush" or key=="eraser" then set_panel("brush")
-            elseif key=="text" then set_panel("text")
-            else panel=nil;state.active_panel=nil end
-        end,key)
     end
     if visual.reference then draw_reference_window() end
     draw_size_controls()
@@ -980,7 +1000,22 @@ end
 function draw_editor_panel()
     local name=panel
     local x,y,w,h
-    if name=="brush" then
+    if name=="tools" then
+        w,h=preferences:panel_size(W,H)
+        if preferences.tool_position=="popup" then
+            x=(W-w)/2
+        elseif preferences.tool_position=="right" then
+            x=W-w-66
+        else
+            x=65
+        end
+        y=math.max(7,math.min(58,H-h-80))
+    elseif name=="settings" then
+        w=math.min(438,W-90)
+        h=math.min(476,H-145)
+        x=W-w-22
+        y=55
+    elseif name=="brush" then
         -- Store Windows screenshot: light preset list, charcoal parameter side.
         x=math.min(185,math.max(66,W*0.16))
         y=55
@@ -1485,28 +1520,115 @@ function draw_editor_panel()
             end,"rgb_slider")
         end
     elseif name=="tools" then
+        local cols=preferences:effective_tool_columns()
+        local rows=math.ceil(#tools/cols)
+        local gap=5
+        local inset=10
+        local cell_w=(w-2*inset-gap*(cols-1))/cols
+        local row_h=(h-51)/rows
         for i,item in ipairs(tools) do
-            local bw=(w-24)/3
-            local row=math.floor((i-1)/3)
-            local col=(i-1)%3
-            local xx=x+11+col*bw
-            local yy=y+47+row*math.min(80,(h-54)/5)
-            if yy+56<=y+h-4 then
-                rectangle(xx,yy,bw-4,56,item[2]==state.active_tool and C.blue or C.deep,
-                    item[2]==state.active_tool and 0.8 or 0.50,3)
-                glyph(item[2],xx+(bw-4)/2,yy+21,16)
-                label(item[1],xx,yy+37,bw-4,"tiny","center",C.white)
-                local key=item[2]
-                hit(xx,yy,bw-4,56,function()
-                    state:set_tool(key);panel=nil;state.active_panel=nil
-                end,"tool_choice")
+            local row_index=math.floor((i-1)/cols)
+            local column=(i-1)%cols
+            local xx=x+inset+column*(cell_w+gap)
+            local yy=y+42+row_index*row_h
+            local cell_h=row_h-3
+            local selected=item[2]==state.active_tool
+            rectangle(xx,yy,cell_w,cell_h,
+                selected and C.blue or C.deep,
+                selected and 0.87 or 0.67,3)
+            if cols==1 then
+                glyph(item[2],xx+25,yy+cell_h/2,math.min(17,cell_h*0.37))
+                if preferences.show_tool_labels then
+                    label(item[1],xx+48,yy+(cell_h-13)/2,
+                        cell_w-55,"small","left",C.white)
+                end
+            else
+                glyph(item[2],xx+cell_w/2,
+                    yy+(preferences.show_tool_labels and cell_h*0.38
+                        or cell_h*0.5),
+                    math.min(18,cell_h*0.27))
+                if preferences.show_tool_labels then
+                    label(item[1],xx+2,yy+cell_h*0.69,
+                        cell_w-4,"tiny","center",C.white)
+                end
             end
+            local key=item[2]
+            hit(xx,yy,cell_w,cell_h,function()
+                state:set_tool(key)
+                panel=nil;state.active_panel=nil
+            end,"tool_choice_"..key)
         end
     elseif name=="back" then
-        label("Return to My Gallery?",x+20,y+82,w-40,"normal","center",C.white)
-        plain_button(x+20,y+151,w-40,41,"Back to My Gallery",function()
-            state:open_gallery();panel=nil
+        label("Back",x+20,y+69,w-40,"normal","center",C.white)
+        plain_button(x+20,y+127,w-40,42,"Back to My Gallery",function()
+            state:open_gallery()
+            panel=nil
         end,true)
+        plain_button(x+20,y+191,w-40,42,"Settings",function()
+            set_panel("settings")
+        end)
+        hit(x+20,y+191,w-40,42,function()
+            set_panel("settings")
+        end,"back_settings")
+    elseif name=="settings" then
+        local bx=x+15
+        local bw=w-30
+        label("User Interface",bx,y+46,bw,"normal","left",C.white)
+        line(bx,y+78,x+w-15,y+78,1,C.soft,0.37)
+        label("Tool Select Position",bx,y+91,bw,"small","left",C.white)
+        local choices={
+            {"Left","left"},{"Right","right"},{"Popup","popup"}
+        }
+        local sw=(bw-8)/3
+        for i,choice in ipairs(choices) do
+            local xx=bx+(i-1)*(sw+4)
+            local current=preferences.tool_position==choice[2]
+            rectangle(xx,y+114,sw,37,current and C.blue or C.deep,
+                current and 0.94 or 0.75,3)
+            label(choice[1],xx+2,y+126,sw-4,"small","center",C.white)
+            local selected=choice[2]
+            hit(xx,y+114,sw,37,function()
+                preferences:set_tool_position(selected)
+            end,"pref_position_"..selected)
+        end
+        label("Number of Columns in Tool Select Popup",
+            bx,y+165,bw,"small","left",
+            preferences.tool_position=="popup" and C.white or C.soft)
+        for cols=1,3 do
+            local xx=bx+(cols-1)*(sw+4)
+            local active=preferences.popup_columns==cols
+            local available=preferences.tool_position=="popup"
+            rectangle(xx,y+189,sw,34,available and
+                (active and C.blue or C.deep) or C.bar,
+                available and 0.90 or 0.48,3)
+            label(tostring(cols),xx+2,y+199,sw-4,"small","center",
+                available and C.white or C.soft)
+            local value=cols
+            if available then hit(xx,y+189,sw,34,function()
+                preferences:set_popup_columns(value)
+            end,"pref_columns_"..value) end
+        end
+        local function pref_toggle(yy,title,enabled,fn,key)
+            rectangle(bx,yy,bw,42,C.white,0.065,3)
+            label(title,bx+11,yy+13,bw-88,"small","left",C.white)
+            local tx=bx+bw-72
+            rectangle(tx,yy+9,54,25,
+                enabled and C.blue or {0.49,0.49,0.49},1,12)
+            rgba(C.white)
+            love.graphics.circle("fill",tx+(enabled and 40 or 13),yy+21,9)
+            hit(bx,yy,bw,42,fn,key)
+        end
+        pref_toggle(y+237,"Show Label in Tool Select",
+            preferences.show_tool_labels,
+            function() preferences:toggle_tool_labels() end,"pref_show_labels")
+        pref_toggle(y+285,"Invert Direction of Mouse Wheel",
+            preferences.invert_wheel,
+            function() preferences:toggle_invert_wheel() end,"pref_invert_wheel")
+        pref_toggle(y+333,"Show Message on Undo",
+            preferences.show_undo_message,
+            function() preferences:toggle_undo_messages() end,"pref_undo_messages")
+        label("Additional settings are not yet reconstructed.",
+            bx,y+400,bw,"tiny","center",C.soft)
     elseif name=="text" then
         label("Text tool selected.",x+15,y+99,w-30,"normal","center",C.white)
         label("Editing artwork is outside the UI-only scope.",x+12,y+145,w-24,"small","center",C.soft)
@@ -1743,9 +1865,11 @@ function love.wheelmoved(dx,dy)
             view:rotate_wheel(dy)
         else
             local x,y=pointer()
-            local cx=62+(W-62)/2
+            local left=preferences.tool_position=="left" and 62 or 0
+            local right=preferences.tool_position=="right" and 75 or 34
+            local cx=left+(W-left-right)/2
             local cy=28+(H-111)/2
-            view:zoom_at(dy,x,y,cx,cy)
+            view:zoom_at(preferences:wheel_steps(dy),x,y,cx,cy)
         end
     end
 end
