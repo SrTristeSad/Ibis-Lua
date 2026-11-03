@@ -141,6 +141,44 @@ function Bridge:finishStroke()
     self.dirty=true
     return true
 end
+-- Balde do Rebuild: flood-fill contiguo no buffer ativo com undo.
+-- Tolerancia inicial 0 enquanto o front-end nao expuser o controle.
+function Bridge:bucket(id,x,y,r,g,b,opacity,tolerance)
+    assert(self.buffers[id],'Camada ativa inexistente')
+    assert(validCoord(x,y,self.width,self.height),
+        'Balde fora do canvas')
+    for _,v in ipairs({r,g,b}) do
+        assert(type(v)=='number' and v%1==0 and v>=0 and v<=255,
+            'Cor RGB invalida')
+    end
+    assert(type(opacity)=='number' and opacity==opacity and
+        opacity>=0 and opacity<=1,'Opacidade invalida')
+    tolerance=tolerance or 0
+    assert(type(tolerance)=='number' and tolerance%1==0 and
+        tolerance>=0 and tolerance<=255,'Tolerancia invalida')
+    self:finishStroke()
+    local layer=self.buffers[id]
+    self.pending={id=id,before=Raster.bytes(layer)}
+    local rgba=r*16777216+g*65536+b*256+
+        math.floor(opacity*255+.5)
+    local changed=Raster.bucketFill(layer,
+        math.floor(x),math.floor(y),rgba,tolerance)
+    if changed>0 then self.dirty=true end
+    self:finishStroke()
+    return changed
+end
+-- Conta-gotas amostra a composicao visivel; pixel transparente
+-- nao muda a cor selecionada da UI.
+function Bridge:pick(x,y)
+    assert(validCoord(x,y,self.width,self.height),
+        'Conta-gotas fora do canvas')
+    local rgba=Raster.readPixel(self:composed(),
+        math.floor(x),math.floor(y))
+    if rgba%256==0 then return nil end
+    return math.floor(rgba/16777216)%256,
+        math.floor(rgba/65536)%256,
+        math.floor(rgba/256)%256
+end
 local function apply(self,entry,key)
     local b=Raster.buffer(self.width,self.height,entry[key])
     b.alphaLock=self.buffers[entry.id].alphaLock
