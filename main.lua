@@ -109,6 +109,13 @@ local function notice(s)
     toast=s
     toast_until=love.timer.getTime()+3.5
 end
+local function save_preferences()
+    -- Screenshot and interaction tests start with deterministic defaults.
+    if smoke or e2e or settings_e2e or gallery_e2e then return end
+    local ok,reason=love.filesystem.write(
+        "editor-preferences.txt",preferences:encode())
+    if not ok then notice("Settings could not be saved: "..tostring(reason)) end
+end
 local function current()
     return state.screen=="editor"
 end
@@ -1589,6 +1596,7 @@ function draw_editor_panel()
             local selected=choice[2]
             hit(xx,y+114,sw,37,function()
                 preferences:set_tool_position(selected)
+                save_preferences()
             end,"pref_position_"..selected)
         end
         label("Number of Columns in Tool Select Popup",
@@ -1606,6 +1614,7 @@ function draw_editor_panel()
             local value=cols
             if available then hit(xx,y+189,sw,34,function()
                 preferences:set_popup_columns(value)
+                save_preferences()
             end,"pref_columns_"..value) end
         end
         local function pref_toggle(yy,title,enabled,fn,key)
@@ -1620,13 +1629,22 @@ function draw_editor_panel()
         end
         pref_toggle(y+237,"Show Label in Tool Select",
             preferences.show_tool_labels,
-            function() preferences:toggle_tool_labels() end,"pref_show_labels")
+            function()
+                preferences:toggle_tool_labels()
+                save_preferences()
+            end,"pref_show_labels")
         pref_toggle(y+285,"Invert Direction of Mouse Wheel",
             preferences.invert_wheel,
-            function() preferences:toggle_invert_wheel() end,"pref_invert_wheel")
+            function()
+                preferences:toggle_invert_wheel()
+                save_preferences()
+            end,"pref_invert_wheel")
         pref_toggle(y+333,"Show Message on Undo",
             preferences.show_undo_message,
-            function() preferences:toggle_undo_messages() end,"pref_undo_messages")
+            function()
+                preferences:toggle_undo_messages()
+                save_preferences()
+            end,"pref_undo_messages")
         label("Additional settings are not yet reconstructed.",
             bx,y+400,bw,"tiny","center",C.soft)
     elseif name=="text" then
@@ -1662,6 +1680,14 @@ function love.load()
     font.logo=love.graphics.newFont(65)
     font.icon=love.graphics.newFont(14)
     font.big_icon=love.graphics.newFont(26)
+    if not (smoke or e2e or settings_e2e or gallery_e2e) then
+        local content=love.filesystem.read("editor-preferences.txt")
+        if content then
+            local ok,restored=pcall(EditorPreferences.decode,content)
+            if ok then preferences=restored
+            else notice("Invalid saved settings; using defaults.") end
+        end
+    end
     if (e2e or settings_e2e) and os.getenv("IBIS_LUA_E2E_RES") then
         local w,h=os.getenv("IBIS_LUA_E2E_RES"):match("^(%d+)x(%d+)$")
         assert(w and h,"IBIS_LUA_E2E_RES deve ser largura x altura")
