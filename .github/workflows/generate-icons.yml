@@ -1,0 +1,45 @@
+name: Gerar ícones Lucide PNG
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'assets/icons/svg/**'
+      - 'tools/rebuild_icons.py'
+      - '.github/workflows/generate-icons.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  generate-icons:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Rasterizar SVGs do Lucide
+        run: |
+          python -m pip install cairosvg pillow
+          python tools/rebuild_icons.py
+          python - <<'PY'
+          from PIL import Image
+          from pathlib import Path
+          fs=list(Path("assets/icons/png").glob("*.png"))
+          assert len(fs)>=38,len(fs)
+          for p in fs:
+              with Image.open(p) as im:
+                  assert im.size==(96,96) and im.getbbox(),p
+          PY
+      - name: Publicar PNGs para execução offline
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/icons/png
+          if git diff --cached --quiet; then
+            echo "Ícones já atualizados."
+          else
+            git commit -m "assets: incluir PNGs Lucide rasterizados para LÖVE"
+            git push origin HEAD:main
+          fi
