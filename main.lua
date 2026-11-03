@@ -1,7 +1,10 @@
 -- Ibis-Lua. Windows reference-based UI reconstruction, not the official application.
 -- Layout evidence: Windows gallery/new canvas (Uptodown), Windows tool editor
 -- (Microsoft Store, independent Windows screenshots), official tool manual.
--- Fidelity to version 14.1.4 is NOT yet certified. No paint/image engine.
+-- Fidelity to version 14.1.4 is NOT yet certified. Basic RGBA paint now
+-- uses the Rebuild LuaJIT engine; other visual tools remain simulated.
+local RasterBridge = require("src.raster_bridge")
+local ProjectStore = require("src.project_persistence")
 local Model = require("src.model")
 local Viewport = require("src.viewport")
 local ViewState = require("src.view_state")
@@ -41,6 +44,9 @@ local gallery_dialog=nil
 local gallery_input=""
 local gallery_input_replace=true
 local active_artwork_id=nil
+local projectStore=nil
+local projectForArtwork={}
+local activeProject=nil
 local controls = {}
 local font = {}
 local scale, W, H = 1, 1024, 768
@@ -64,6 +70,8 @@ local smoke = os.getenv("PAINT_LUA_SMOKE") == "1"
 local e2e = os.getenv("PAINT_LUA_E2E") == "1"
 local e2e_stage = 0
 local gallery_e2e = os.getenv("PAINT_LUA_GALLERY_E2E") == "1"
+local raster_e2e = os.getenv("PAINT_LUA_RASTER_E2E") == "1"
+local persistence_e2e=os.getenv('PAINT_LUA_PERSISTENCE_E2E')
 local gallery_e2e_stage = 0
 local smoke_screen = os.getenv("PAINT_LUA_SCREEN") or "title"
 local capture_requested, capture_done, capture_pending, capture_error = false, false, false, nil
@@ -149,6 +157,62 @@ local function save_preferences()
 end
 local function current()
     return state.screen=="editor"
+end
+-- Documento de pixels em memoria; estado e aparencia da interface
+-- continuam pertencendo ao Ibis-Lua. Nenhum dado e salvo ainda.
+local raster, raster_doc = nil,nil
+local function current_raster()
+    if not current() or not state.document then return nil end
+    local d=state.document
+    if d.width>RasterBridge.MAX_AXIS or
+        d.height>RasterBridge.MAX_AXIS then return nil end
+    if raster_doc~=d then
+        raster=RasterBridge.new(d.width,d.height)
+        raster_doc=d
+    end
+    raster:sync(state.layers)
+    return raster
+end
+-- Inversa exata do transform aplicado ao canvas no editor_screen.
+-- Recebe coordenadas logicas (apos normalizacao pelo DPI/escala).
+local function canvas_point(x,y)
+    if not current() or not state.document then return nil end
+    local dw,dh=state.document.width,state.document.height
+    local left=preferences.tool_position=="left" and 62 or 0
+    local right=preferences.tool_position=="right" and 75 or 34
+    local aw,ah=W-left-right,H-160
+    local factor=math.min(aw/dw,ah/dh,1.1)*view.zoom
+    if factor<=0 then return nil end
+    local cx=left+aw/2+view.pan_x
+    local cy=62+ah/2+view.pan_y
+    local dx,dy=x-cx,y-cy
+    local c,s=math.cos(view.rotation),math.sin(view.rotation)
+    local px=(dx*c+dy*s)/factor+dw/2
+    local py=(-dx*s+dy*c)/factor+dh/2
+    if px>=0 and py>=0 and px<dw and py<dh and
+        y>=35 and y<=H-66 then return px,py end
+    return nil
+end
+-- Persistencia apenas dos documentos RBD2; os demais estados de galeria
+-- continuam UI demonstrativa ate o proximo incremento.
+local function save_current_project()
+    if not projectStore or not current() or not active_artwork_id then
+        return true
+    end
+    local engine=current_raster()
+    if not engine then return true end
+    local item=gallery:get(active_artwork_id)
+    if not item then return true end
+    local ok,record=pcall(projectStore.save,projectStore,
+        activeProject or projectForArtwork[active_artwork_id],
+        state,engine,item.name)
+    if not ok then
+        notice('Nao foi possivel salvar RBD2: '..tostring(record))
+        return false
+    end
+    activeProject=record
+    projectForArtwork[active_artwork_id]=record
+    return true
 end
 local picker_hue=0
 local function set_panel(name)
@@ -425,7 +489,22 @@ local function gallery_item(tile,item)
                 gallery:enter(id)
                 gallery_item_scroll=0
             else
-                state:reopen_canvas(item.width,item.height)
+                local persisted=projectForArtwork[id]
+                if persisted and projectStore then
+                    local ok,record,engine=pcall(
+                        projectStore.load,projectStore,persisted.doc.id,state)
+                    if not ok then
+                        notice('Falha ao abrir RBD2: '..tostring(record))
+                        return
+                    end
+                    raster=engine
+                    raster_doc=state.document
+                    activeProject=record
+                    projectForArtwork[id]=record
+                else
+                    state:reopen_canvas(item.width,item.height)
+                    raster=nil;raster_doc=nil;activeProject=nil
+                end
                 active_artwork_id=id
                 view:reset()
             end
@@ -612,6 +691,7 @@ local function finish_new_canvas(wi,he)
     state:create_canvas(wi,he)
     active_artwork_id=gallery:add_artwork(
         wi,he,"Untitled "..tostring(gallery:total_artworks()+1))
+    raster=nil;raster_doc=nil;activeProject=nil
     view:reset()
     panel=nil;gallery_menu=nil;focus=nil
     gallery_selecting=false
@@ -770,13 +850,19 @@ local function draw_editor_toolbar()
             notice("Mesclar para baixo ainda não é simulado.")
         end},
         {"undo",function()
-            if preferences.show_undo_message then
-                notice("Nenhuma alteração de pintura para desfazer.")
+            local engine=current_raster()
+            if not engine or not engine:undo(state) then
+                if preferences.show_undo_message then
+                    notice("Nenhuma pincelada para desfazer.")
+                end
             end
         end},
         {"redo",function()
-            if preferences.show_undo_message then
-                notice("Nenhuma alteração de pintura para refazer.")
+            local engine=current_raster()
+            if not engine or not engine:redo(state) then
+                if preferences.show_undo_message then
+                    notice("Nenhuma pincelada para refazer.")
+                end
             end
         end},
         {"layer",function() set_panel("layer") end},
@@ -996,6 +1082,12 @@ local function editor_screen()
             rectangle(-dw/2+i*tw,-dh/2+j*th,tw+0.1,th+0.1,
                 {level,level,level})
         end end
+    end
+    -- Camada RGBA real sobre a superficie visual existente.
+    local engine=current_raster()
+    if engine then
+        love.graphics.setColor(1,1,1,1)
+        love.graphics.draw(engine:image(),-dw/2,-dh/2)
     end
     draw_view_guides(dw,dh,actual_scale)
     rgba(C.deep,0.22)
@@ -1340,11 +1432,27 @@ function draw_editor_panel()
                 rectangle(bx,yy,w-53,50,C.deep,0.34)
             end
         end
-        icon_button(x+w-39,y+44,31,31,"plus",function()
-            state:add_layer()
-        end)
-        hit(x+w-39,y+44,31,31,function() state:add_layer() end,
-            "layer_add")
+        -- Manter exatamente o controle "+" definido no Ibis-Lua.
+        -- A integração do motor acontece só na ação, sem novos botões.
+        local function add_layer()
+            local engine=current_raster()
+            if engine then
+                local nextCount=#state.layers+1
+                local bytes=state.document.width*state.document.height*
+                    4*nextCount+65536
+                if nextCount>8 or bytes>64*1024*1024 then
+                    notice("Limite de camadas do arquivo RBD2 atingido.")
+                    return
+                end
+                local ok,err=pcall(engine.changeLayer,engine,
+                    state,'add',state.active_layer_id)
+                if not ok then notice(tostring(err)) end
+            else
+                state:add_layer()
+            end
+        end
+        icon_button(x+w-39,y+44,31,31,"plus",add_layer)
+        hit(x+w-39,y+44,31,31,add_layer,"layer_add")
         local active=state:active_layer()
         local foot=y+h-174
         line(x+8,foot-8,x+w-8,foot-8,1,C.soft,0.3)
@@ -1960,6 +2068,7 @@ function draw_editor_panel()
     elseif name=="back" then
         label("Back",x+20,y+69,w-40,"normal","center",C.white)
         plain_button(x+20,y+127,w-40,42,"Back to My Gallery",function()
+            if not save_current_project() then return end
             state:open_gallery()
             panel=nil
         end,true)
@@ -2073,6 +2182,27 @@ function love.load()
     font.icon=love.graphics.newFont(14)
     font.big_icon=love.graphics.newFont(26)
     IconPack.load()
+    -- Testes de UI anteriores permanecem isolados e deterministas;
+    -- a execucao normal recupera os documentos RBD2 na galeria raiz.
+    if not (smoke or e2e or settings_e2e or gallery_e2e
+        or color_e2e or raster_e2e) then
+        local ok,result=pcall(ProjectStore.open)
+        if ok then
+            projectStore=result
+            local listed,rows=pcall(projectStore.list,projectStore)
+            if listed then
+                for _,doc in ipairs(rows) do
+                    local id=gallery:add_artwork(doc.width,doc.height,
+                        doc.name)
+                    projectForArtwork[id]={doc=doc}
+                end
+            else
+                notice('Falha ao listar projetos RBD2: '..tostring(rows))
+            end
+        else
+            notice('Falha ao iniciar RBD2: '..tostring(result))
+        end
+    end
     if not (smoke or e2e or settings_e2e or gallery_e2e) then
         local content=love.filesystem.read("editor-preferences.txt")
         if content then
@@ -2088,8 +2218,65 @@ function love.load()
         local ok=love.window.setMode(tonumber(w),tonumber(h),{resizable=true})
         assert(ok,"Não foi possível configurar resolução de teste")
     end
+    if persistence_e2e=='write' then
+        assert(projectStore,'Teste: Store RBD2 nao iniciou')
+        state:open_gallery()
+        state:open_new_canvas()
+        finish_new_canvas(64,64)
+        local engine=assert(current_raster())
+        engine:beginStroke('brush',1,32,32,8,201,31,71,1)
+        assert(engine:finishStroke(),'Teste: pincel nao alterou pixels')
+        state:add_layer()
+        engine:sync(state.layers)
+        engine:beginStroke('brush',2,12,12,6,28,60,220,1)
+        assert(engine:finishStroke(),'Teste: segunda camada nao pintou')
+        state:set_layer_opacity(2,75)
+        state:toggle_layer_alpha_lock(2)
+        assert(save_current_project(),'Teste: save RBD2 falhou')
+        assert(activeProject and activeProject.doc.format==2 and
+            activeProject.doc.revision>=1,
+            'Teste: Store nao gravou documento RBD2')
+        local id=activeProject.doc.id
+        local magic=projectStore.store.fs:readRange(
+            'projects/'..id..'.rbd',0,8,1048576)
+        assert(magic=='RBD2\r\n\26\n',
+            'Teste: arquivo nao possui cabecalho RBD2 verdadeiro')
+        assert(love.filesystem.write('rbd2-e2e-last.txt',id),
+            'Teste: nao foi possivel marcar projeto salvo')
+        -- Um projeto invalido com nove camadas nao pode deixar
+        -- arquivos incompletos ou passar silenciosamente do limite.
+        local invalid=Model.new()
+        invalid:open_gallery()
+        invalid:open_new_canvas()
+        invalid:create_canvas(32,32)
+        for i=2,9 do invalid:add_layer() end
+        local invalidRaster=RasterBridge.new(32,32)
+        invalidRaster:sync(invalid.layers)
+        assert(not pcall(projectStore.save,projectStore,nil,
+            invalid,invalidRaster,'Invalid'),
+            'Teste: RBD2 aceitou 9 camadas nao suportadas')
+    elseif persistence_e2e=='read' then
+        assert(projectStore,'Teste: Store RBD2 nao iniciou')
+        state:open_gallery()
+    end
+    if raster_e2e then
+        state:open_gallery()
+        state:open_new_canvas()
+        state:create_canvas(128,128)
+        state:set_brush_size(8)
+    end
     if smoke then
-        if smoke_screen=="gallery" then state:open_gallery()
+        if smoke_screen=="raster_painted" then
+            state:open_gallery();state:open_new_canvas()
+            state:create_canvas(640,480)
+            state:set_brush_size(28)
+            state:set_color(225,47,76)
+            local engine=current_raster()
+            engine:beginStroke('brush',state.active_layer_id,
+                50,60,28,225,47,76,1)
+            engine:moveStroke(480,320)
+            engine:finishStroke()
+        elseif smoke_screen=="gallery" then state:open_gallery()
         elseif smoke_screen=="gallery_new" then
             state:open_gallery();gallery_menu="new"
         elseif smoke_screen=="gallery_folders" then
@@ -2258,9 +2445,57 @@ function love.mousepressed(rx,ry,button)
     end
     if state.screen=="editor" and not panel and love.keyboard.isDown("space") then
         view:begin_pan(x,y)
+    elseif state.screen=="editor" and not panel and
+        (state.active_tool=="brush" or state.active_tool=="eraser"
+            or state.active_tool=="bucket"
+            or state.active_tool=="eyedropper") then
+        local px,py=canvas_point(x,y)
+        if px then
+            local engine=current_raster()
+            if engine then
+                local rgb=state.color
+                if state.active_tool=="bucket" then
+                    engine:bucket(state.active_layer_id,px,py,
+                        rgb[1],rgb[2],rgb[3],opacity/100,0)
+                elseif state.active_tool=="eyedropper" then
+                    local r,g,b=engine:pick(px,py)
+                    if r then
+                        state:set_color(r,g,b)
+                        colors:set_hex(("#%02X%02X%02X"):format(r,g,b))
+                    end
+                else
+                    engine:beginStroke(state.active_tool,state.active_layer_id,
+                        px,py,state.brush_size,
+                        rgb[1],rgb[2],rgb[3],opacity/100)
+                end
+            else
+                notice("Motor RGBA: limite atual de 2048 px por eixo.")
+            end
+            return
+        end
     elseif panel then panel=nil;state.active_panel=nil;layer_blend_open=false end
 end
 function love.mousemoved(rx,ry,dx,dy)
+    if raster and raster.pending and state.screen=="editor" then
+        local x,y=canvas_point(rx/scale,ry/scale)
+        if not x then
+            -- Manter o segmento dentro dos limites do documento.
+            x,y=rx/scale,ry/scale
+            local dw,dh=state.document.width,state.document.height
+            local left=preferences.tool_position=="left" and 62 or 0
+            local right=preferences.tool_position=="right" and 75 or 34
+            local aw,ah=W-left-right,H-160
+            local factor=math.min(aw/dw,ah/dh,1.1)*view.zoom
+            local dx=x-(left+aw/2+view.pan_x)
+            local dy=y-(62+ah/2+view.pan_y)
+            local c,s=math.cos(view.rotation),math.sin(view.rotation)
+            x=math.max(0,math.min(dw-.001,
+                (dx*c+dy*s)/factor+dw/2))
+            y=math.max(0,math.min(dh-.001,
+                (-dx*s+dy*c)/factor+dh/2))
+        end
+        raster:moveStroke(x,y)
+    end
     if color_drag and panel=="color" and color_float then
         color_position={
             x=rx/scale-color_drag.dx,
@@ -2319,6 +2554,10 @@ function love.mousemoved(rx,ry,dx,dy)
 end
 function love.mousereleased(rx,ry,button)
     if button~=1 then return end
+    if raster and raster.pending then
+        raster:finishStroke()
+        return
+    end
     if color_swatch_drag and panel=="color" and colors.palette_mode then
         local d=color_swatch_drag
         local xx,yy=rx/scale,ry/scale
@@ -2513,6 +2752,7 @@ function love.keypressed(key)
         end
     end
     if key=="escape" then
+        if raster and raster.pending then raster:finishStroke() end
         view:end_pan()
         if layer_blend_open then layer_blend_open=false
         elseif panel then panel=nil;state.active_panel=nil
@@ -2525,6 +2765,18 @@ function love.keypressed(key)
             else gallery_item_scroll=0 end
         else love.event.quit() end
     elseif state.screen=="editor" then
+        if key=="s" and love.keyboard.isDown("lctrl","rctrl") then
+            if save_current_project() then notice("Projeto RBD2 salvo") end
+            return
+        end
+        if key=="z" and love.keyboard.isDown("lctrl","rctrl") then
+            local engine=current_raster()
+            if engine then
+                if love.keyboard.isDown("lshift","rshift") then engine:redo(state)
+                else engine:undo(state) end
+            end
+            return
+        end
         if key=="b" then state:set_tool("brush")
         elseif key=="e" then state:set_tool("eraser")
         elseif key=="l" then set_panel("layer")
@@ -2910,6 +3162,104 @@ local function color_e2e_update()
 end
 
 function love.update()
+    if persistence_e2e=='write' then
+        love.event.quit(0)
+        return
+    elseif persistence_e2e=='read' and #controls>0 then
+        local id=assert(love.filesystem.read('rbd2-e2e-last.txt'),
+            'Teste: arquivo de controle nao encontrado apos reinicio')
+        local artwork
+        for galleryId,record in pairs(projectForArtwork) do
+            if record.doc.id==id then artwork=galleryId;break end
+        end
+        assert(artwork,'Teste: galeria nao recuperou projeto RBD2')
+        click_control('artwork_'..artwork)
+        assert(state.screen=='editor' and state.document.width==64
+            and state.document.height==64,
+            'Teste: clique da galeria nao reabriu documento salvo')
+        local engine=assert(current_raster())
+        local red=engine:buffer(1).bytes[(32*64+32)*4]
+        local blue=engine:buffer(2).bytes[(12*64+12)*4+2]
+        assert(red==201 and blue==220,
+            'Teste: raster RGBA nao sobreviveu ao reinicio do aplicativo')
+        assert(#state.layers==2 and state.layers[2].opacity==75
+            and state.layers[2].alpha_lock,
+            'Teste: propriedades de camadas foram perdidas no RBD2')
+        assert(activeProject.doc.format==2 and
+            activeProject.doc.revision>=2,
+            'Teste: documento RBD2 reaberto esta inconsistente')
+        love.event.quit(0)
+        return
+    end
+    if raster_e2e and #controls>0 then
+        local engine=assert(current_raster(),
+            "E2E: motor RGBA nao foi inicializado")
+        local left=preferences.tool_position=="left" and 62 or 0
+        local right=preferences.tool_position=="right" and 75 or 34
+        local x=(left+(W-left-right)/2)*scale
+        local y=(62+(H-160)/2)*scale
+        love.mousepressed(x,y,1)
+        love.mousemoved(x+12*scale,y,12*scale,0)
+        love.mousereleased(x+12*scale,y,1)
+        local pixels=engine:buffer(state.active_layer_id)
+        local at=(64*128+64)*4+3
+        assert(pixels.bytes[at]>0 and engine:canUndo(),
+            "E2E: clique no canvas nao pintou RGBA real")
+        click_control("undo")
+        assert(pixels.bytes[at]>0,
+            "E2E: a restauracao substitui o buffer, nao referencia antiga")
+        assert(engine:buffer(state.active_layer_id).bytes[at]==0,
+            "E2E: botao Undo nao restaurou canvas")
+        love.draw()
+        click_control("redo")
+        assert(engine:buffer(state.active_layer_id).bytes[at]>0,
+            "E2E: botao Redo nao repintou canvas")
+        love.keypressed("e")
+        assert(state.active_tool=="eraser")
+        love.mousepressed(x,y,1)
+        love.mousereleased(x,y,1)
+        assert(engine:buffer(state.active_layer_id).bytes[at]==0,
+            "E2E: Borracha nao removeu o pixel")
+        -- Clicar fora da pincelada inicial, em uma area
+        -- transparente conectada ao canto superior esquerdo.
+        local fillx=x-54*1.1*scale
+        local filly=y-54*1.1*scale
+        state:set_tool("bucket")
+        state:set_color(12,34,56)
+        love.mousepressed(fillx,filly,1)
+        love.mousereleased(fillx,filly,1)
+        assert(engine:buffer(state.active_layer_id).bytes[3]>0,
+            "E2E: Balde nao preencheu pixels reais")
+        state:set_tool("eyedropper")
+        state:set_color(0,0,255)
+        love.mousepressed(fillx,filly,1)
+        love.mousereleased(fillx,filly,1)
+        assert(state.color[1]==12 and state.color[2]==34 and
+            state.color[3]==56,
+            "E2E: Conta-gotas nao atualizou a cor real da UI")
+        love.draw()
+        click_control("undo")
+        assert(engine:buffer(state.active_layer_id).bytes[3]==0,
+            "E2E: Undo nao reverteu preenchimento real")
+        -- O painel permanece exatamente como no Ibis-Lua:
+        -- so o botao + original e testado na interface visual.
+        -- Exclusao/reordem sao exercitadas nos testes do motor.
+        click_control("layer")
+        love.draw()
+        click_control("layer_add")
+        assert(#state.layers==2 and state.active_layer_id==2,
+            "E2E: botao Mais nao adicionou camada raster")
+        love.draw()
+        click_control("undo")
+        assert(#state.layers==1 and not engine:buffer(2),
+            "E2E: desfazer adicao nao removeu camada")
+        love.draw()
+        click_control("redo")
+        assert(#state.layers==2 and state.active_layer_id==2,
+            "E2E: refazer adicao nao recuperou a camada")
+        love.event.quit(0)
+        return
+    end
     if smoke and capture_done then
         if capture_error then error("Screenshot: "..capture_error) end
         love.event.quit(0)
@@ -3068,5 +3418,14 @@ function love.update()
     else
         print("PASS: UI LÖVE E2E (gallery, layers, View, brush search and sliders)")
         love.event.quit(0)
+    end
+end
+
+-- Fechar pela janela nao descarta uma pintura ainda nao publicada.
+-- Se houver erro de I/O, impedir encerramento e manter pixels em memoria.
+function love.quit()
+    if current() and projectStore and
+        not save_current_project() then
+        return true
     end
 end
