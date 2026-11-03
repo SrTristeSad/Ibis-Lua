@@ -2328,15 +2328,28 @@ function love.mousepressed(rx,ry,button)
     if state.screen=="editor" and not panel and love.keyboard.isDown("space") then
         view:begin_pan(x,y)
     elseif state.screen=="editor" and not panel and
-        (state.active_tool=="brush" or state.active_tool=="eraser") then
+        (state.active_tool=="brush" or state.active_tool=="eraser"
+            or state.active_tool=="bucket"
+            or state.active_tool=="eyedropper") then
         local px,py=canvas_point(x,y)
         if px then
             local engine=current_raster()
             if engine then
                 local rgb=state.color
-                engine:beginStroke(state.active_tool,state.active_layer_id,
-                    px,py,state.brush_size,
-                    rgb[1],rgb[2],rgb[3],opacity/100)
+                if state.active_tool=="bucket" then
+                    engine:bucket(state.active_layer_id,px,py,
+                        rgb[1],rgb[2],rgb[3],opacity/100,0)
+                elseif state.active_tool=="eyedropper" then
+                    local r,g,b=engine:pick(px,py)
+                    if r then
+                        state:set_color(r,g,b)
+                        colors:set_hex(("#%02X%02X%02X"):format(r,g,b))
+                    end
+                else
+                    engine:beginStroke(state.active_tool,state.active_layer_id,
+                        px,py,state.brush_size,
+                        rgb[1],rgb[2],rgb[3],opacity/100)
+                end
             else
                 notice("Motor RGBA: limite atual de 2048 px por eixo.")
             end
