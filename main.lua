@@ -437,25 +437,41 @@ end
 local function gallery_screen()
     rectangle(0,0,W,H,C.paper)
     gallery_header()
-    rectangle(0,49,W,34,{0.94,0.94,0.92})
-    label("Cloud Synchronization",16,57,205,"small","left",{0.52,0.52,0.52})
-    rectangle(220,57,35,18,{0.80,0.80,0.80},1,9)
-    rgba(C.white);love.graphics.circle("fill",229,66,8)
+    rectangle(0,54,W,29,{0.924,0.936,0.951})
+    label("Sincronização da Nuvem",16,61,198,"small","left",C.muted)
+    rectangle(220,59,38,19,{0.77,0.80,0.84},1,10)
+    rgba(C.white);love.graphics.circle("fill",229,68,7.5)
+    label("PAINT LUA  /  ESTÚDIO",W-196,61,184,"tiny","right",C.muted)
     hit(214,51,48,30,function() gallery_menu="cloud" end,"cloud")
     local items=gallery:items()
     if #items==0 then
-        label(gallery.current_folder==0 and "There is no artwork."
-             or "This folder is empty.",0,H*0.54,W,"small","center",
-             {0.63,0.63,0.63})
-        label("Press '+' to create an artwork or folder.",0,H*0.54+23,W,
-             "small","center",{0.63,0.63,0.63})
+        local cx=W/2
+        local cy=H*0.43
+        local center_w=math.min(410,W-56)
+        soft_shadow(cx-center_w/2,cy-82,center_w,242,18,0.65)
+        rectangle(cx-center_w/2,cy-82,center_w,242,C.white,0.97,18)
+        inset_border(cx-center_w/2,cy-82,center_w,242,18,0.80)
+        rectangle(cx-41,cy-56,83,92,C.accent_tint,1,10)
+        rectangle(cx-24,cy-40,83,92,C.light,1,9)
+        stroke(cx-24,cy-40,83,92,C.card_border,0.85)
+        line(cx-7,cy-15,cx+40,cy-15,3,C.card_border)
+        line(cx-7,cy-2,cx+30,cy-2,3,C.card_border)
+        label(gallery.current_folder==0 and "Sua galeria está pronta"
+             or "Esta pasta está vazia",cx-center_w/2+14,cy+69,
+             center_w-28,"header","center",C.ink)
+        label("Crie uma tela para começar seu próximo projeto.",
+             cx-center_w/2+14,cy+99,center_w-28,"small","center",C.muted)
+        local bw=math.min(220,center_w-45)
+        plain_button(cx-bw/2,cy+123,bw,34,"+  Nova tela",function()
+            gallery_menu="new"
+        end,true,"gallery_empty_new")
     else
-        local tile_w=166
-        local gap=19
-        local left=29
+        local tile_w=200
+        local gap=28
+        local left=15
         local count=math.max(1,math.floor((W-left*2+gap)/(tile_w+gap)))
         local total_rows=math.ceil(#items/count)
-        local maximum=math.max(0,total_rows*204-(H-58-109))
+        local maximum=math.max(0,total_rows*228-(H-58-109))
         gallery_item_scroll=math.max(0,math.min(maximum,gallery_item_scroll))
         love.graphics.setScissor(0,83*scale,W*scale,(H-141)*scale)
         for i,item in ipairs(items) do
@@ -463,7 +479,7 @@ local function gallery_screen()
             local col=(i-1)%count
             local tile={
                 x=left+col*(tile_w+gap),
-                y=109+row*204-gallery_item_scroll,w=tile_w,h=184
+                y=109+row*228-gallery_item_scroll,w=tile_w,h=200
             }
             if tile.y+tile.h>83 and tile.y<H-58 then
                 gallery_item(tile,item)
@@ -2356,9 +2372,9 @@ function love.wheelmoved(dx,dy)
         brush_scroll=math.max(0,math.min(maximum,brush_scroll-dy*39))
     elseif state.screen=="gallery" and not gallery_dialog and not gallery_menu then
         local items=gallery:items()
-        local columns=math.max(1,math.floor((W-58+19)/(166+19)))
+        local columns=math.max(1,math.floor((W-30+28)/(200+28)))
         local rows=math.ceil(#items/columns)
-        local maximum=math.max(0,rows*204-(H-58-109))
+        local maximum=math.max(0,rows*228-(H-58-109))
         gallery_item_scroll=math.max(0,math.min(maximum,
             gallery_item_scroll-dy*72))
     elseif state.screen=="editor" and not panel then
