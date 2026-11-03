@@ -60,4 +60,28 @@ assert(#s.layers==1 and s.layers[1].opacity==100)
 s:open_gallery()
 fails(function() s:reopen_canvas(0,480) end)
 assert(s.screen=="gallery")
+-- A57: modelo permite reordenar e excluir sem perder ID nem
+-- selecionar uma camada removida; ultima camada e protegida.
+local layers=Model.new()
+layers:open_gallery();layers:open_new_canvas()
+layers:create_canvas(64,64)
+assert(not layers:move_layer(1,1),'Mover ultima camada nao altera lista')
+local second=layers:add_layer()
+local third=layers:add_layer()
+assert(second==2 and third==3 and layers.active_layer_id==3)
+assert(layers:move_layer(2,1) and
+    layers.layers[2].id==3 and layers.layers[3].id==2,
+    'Movimento acima precisa manter ID e posicao')
+assert(layers:move_layer(2,-1) and
+    layers.layers[2].id==2,'Movimento abaixo falhou')
+local removed=layers:delete_layer(3)
+assert(removed.id==3 and #layers.layers==2 and
+    layers.active_layer_id==2,'Excluir ativo precisa selecionar vizinha')
+removed=layers:delete_layer(2)
+assert(#layers.layers==1 and layers.active_layer_id==1)
+fails(function() layers:delete_layer(1) end)
+fails(function() layers:move_layer(999,1) end)
+fails(function() layers:move_layer(1,2) end)
+assert(layers:add_layer()==4,
+    'IDs de camada nao podem ser reciclados por exclusao')
 print("PASS: modelo simulado (navegação, estado, controles e camadas)")
