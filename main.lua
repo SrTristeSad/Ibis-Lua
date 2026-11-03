@@ -1984,7 +1984,8 @@ function love.load()
             else notice("Invalid saved settings; using defaults.") end
         end
     end
-    if (e2e or settings_e2e) and os.getenv("IBIS_LUA_E2E_RES") then
+    if (e2e or settings_e2e or color_e2e)
+        and os.getenv("IBIS_LUA_E2E_RES") then
         local w,h=os.getenv("IBIS_LUA_E2E_RES"):match("^(%d+)x(%d+)$")
         assert(w and h,"IBIS_LUA_E2E_RES deve ser largura x altura")
         local ok=love.window.setMode(tonumber(w),tonumber(h),{resizable=true})
@@ -2023,6 +2024,32 @@ function love.load()
             preset_selected=10;active_dpi=300
             local wi,he=CanvasPresets.pixels(presets[10],active_dpi)
             current_width=tostring(wi);current_height=tostring(he)
+        elseif smoke_screen=="color_palette"
+            or smoke_screen=="color_hex"
+            or smoke_screen=="color_floating"
+            or smoke_screen=="color_rgb" then
+            state:open_gallery();state:open_new_canvas();state:create_canvas(1800,2400)
+            set_panel("color")
+            colors:set_hex("#337BCC")
+            state:set_color(51,123,204)
+            if smoke_screen=="color_palette" then
+                colors.palette_mode=true
+                colors:create_palette("Character")
+                colors:add_current()
+                colors:set_hex("#FF8D53")
+                colors:add_current()
+                state:set_color(255,141,83)
+            elseif smoke_screen=="color_hex" then
+                color_dialog="hex"
+                color_input="#337BCC"
+                color_input_replace=true
+            elseif smoke_screen=="color_floating" then
+                color_float=true
+                color_position={x=310,y=70}
+                color_size={w=480,h=575}
+            elseif smoke_screen=="color_rgb" then
+                colors.rgb_mode=true
+            end
         elseif smoke_screen=="brush_search" then
             state:open_gallery();state:open_new_canvas();state:create_canvas(1800,2400)
             selected_brush=7;state:set_brush_size(8)
@@ -2131,6 +2158,28 @@ function love.mousepressed(rx,ry,button)
     elseif panel then panel=nil;state.active_panel=nil;layer_blend_open=false end
 end
 function love.mousemoved(rx,ry,dx,dy)
+    if color_drag and panel=="color" and color_float then
+        color_position={
+            x=rx/scale-color_drag.dx,
+            y=ry/scale-color_drag.dy
+        }
+    end
+    if color_resize and panel=="color" and color_float then
+        color_size={
+            w=math.max(370,math.min(W-96,
+                color_resize.w+rx/scale-color_resize.mx)),
+            h=math.max(490,math.min(H-119,
+                color_resize.h+ry/scale-color_resize.my))
+        }
+    end
+    if color_slider_drag and panel=="color" then
+        local d=color_slider_drag
+        d.change((rx/scale-d.x)/d.w)
+    end
+    if color_wheel_drag and panel=="color" then
+        local d=color_wheel_drag
+        d.action(rx/scale,ry/scale,d.x,d.y,d.r)
+    end
     if brush_drag and panel=="brush" then
         local fraction=math.max(0,math.min(1,
             (rx/scale-brush_drag.x)/brush_drag.w))
@@ -2168,6 +2217,10 @@ end
 function love.mousereleased(rx,ry,button)
     if button~=1 then return end
     drag_dimension=nil
+    color_drag=nil
+    color_resize=nil
+    color_slider_drag=nil
+    color_wheel_drag=nil
     brush_drag=nil
     drag_layer=nil
     drag_layer_resize=nil
@@ -2219,6 +2272,15 @@ function love.wheelmoved(dx,dy)
     end
 end
 function love.textinput(t)
+    if state.screen=="editor" and panel=="color" and color_dialog then
+        local limit=color_dialog=="hex" and 7 or 64
+        local content=color_input_replace and t or color_input..t
+        if #content<=limit then
+            color_input=content
+            color_input_replace=false
+        end
+        return
+    end
     if state.screen=="editor" and panel=="brush" and brush_search_active then
         if #brush_search+#t<=64 then
             brush_search=brush_search..t
@@ -2246,6 +2308,34 @@ function love.textinput(t)
 end
 function love.keypressed(key)
     if key=="f12" then capture_requested=true;return end
+    if state.screen=="editor" and panel=="color" and color_dialog then
+        if key=="escape" then color_dialog=nil
+        elseif key=="backspace" then
+            if color_input_replace then color_input=""
+            else
+                local index=utf8.offset(color_input,-1)
+                color_input=index and color_input:sub(1,index-1) or ""
+            end
+            color_input_replace=false
+        elseif key=="return" or key=="kpenter" then
+            local ok=pcall(function()
+                if color_dialog=="hex" then
+                    colors:set_hex(color_input)
+                    state:set_color(colors.current[1],
+                        colors.current[2],colors.current[3])
+                    local h=colors:hsb()
+                    picker_hue=(h%360)/360
+                elseif color_dialog=="new_palette" then
+                    colors:create_palette(color_input)
+                else
+                    colors:rename_palette(colors.active_palette,color_input)
+                end
+            end)
+            if ok then color_dialog=nil
+            else notice("Invalid color or palette name.") end
+        end
+        return
+    end
     if state.screen=="editor" and panel=="brush" and brush_search_active then
         if key=="backspace" then
             local index=utf8.offset(brush_search,-1)
