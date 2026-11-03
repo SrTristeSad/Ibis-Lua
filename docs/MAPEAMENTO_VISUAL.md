@@ -189,3 +189,15 @@ https://ibispaint.com/img/lecture/common/chapter_04_05.png
 As configurações de posição da Tool Select e outras preferências passaram a ser serializadas como texto simples no diretório de dados do LÖVE. Isto é uma **decisão de engenharia própria do Ibis-Lua**, não uma afirmação sobre o formato proprietário usado pelo ibisPaint Windows 14.1.4.
 
 Fontes funcionais dos campos: https://ibispaint.com/lecture/index.jsp?no=81. O comportamento de restauração é simulado e seguro contra conteúdo malformado. Testes automatizados verificam round-trip e rejeição de entradas inválidas.
+
+## W17 — Color Window v14: seleção, paletas e janela flutuante
+
+**Fontes oficiais:**
+- https://ibispaint.com/lecture/index.jsp?no=11 — Color Circle / HSB box, Current/Previous Color, HEX, sliders HSB/RGB e opacidade, HSB/Palette e histórico.
+- https://ibispaint.com/newFeature.jsp — versão 14.0.0: múltiplas paletas, renomeação, reorganização das cores e Floating Color Window em desktops/tablets.
+
+**Implementado:** novo módulo `src/color_state.lua`, com conversões RGB/HSB/HEX, controle de opacidade, paletas individuais, seleção de cores, rearranjo arrastável, histórico limitado a 100 cores selecionadas e cópias defensivas. O código `main.lua` exibe a janela com os controles, modal de HEX, listas de paletas com paginação, botão de modo flutuante e alça de redimensionamento. O círculo/diamante é renderizado com polígonos LÖVE próprios; não há assets extraídos do programa original.
+
+**Capturas geradas:** `color`, `color_rgb`, `color_palette`, `color_hex`, `color_floating`. Um defeito de sobreposição de texto e uma tonalidade inconsistente nas capturas de smoke foram identificados na inspeção visual e corrigidos.
+
+**Pendências:** disposição geométrica oficial de Windows 14.1.4, cores e fontes exatas, seletor de paletas original, gerenciamento de QR Codes, importação/exportação, persistência de paletas e histórico de pintura real. A opção de opacidade modifica somente o modelo da janela.

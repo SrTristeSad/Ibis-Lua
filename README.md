@@ -28,7 +28,7 @@ No programa: clique em My Gallery, +, escolha dimensões e clique OK. Os campos 
 - Comparador: python -m unittest discover -s tests -p "test_compare.py"
 - Diferença de imagens: python tools/compare_screenshots.py --reference original.png --actual copia.png --output-dir comparison_output
 
-O GitHub Actions realiza verificação sintática, testes do modelo, testes do comparador, integração por cliques e **captura trinta estados no LÖVE** (título, galeria, menu New, galeria com pastas, galeria dentro de pasta, seleção da galeria, galeria com muitos itens, novo canvas, novo canvas com DPI, editor, camadas, janela flutuante, propriedades, blending, fundo transparente, pincéis, cor, zoom/rotação, Solo, View Menu, Grid Settings, grade e janela de referência). Capturas automatizadas não comprovam correspondência com o software original.
+O GitHub Actions realiza verificação sintática, testes do modelo, testes do comparador, integração por cliques e **captura trinta e quatro estados no LÖVE** (título, galeria, menu New, galeria com pastas, galeria dentro de pasta, seleção da galeria, galeria com muitos itens, novo canvas, novo canvas com DPI, editor, camadas, janela flutuante, propriedades, blending, fundo transparente, pincéis, cor, zoom/rotação, Solo, View Menu, Grid Settings, grade e janela de referência). Capturas automatizadas não comprovam correspondência com o software original.
 
 ## Pesquisa e qualidade
 
@@ -102,7 +102,7 @@ Além dos testes Lua, o projeto inclui `tools/check_ui_screenshots.py`. Após ge
 python tools/check_ui_screenshots.py screenshots
 ```
 
-O programa verifica a presença e a integridade das **30 imagens PNG** produzidas pelo LÖVE no CI (1024×768) e examina a estrutura principal do painel Brush: **biblioteca clara à esquerda e propriedades escuras à direita**. A validação também tem testes unitários em `tests/test_ui_screenshots.py`; o GitHub Actions executa as verificações automaticamente.
+O programa verifica a presença e a integridade das **34 imagens PNG** produzidas pelo LÖVE no CI (1024×768) e examina a estrutura principal do painel Brush: **biblioteca clara à esquerda e propriedades escuras à direita**. A validação também tem testes unitários em `tests/test_ui_screenshots.py`; o GitHub Actions executa as verificações automaticamente.
 
 **Esse teste não mede a fidelidade 1:1 ao ibisPaint.** Para avaliar equivalência, ainda são necessárias capturas comparáveis do Windows 14.1.4 e uso do comparador `tools/compare_screenshots.py`. A arte final do painel Brush pode ser inspecionada nos artefatos da execução do CI.
 
@@ -127,3 +127,13 @@ As opções alteradas em **Back → Settings** são salvas automaticamente em `e
 O arquivo é texto simples, com campos `tool_position`, `popup_columns`, `show_tool_labels`, `invert_wheel` e `show_undo_message`. Seu conteúdo é validado como dados; o programa **não executa Lua lido do disco**. Um arquivo corrompido é ignorado e as preferências voltam aos valores padrão. Para voltar manualmente ao padrão, basta encerrar o programa e apagar apenas `editor-preferences.txt` do diretório de dados, sem mexer nas outras configurações.
 
 Os testes de screenshot e de interação desativam intencionalmente a restauração/gravação das preferências, garantindo capturas determinísticas. O teste puro `tests/test_editor_preferences.lua` valida a serialização, leitura e rejeição de dados malformados.
+
+## Color Window — atualização da versão 14
+
+O painel **Color** foi reconstruído usando a documentação oficial de seleção de cores (https://ibispaint.com/lecture/index.jsp?no=11) e as mudanças introduzidas no ibisPaint 14.0.0 (https://ibispaint.com/newFeature.jsp). A interface inclui amostras **Current / Previous**, círculo de cor com controle HSB, escolha entre sliders HSB e RGB, campo hexadecimal editável, opacidade, seleção de paletas e histórico local de **cores selecionadas**.
+
+Na aba **Palette**, é possível criar e renomear paletas, mudar entre várias paletas (até três nomes visíveis por página), adicionar a cor atual e reorganizar as amostras arrastando uma delas para outra posição. O estado editável fica em `src/color_state.lua` e é validado por `tests/test_color_state.lua`.
+
+O botão **Floating Window** alterna a janela móvel, que pode ser arrastada pela barra superior e redimensionada pelo canto inferior direito. O botão de confirmação/fechamento do painel permanece disponível. Capturas de comparação interna: `color`, `color_rgb`, `color_palette`, `color_hex`, `color_floating`.
+
+**Limitações importantes:** não há aplicação de tinta ao canvas, exportação/importação de paletas por QR Code, sincronização com o software original ou armazenamento permanente dessas paletas. As cores do histórico são cores **selecionadas no protótipo**, não cores empregadas em pinceladas reais. As geometrias, ícones e tamanhos ainda não foram validados pixel a pixel contra o Windows 14.1.4. O CI executa um E2E específico (`IBIS_LUA_COLOR_E2E=1 love .`) nas resoluções 1024×768 e 1600×900.

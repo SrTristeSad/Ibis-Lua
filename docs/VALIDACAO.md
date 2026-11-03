@@ -79,13 +79,13 @@
 
 - `luajit tests/test_brush_catalog.lua` verifica catálogo de exemplos, filtro de busca sem distinção de maiúsculas/minúsculas, estados válidos e cópias defensivas.
 - A sequência end-to-end `IBIS_LUA_E2E=1 love .` também abre Brush, ativa a busca, filtra os resultados, seleciona um pincel e testa os sliders e Reset.
-- GitHub Actions captura `brush.png` e `brush_search.png`, totalizando **30 estados**.
+- GitHub Actions captura `brush.png` e `brush_search.png`, totalizando **34 estados**.
 - A evidência Windows é screenshot da Microsoft Store, sem identificação comprovada de build 14.1.4. Sem captura da mesma versão e resolução não existe resultado de fidelidade pixel a pixel.
 
 ## Verificador estrutural de screenshots
 
 - `python -m unittest discover -s tests -p 'test_*.py' -v`: roda os testes Python do comparador e do validador de layout.
-- `python tools/check_ui_screenshots.py screenshots`: verifica os 30 PNGs, resolução do CI e separação clara/escura do painel Brush.
+- `python tools/check_ui_screenshots.py screenshots`: verifica os 34 PNGs, resolução do CI e separação clara/escura do painel Brush.
 - O teste foi motivado por inspeção real dos screenshots gerados pelo LÖVE, incluindo correção dos traços de caneta que apareciam pontilhados.
 - **Não comparar os resultados desse verificador com uma avaliação de precisão visual contra o ibisPaint original.** São invariantes internos da reconstrução, não métricas de semelhança.
 
@@ -103,3 +103,12 @@
 - `EditorPreferences.decode(text)` valida posição, número de colunas, booleanos, versão e tamanho; entradas desconhecidas ou malformadas são rejeitadas, sem `loadstring` nem avaliação de código.
 - Uma execução normal do LÖVE carrega `editor-preferences.txt` no início e salva após mudanças no menu Settings; ambientes de smoke/E2E não leem nem escrevem esse arquivo.
 - O arquivo contém apenas preferências de UI. Não há gravação de trabalhos ou imagens, nem sincronização com a nuvem.
+
+## Color Window — testes e limites
+
+- `luajit tests/test_color_state.lua`: RGB, HSB, código hexadecimal, canal isolado, opacidade, paletas, nomeação, troca de paleta, reorganização de amostras, histórico limitado a 100 e rejeição de entradas inválidas.
+- `IBIS_LUA_COLOR_E2E=1 love .`: navegação real da tela inicial ao editor → Color → edição HEX → RGB slider → Palette → criar/renomear paleta → armazenar e arrastar amostras → navegar entre páginas → Floating Window → mover e redimensionar → fechar.
+- Mesmo fluxo com `IBIS_LUA_E2E_RES=1600x900` para regressão responsiva.
+- O pipeline inclui quatro estados adicionais de captura `color_rgb`, `color_palette`, `color_hex`, `color_floating`, totalizando **34 PNGs**.
+- Uma inspeção do screenshot inicial encontrou texto sobreposto ao círculo HSB devido a uma variável local de altura reutilizada; a rotina foi corrigida. Um marcador de tonalidade inconsistente nas capturas também foi corrigido.
+- Aprovado em CI significa apenas funcionamento de interfaces e testes, **não equivalência 1:1** com uma captura original certificada do ibisPaint Windows 14.1.4.

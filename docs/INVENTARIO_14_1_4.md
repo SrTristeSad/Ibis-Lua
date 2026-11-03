@@ -49,3 +49,7 @@ versão exata; origem e licença das capturas; resolução; escala DPI; idioma; 
 ## Tool Select Position — etapa implementada
 
 Estado simulado e navegável: esquerda, direita, Popup com 1/2/3 colunas, rótulos visíveis/ocultos, mensagens de desfazer e direção da roda do mouse. Abrir pela ação Back → Settings. Referências oficiais: manuais no=4 e no=81. Capturas de Windows 14.1.4, DPI, idioma e tipografia originais continuam pendentes; **não classificar a tela como concluída**.
+
+## Color Window — etapa v14
+
+O tutorial oficial no=11 e as notas da versão 14.0.0 sustentam a existência de seleção HSB/RGB/HEX, Current/Previous, opacidade, múltiplas paletas e janela flutuante. Em Ibis-Lua há implementação **funcional demonstrativa** desses controles, sem pintura, QR export, importação ou persistência de paletas. Geometria Windows 14.1.4 ainda não validada. Não alterar o status global do projeto para "cópia fiel".
