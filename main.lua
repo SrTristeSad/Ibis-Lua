@@ -2650,12 +2650,109 @@ local function settings_e2e_update()
     settings_e2e_stage=settings_e2e_stage+1
 end
 
+local function color_e2e_update()
+    if color_e2e_stage==0 then
+        click_control("brush")
+        assert(state.screen=="gallery")
+    elseif color_e2e_stage==1 then
+        click_control("plus")
+        assert(gallery_menu=="new")
+    elseif color_e2e_stage==2 then
+        click_control("new_canvas")
+        assert(state.modal=="new_canvas")
+    elseif color_e2e_stage==3 then
+        click_control("OK")
+        assert(state.screen=="editor")
+    elseif color_e2e_stage==4 then
+        click_control("color")
+        assert(panel=="color" and colors:hex()=="#000000")
+    elseif color_e2e_stage==5 then
+        click_control("color_hex")
+        assert(color_dialog=="hex")
+    elseif color_e2e_stage==6 then
+        for ch in ("#33AA55"):gmatch(".") do love.textinput(ch) end
+        click_control("color_dialog_confirm")
+        assert(colors:hex()=="#33AA55"
+            and state.color[1]==51 and state.color[2]==170)
+    elseif color_e2e_stage==7 then
+        click_control("color_rgb_toggle")
+        assert(colors.rgb_mode)
+    elseif color_e2e_stage==8 then
+        click_control("color_slider_r")
+        assert(colors.current[1]>=120 and colors.current[1]<=135,
+            "Color UI e2e: RGB slider not applied")
+    elseif color_e2e_stage==9 then
+        click_control("color_mode_palette")
+        assert(colors.palette_mode)
+    elseif color_e2e_stage==10 then
+        click_control("color_new_palette")
+        assert(color_dialog=="new_palette")
+    elseif color_e2e_stage==11 then
+        for ch in ("Character"):gmatch(".") do love.textinput(ch) end
+        click_control("color_dialog_confirm")
+        assert(#colors:palettes_list()==2 and
+            colors:palettes_list()[2].name=="Character")
+    elseif color_e2e_stage==12 then
+        click_control("color_add_swatch")
+        assert(#colors:colors()==1)
+    elseif color_e2e_stage==13 then
+        click_control("color_rename_palette")
+        assert(color_dialog=="rename_palette")
+    elseif color_e2e_stage==14 then
+        for ch in ("Warm tones"):gmatch(".") do love.textinput(ch) end
+        click_control("color_dialog_confirm")
+        assert(colors:palettes_list()[2].name=="Warm tones")
+    elseif color_e2e_stage==15 then
+        click_control("color_float_toggle")
+        assert(color_float)
+    elseif color_e2e_stage==16 then
+        local b
+        for _,c in ipairs(controls) do
+            if c.key=="color_move_bar" then b=c;break end
+        end
+        assert(b,"Color window drag hitbox missing")
+        local mx=(b.x+b.w/2)*scale
+        local my=(b.y+b.h/2)*scale
+        love.mouse.setPosition(mx,my)
+        love.mousepressed(mx,my,1)
+        love.mousemoved(mx+22*scale,my+14*scale,22*scale,14*scale)
+        love.mousereleased(mx+22*scale,my+14*scale,1)
+        assert(color_position and color_position.x>290,
+            "Color window not moved")
+    elseif color_e2e_stage==17 then
+        local b
+        for _,c in ipairs(controls) do
+            if c.key=="color_resize" then b=c;break end
+        end
+        assert(b,"Color resize grip hitbox missing")
+        local mx=(b.x+b.w/2)*scale
+        local my=(b.y+b.h/2)*scale
+        love.mouse.setPosition(mx,my)
+        love.mousepressed(mx,my,1)
+        love.mousemoved(mx-25*scale,my-22*scale,-25*scale,-22*scale)
+        love.mousereleased(mx-25*scale,my-22*scale,1)
+        assert(color_size and color_size.w<520 and color_size.h<635,
+            "Color window not resized")
+    elseif color_e2e_stage==18 then
+        click_control("check")
+        assert(panel==nil)
+    else
+        print("PASS: Color window E2E (HEX, RGB, palettes, floating drag/resize)")
+        love.event.quit(0)
+    end
+    color_e2e_stage=color_e2e_stage+1
+end
+
 function love.update()
     if smoke and capture_done then
         if capture_error then error("Screenshot: "..capture_error) end
         love.event.quit(0)
     end
     -- Each stage runs after a draw; hitboxes represent the visible UI.
+    if color_e2e and #controls>0 then
+        color_e2e_update()
+        return
+    end
     if settings_e2e and #controls>0 then
         settings_e2e_update()
         return
