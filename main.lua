@@ -924,10 +924,7 @@ local function draw_editor_toolbar()
             "small","left",C.soft)
     end
     if W-dock.x-dock.w>110 then
-        -- O canvas possui raster real ate 2048; outros modos ainda
-        -- sao demonstrativos. Nao anunciar simulacao integral.
-        label(current_raster() and "RASTER BÁSICO" or "VISUAL",
-            dock.x+dock.w+13,H-41,
+        label("SIMULAÇÃO",dock.x+dock.w+13,H-41,
             math.max(65,W-dock.x-dock.w-20),"tiny","center",C.soft)
     end
 end
@@ -1404,7 +1401,7 @@ function draw_editor_panel()
         end,"layer_drag")
         local bx=x+10
         rectangle(bx,y+43,w-53,37,C.light,0.20,2)
-        label("Selection Layer",bx+40,y+54,w-193,"small","left",C.white)
+        label("Selection Layer",bx+40,y+54,w-101,"small","left",C.white)
         rectangle(bx+7,y+48,25,25,C.white)
         local max_rows=math.max(1,math.floor((h-269)/52))
         for slot=1,math.min(#state.layers,max_rows) do
@@ -1435,12 +1432,11 @@ function draw_editor_panel()
                 rectangle(bx,yy,w-53,50,C.deep,0.34)
             end
         end
-        -- A57: a mesma pilha undo/redo grava pinceladas E estrutura,
-        -- preservando os IDs das camadas e os buffers RGBA removidos.
-        local function layer_action(action)
+        -- Manter exatamente o controle "+" definido no Ibis-Lua.
+        -- A integração do motor acontece só na ação, sem novos botões.
+        local function add_layer()
             local engine=current_raster()
-            local id=state.active_layer_id
-            if action=='add' and engine then
+            if engine then
                 local nextCount=#state.layers+1
                 local bytes=state.document.width*state.document.height*
                     4*nextCount+65536
@@ -1448,45 +1444,15 @@ function draw_editor_panel()
                     notice("Limite de camadas do arquivo RBD2 atingido.")
                     return
                 end
+                local ok,err=pcall(engine.changeLayer,engine,
+                    state,'add',state.active_layer_id)
+                if not ok then notice(tostring(err)) end
+            else
+                state:add_layer()
             end
-            local function change()
-                if engine then return engine:changeLayer(state,action,id) end
-                if action=='add' then return state:add_layer()
-                elseif action=='delete' then return state:delete_layer(id)
-                else return state:move_layer(id,action=='up' and 1 or -1) end
-            end
-            local ok,result=pcall(change)
-            if not ok then notice(tostring(result)) end
         end
-        -- Controles pequenos junto do "+" original, sem alterar
-        -- painel, dock ou posicionamento de suas areas principais.
-        -- A57: usar PNG Lucide existente em vez de glifos Unicode
-        -- (a fonte do LÖVE mostra setas Unicode como quadradinhos).
-        local function arrow_button(xx,up,fn,key)
-            local yy=y+46
-            local hovered=over(xx,yy,29,27)
-            rectangle(xx,yy,29,27,
-                hovered and C.hover or C.dark,1,Theme.radius.button)
-            inset_border(xx,yy,29,27,Theme.radius.button,0.15)
-            love.graphics.push()
-            love.graphics.translate(xx+14.5,yy+13.5)
-            love.graphics.rotate(up and -math.pi/2 or math.pi/2)
-            glyph("arrow_right",0,0,8.3)
-            love.graphics.pop()
-            hit(xx,yy,29,27,fn,key)
-        end
-        arrow_button(x+w-135,false,
-            function() layer_action('down') end,"layer_move_down")
-        arrow_button(x+w-103,true,
-            function() layer_action('up') end,"layer_move_up")
-        icon_button(x+w-71,y+44,29,31,"minus",
-            function() layer_action('delete') end)
-        hit(x+w-71,y+44,29,31,
-            function() layer_action('delete') end,"layer_delete")
-        icon_button(x+w-39,y+44,31,31,"plus",
-            function() layer_action('add') end)
-        hit(x+w-39,y+44,31,31,
-            function() layer_action('add') end,"layer_add")
+        icon_button(x+w-39,y+44,31,31,"plus",add_layer)
+        hit(x+w-39,y+44,31,31,add_layer,"layer_add")
         local active=state:active_layer()
         local foot=y+h-174
         line(x+8,foot-8,x+w-8,foot-8,1,C.soft,0.3)
