@@ -67,5 +67,70 @@ assert(c:redo() and select(1,c:pick(4,4))==12,
     'Redo nao restaurou o balde')
 assert(not pcall(c.bucket,c,10,4,4,1,2,3,1,256),
     'Balde deve rejeitar tolerancia invalida')
-print('OK: RGBA, brush, eraser, bucket, picker, undo/redo, layers')
+-- A57: ordem cronologica unificada entre pixels e estrutura.
+local Model=require('src.model')
+local model=Model.new()
+model:open_gallery()
+model:open_new_canvas()
+model:create_canvas(16,16)
+local h=Bridge.new(16,16)
+h:sync(model.layers)
+h:beginStroke('brush',1,4,4,4,200,20,30,1)
+assert(h:finishStroke())
+local base=Raster.readPixel(h:buffer(1),4,4)
+assert(base~=0)
+assert(h:changeLayer(model,'add')==2 and #model.layers==2)
+h:beginStroke('brush',2,11,11,3,15,180,240,1)
+assert(h:finishStroke())
+local colored=Raster.readPixel(h:buffer(2),11,11)
+assert(colored~=0)
+assert(h:changeLayer(model,'down',2)==true
+    and model.layers[1].id==2 and model.layers[2].id==1,
+    'Reordenar alterou a camada errada')
+local removed=h:changeLayer(model,'delete',2)
+assert(removed.id==2 and #model.layers==1 and not h:buffer(2),
+    'Excluir camada deve retirar buffer e atualizar lista')
+assert(not pcall(h.changeLayer,h,model,'delete',1),
+    'Nao pode remover ultima camada')
+assert(h:undo(model) and #model.layers==2
+    and Raster.readPixel(h:buffer(2),11,11)==colored,
+    'Desfazer exclusao perdeu pixels RGBA da camada')
+assert(h:undo(model) and model.layers[1].id==1
+    and model.layers[2].id==2,
+    'Desfazer movimento nao restaurou ordem')
+assert(h:undo(model) and
+    Raster.readPixel(h:buffer(2),11,11)==0,
+    'Desfazer pintura na camada restaurada falhou')
+assert(h:undo(model) and #model.layers==1
+    and not h:buffer(2) and model.active_layer_id==1,
+    'Desfazer adicao nao removeu camada criada')
+assert(h:undo(model) and Raster.readPixel(h:buffer(1),4,4)==0,
+    'Desfazer inicial nao restaurou base')
+assert(not h:canUndo() and h:canRedo())
+assert(h:redo(model) and Raster.readPixel(h:buffer(1),4,4)==base)
+assert(h:redo(model) and #model.layers==2
+    and Raster.readPixel(h:buffer(2),11,11)==0,
+    'Refazer adicao deve restaurar a camada VAZIA, nao a pintura futura')
+assert(h:redo(model) and
+    Raster.readPixel(h:buffer(2),11,11)==colored,
+    'Refazer pintura deve recuperar seus bytes')
+assert(h:redo(model) and model.layers[1].id==2)
+assert(h:redo(model) and #model.layers==1
+    and not h:buffer(2) and not h:canRedo(),
+    'Refazer exclusao deve deixar somente a base')
+assert(h.historyBytes<=h.MAX_HISTORY_BYTES and
+    #h.undoStack<=h.MAX_HISTORY_ENTRIES,
+    'Historico estrutural deve cumprir limites de memoria')
+-- Undo de Delete e nova pintura devem limpar Redo futuro.
+assert(h:undo(model) and #model.layers==2)
+h:beginStroke('brush',2,8,8,2,80,20,10,1)
+assert(h:finishStroke() and not h:canRedo(),
+    'Novo traco apos undo precisa invalidar redo')
+-- Metadata e ID precisam retornar ao estado anterior a exclusao.
+assert(h:changeLayer(model,'up',2))
+assert(h:undo(model) and model.active_layer_id==1)
+assert(not h:changeLayer(model,'up',1),
+    'Mover camada alem da borda superior nao deve gerar registro')
+print('OK: RGBA + historico unificado de tracos, camada, exclusao e ordem')
+
 
