@@ -183,3 +183,9 @@ https://ibispaint.com/img/lecture/common/chapter_04_05.png
 **Validação executável:** teste Lua do modelo, integração LÖVE em 1024×768/1600×900, seis screenshots novos (30 no total) e verificador de presença/ausência e lateralidade da faixa de ferramentas. Isso não valida espaçamento, iconografia ou equivalência pixel-perfect com Windows 14.1.4.
 
 **Incertezas preservadas:** ordem exata dos itens dentro da janela Settings na build-alvo, fontes, cores e dimensões dos menus Popup. Os elementos são protótipos vetoriais, sem assets do software proprietário.
+
+## W16 — Persistência das opções de interface (implementação interna)
+
+As configurações de posição da Tool Select e outras preferências passaram a ser serializadas como texto simples no diretório de dados do LÖVE. Isto é uma **decisão de engenharia própria do Ibis-Lua**, não uma afirmação sobre o formato proprietário usado pelo ibisPaint Windows 14.1.4.
+
+Fontes funcionais dos campos: https://ibispaint.com/lecture/index.jsp?no=81. O comportamento de restauração é simulado e seguro contra conteúdo malformado. Testes automatizados verificam round-trip e rejeição de entradas inválidas.

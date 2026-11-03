@@ -96,3 +96,10 @@
 - Mesmo E2E em 1600×900 para detectar falhas de posicionamento responsivo.
 - Capturas `editor_settings`, `tool_popup_1`, `tool_popup_2`, `tool_popup_3`, `tool_right` e `tool_labels_off` registram seis estados adicionais.
 - `python tools/check_ui_screenshots.py screenshots` inclui uma amostragem de pixels para detectar se o rail está à esquerda/direita ou ausente no Popup. Esta é uma verificação **interna** de layout, não comparação contra o ibisPaint original.
+
+## Preferências persistentes
+
+- `EditorPreferences:encode()` gera formato texto estrito, versionado e legível.
+- `EditorPreferences.decode(text)` valida posição, número de colunas, booleanos, versão e tamanho; entradas desconhecidas ou malformadas são rejeitadas, sem `loadstring` nem avaliação de código.
+- Uma execução normal do LÖVE carrega `editor-preferences.txt` no início e salva após mudanças no menu Settings; ambientes de smoke/E2E não leem nem escrevem esse arquivo.
+- O arquivo contém apenas preferências de UI. Não há gravação de trabalhos ou imagens, nem sincronização com a nuvem.

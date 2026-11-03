@@ -119,3 +119,11 @@ Também estão disponíveis `Show Label in Tool Select`, `Show Message on Undo` 
 - Inspeção estrutural: `tools/check_ui_screenshots.py` confirma que a barra fica à esquerda ou direita, ou desaparece quando `Popup` é escolhido.
 
 **Fontes oficiais de funcionamento:** https://ibispaint.com/lecture/index.jsp?no=4 e https://ibispaint.com/lecture/index.jsp?no=81. Essas fontes documentam a presença e a finalidade das opções, mas não certificam a geometria **Windows 14.1.4**. Os controles são desenhados com vetores próprios. Não foi implementado um motor de pintura.
+
+## Persistência das preferências de interface
+
+As opções alteradas em **Back → Settings** são salvas automaticamente em `editor-preferences.txt`, no diretório de dados do LÖVE da aplicação `ibis-lua-fidelity` (identidade definida em `conf.lua`). Na próxima execução normal, são restauradas sem gravar ou modificar quaisquer obras da galeria.
+
+O arquivo é texto simples, com campos `tool_position`, `popup_columns`, `show_tool_labels`, `invert_wheel` e `show_undo_message`. Seu conteúdo é validado como dados; o programa **não executa Lua lido do disco**. Um arquivo corrompido é ignorado e as preferências voltam aos valores padrão. Para voltar manualmente ao padrão, basta encerrar o programa e apagar apenas `editor-preferences.txt` do diretório de dados, sem mexer nas outras configurações.
+
+Os testes de screenshot e de interação desativam intencionalmente a restauração/gravação das preferências, garantindo capturas determinísticas. O teste puro `tests/test_editor_preferences.lua` valida a serialização, leitura e rejeição de dados malformados.
