@@ -66,6 +66,7 @@ local smoke = os.getenv("PAINT_LUA_SMOKE") == "1"
 local e2e = os.getenv("PAINT_LUA_E2E") == "1"
 local e2e_stage = 0
 local gallery_e2e = os.getenv("PAINT_LUA_GALLERY_E2E") == "1"
+local raster_e2e = os.getenv("PAINT_LUA_RASTER_E2E") == "1"
 local gallery_e2e_stage = 0
 local smoke_screen = os.getenv("PAINT_LUA_SCREEN") or "title"
 local capture_requested, capture_done, capture_pending, capture_error = false, false, false, nil
@@ -2137,8 +2138,24 @@ function love.load()
         local ok=love.window.setMode(tonumber(w),tonumber(h),{resizable=true})
         assert(ok,"Não foi possível configurar resolução de teste")
     end
+    if raster_e2e then
+        state:open_gallery()
+        state:open_new_canvas()
+        state:create_canvas(128,128)
+        state:set_brush_size(8)
+    end
     if smoke then
-        if smoke_screen=="gallery" then state:open_gallery()
+        if smoke_screen=="raster_painted" then
+            state:open_gallery();state:open_new_canvas()
+            state:create_canvas(640,480)
+            state:set_brush_size(28)
+            state:set_color(225,47,76)
+            local engine=current_raster()
+            engine:beginStroke('brush',state.active_layer_id,
+                50,60,28,225,47,76,1)
+            engine:moveStroke(480,320)
+            engine:finishStroke()
+        elseif smoke_screen=="gallery" then state:open_gallery()
         elseif smoke_screen=="gallery_new" then
             state:open_gallery();gallery_menu="new"
         elseif smoke_screen=="gallery_folders" then
@@ -3007,6 +3024,38 @@ local function color_e2e_update()
 end
 
 function love.update()
+    if raster_e2e and #controls>0 then
+        local engine=assert(current_raster(),
+            "E2E: motor RGBA nao foi inicializado")
+        local left=preferences.tool_position=="left" and 62 or 0
+        local right=preferences.tool_position=="right" and 75 or 34
+        local x=(left+(W-left-right)/2)*scale
+        local y=(62+(H-160)/2)*scale
+        love.mousepressed(x,y,1)
+        love.mousemoved(x+12*scale,y,12*scale,0)
+        love.mousereleased(x+12*scale,y,1)
+        local pixels=engine:buffer(state.active_layer_id)
+        local at=(64*128+64)*4+3
+        assert(pixels.bytes[at]>0 and engine:canUndo(),
+            "E2E: clique no canvas nao pintou RGBA real")
+        click_control("undo")
+        assert(pixels.bytes[at]>0,
+            "E2E: a restauracao substitui o buffer, nao referencia antiga")
+        assert(engine:buffer(state.active_layer_id).bytes[at]==0,
+            "E2E: botao Undo nao restaurou canvas")
+        love.draw()
+        click_control("redo")
+        assert(engine:buffer(state.active_layer_id).bytes[at]>0,
+            "E2E: botao Redo nao repintou canvas")
+        love.keypressed("e")
+        assert(state.active_tool=="eraser")
+        love.mousepressed(x,y,1)
+        love.mousereleased(x,y,1)
+        assert(engine:buffer(state.active_layer_id).bytes[at]==0,
+            "E2E: Borracha nao removeu o pixel")
+        love.event.quit(0)
+        return
+    end
     if smoke and capture_done then
         if capture_error then error("Screenshot: "..capture_error) end
         love.event.quit(0)
