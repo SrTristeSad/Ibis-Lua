@@ -59,6 +59,30 @@ def check_brush_layout(image: Image.Image) -> None:
         )
 
 
+def check_tool_rail_layout(image: Image.Image, expected: str) -> None:
+    """Verify rail placement/popup absence in LÖVE captures, not pixel fidelity."""
+    w, h = image.size
+    if (w, h) != (1024, 768):
+        raise ScreenshotCheckError(
+            f"Tool rail structural check expects 1024x768: got {image.size}"
+        )
+    left = rgb_luma(image, 20, 300)
+    right = rgb_luma(image, w - 19, 300)
+    if expected == "left":
+        correct = right - left >= 65
+    elif expected == "right":
+        correct = left - right >= 65
+    elif expected == "popup":
+        correct = left >= 145 and right >= 145
+    else:
+        raise ValueError("Expected rail position must be left/right/popup")
+    if not correct:
+        raise ScreenshotCheckError(
+            f"Tool Select layout {expected} incorrect: "
+            f"left={left:.0f}, right={right:.0f}"
+        )
+
+
 def check_directory(directory: Path) -> None:
     missing = [name for name in REQUIRED if not (directory / (name + ".png")).is_file()]
     if missing:
@@ -74,7 +98,13 @@ def check_directory(directory: Path) -> None:
                 )
             if name in ("brush", "brush_search"):
                 check_brush_layout(img.convert("RGB"))
-    print(f"PASS: {len(REQUIRED)} screenshots, Brush light/dark split, PNG integrity")
+            if name in ("editor", "editor_settings"):
+                check_tool_rail_layout(img.convert("RGB"), "left")
+            elif name == "tool_right":
+                check_tool_rail_layout(img.convert("RGB"), "right")
+            elif name.startswith("tool_popup_") or name == "tool_labels_off":
+                check_tool_rail_layout(img.convert("RGB"), "popup")
+    print(f"PASS: {len(REQUIRED)} PNGs, Brush split, Left/Right/Popup rail placement")
 
 
 def main() -> None:
