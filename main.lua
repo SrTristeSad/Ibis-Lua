@@ -20,7 +20,7 @@ local visual = ViewState.new()
 local gallery = Gallery.new()
 local preferences=EditorPreferences.new()
 local colors=ColorState.new()
-local color_e2e=os.getenv("IBIS_LUA_COLOR_E2E")=="1"
+local color_e2e=os.getenv("PAINT_LUA_COLOR_E2E")=="1"
 local color_e2e_stage=0
 local color_float=false
 local color_position=nil
@@ -34,7 +34,7 @@ local color_slider_drag=nil
 local color_wheel_drag=nil
 local color_palette_page=0
 local color_swatch_drag=nil
-local settings_e2e=os.getenv("IBIS_LUA_SETTINGS_E2E")=="1"
+local settings_e2e=os.getenv("PAINT_LUA_SETTINGS_E2E")=="1"
 local settings_e2e_stage=0
 local gallery_selecting=false
 local gallery_dialog=nil
@@ -60,20 +60,21 @@ local brush_search=""
 local brush_drag=nil
 local brush_tab="Basic"
 local toast, toast_until = nil, 0
-local smoke = os.getenv("IBIS_LUA_SMOKE") == "1"
-local e2e = os.getenv("IBIS_LUA_E2E") == "1"
+local smoke = os.getenv("PAINT_LUA_SMOKE") == "1"
+local e2e = os.getenv("PAINT_LUA_E2E") == "1"
 local e2e_stage = 0
-local gallery_e2e = os.getenv("IBIS_LUA_GALLERY_E2E") == "1"
+local gallery_e2e = os.getenv("PAINT_LUA_GALLERY_E2E") == "1"
 local gallery_e2e_stage = 0
-local smoke_screen = os.getenv("IBIS_LUA_SCREEN") or "title"
+local smoke_screen = os.getenv("PAINT_LUA_SCREEN") or "title"
 local capture_requested, capture_done, capture_pending, capture_error = false, false, false, nil
 local C = Theme.colors
 local tools = {
-    {"Transform","transform"},{"Magic Wand","magic_wand"},{"Lasso","lasso"},
-    {"Filter","filter"},{"Brush","brush"},{"Eraser","eraser"},
-    {"Smudge","smudge"},{"Blur","blur"},{"Special","special_pen"},
-    {"Bucket","bucket"},{"Vector","vector"},{"Text","text"},
-    {"Frame Divider","frame_divider"},{"Eyedropper","eyedropper"},{"Canvas","canvas"}
+    {"Transformar","transform"},{"Varinha Mágica","magic_wand"},{"Laço","lasso"},
+    {"Filtro","filter"},{"Pincel","brush"},{"Borracha","eraser"},
+    {"Borrar","smudge"},{"Desfoque","blur"},{"Caneta Especial","special_pen"},
+    {"Lata de Tinta","bucket"},{"Vetor","vector"},{"Texto","text"},
+    {"Divisor de quadros","frame_divider"},{"Conta-gotas","eyedropper"},
+    {"Tela","canvas"}
 }
 local presets = CanvasPresets.list()
 local active_dpi=nil
@@ -2048,9 +2049,9 @@ function love.load()
         end
     end
     if (e2e or settings_e2e or color_e2e)
-        and os.getenv("IBIS_LUA_E2E_RES") then
-        local w,h=os.getenv("IBIS_LUA_E2E_RES"):match("^(%d+)x(%d+)$")
-        assert(w and h,"IBIS_LUA_E2E_RES deve ser largura x altura")
+        and os.getenv("PAINT_LUA_E2E_RES") then
+        local w,h=os.getenv("PAINT_LUA_E2E_RES"):match("^(%d+)x(%d+)$")
+        assert(w and h,"PAINT_LUA_E2E_RES deve ser largura x altura")
         local ok=love.window.setMode(tonumber(w),tonumber(h),{resizable=true})
         assert(ok,"Não foi possível configurar resolução de teste")
     end
@@ -2144,6 +2145,8 @@ function love.load()
                 end
                 set_panel("tools")
             end
+        elseif smoke_screen=="editor_square" then
+            state:open_gallery();state:open_new_canvas();state:create_canvas(1000,1000)
         elseif smoke_screen=="editor" then
             state:open_gallery();state:open_new_canvas();state:create_canvas(1800,2400)
         elseif smoke_screen=="layer" or smoke_screen=="color" or smoke_screen=="brush" then
