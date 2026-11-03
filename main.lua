@@ -881,26 +881,42 @@ end
 
 local function editor_screen()
     rectangle(0,0,W,H,C.background)
-    local right=preferences.tool_position=="right" and W-65 or W-5
+    -- Low-contrast workspace guides keep the canvas in focus.
+    for gx=0,W,72 do
+        line(gx,35,gx,H-67,1,C.workspace_grid,0.045)
+    end
+    for gy=35,H-67,72 do
+        line(0,gy,W,gy,1,C.workspace_grid,0.045)
+    end
+    rectangle(0,0,W,35,C.topbar,1)
+    rectangle(0,34,W,1,C.card_border,0.18)
+    local header_left=preferences.tool_position=="left" and 73 or 20
+    label("PAINT LUA",header_left,10,107,"small","left",C.white)
+    rectangle(header_left+101,12,1,13,C.card_border,0.3)
+    label(string.format("Documento  ·  %d × %d px",
+        state.document.width,state.document.height),
+        header_left+117,10,300,"small","left",C.soft)
     local space_left=preferences.tool_position=="left" and 62 or 0
     local space_right=preferences.tool_position=="right" and 75 or 34
     local aw=W-space_left-space_right
-    local ah=H-111
+    local ah=H-160
     local dw,dh=state.document.width,state.document.height
     local canvas_scale=math.min(aw/dw,ah/dh,1.1)
-    local cx=space_left+(W-space_left)/2
-    local cy=28+ah/2
+    local cx=space_left+aw/2
+    local cy=62+ah/2
     local actual_scale=canvas_scale*view.zoom
     love.graphics.push()
     love.graphics.translate(cx+view.pan_x,cy+view.pan_y)
     love.graphics.rotate(view.rotation)
     love.graphics.scale(actual_scale)
-    local shadow=3/actual_scale
-    rectangle(-dw/2-shadow,-dh/2-shadow,dw+shadow*2,dh+shadow*2,C.deep,0.16)
+    local shadow=5/actual_scale
+    rectangle(-dw/2-shadow*2,-dh/2-shadow*2,
+        dw+shadow*4,dh+shadow*4,C.deep,0.042)
+    rectangle(-dw/2-shadow,-dh/2-shadow,
+        dw+shadow*2,dh+shadow*2,C.deep,0.13)
     if state.background_mode=="white" then
         rectangle(-dw/2,-dh/2,dw,dh,C.white)
     else
-        -- Checkerboard visual only: no image compositing or raster engine.
         local count=14
         local rows=math.max(2,math.floor(count*dh/dw+0.5))
         local tw,th=dw/count,dh/rows
@@ -913,51 +929,100 @@ local function editor_screen()
         end end
     end
     draw_view_guides(dw,dh,actual_scale)
+    rgba(C.deep,0.22)
+    love.graphics.setLineWidth(1/math.max(0.05,actual_scale))
+    love.graphics.rectangle("line",-dw/2,-dh/2,dw,dh)
     love.graphics.pop()
-    -- Top-right Windows editor controls, seen in product screenshot.
+    -- Compact top-right action cluster instead of oversized round buttons.
+    local ui=EditorLayout.compute(W,H,preferences.tool_position,#tools)
+    local quick=ui.top
+    soft_shadow(quick.x,quick.y,quick.w,quick.h,13,0.35)
+    rectangle(quick.x,quick.y,quick.w,quick.h,C.panel_head,0.96,12)
+    inset_border(quick.x,quick.y,quick.w,quick.h,12,0.17)
     local tops={"view","selection","stabilizer","shape","ruler","material"}
+    local quick_names={
+        view="Visualização",selection="Seleção",stabilizer="Estabilizador",
+        shape="Formas",ruler="Régua",material="Materiais"
+    }
+    local hovered_tooltip=nil
     for i,name in ipairs(tops) do
-        local x=right-34*(#tops-i+1)
-        if over(x,9,31,31) then rectangle(x,9,31,31,C.dark,0.2,16) end
-        rgba(C.deep,0.31)
-        love.graphics.circle("fill",x+15,24,15)
-        glyph(name,x+15,24,15)
-        hit(x,9,31,31,function() set_panel(name) end,name)
+        local x=quick.button_x+(i-1)*(quick.button_w+quick.button_gap)
+        local y=quick.y+4
+        local selected=panel==name
+        if selected then
+            rectangle(x,y,quick.button_w,36,C.accent,0.26,9)
+        elseif over(x,y,quick.button_w,36) then
+            rectangle(x,y,quick.button_w,36,C.white,0.12,9)
+        end
+        glyph_color=selected and C.accent_light or C.white
+        glyph(name,x+quick.button_w/2,y+18,11.5)
+        glyph_color=nil
+        hit(x,y,quick.button_w,36,function() set_panel(name) end,name)
+        if over(x,y,quick.button_w,36) then
+            hovered_tooltip={text=quick_names[name],x=x,y=quick.y+49,
+                left=false}
+        end
     end
-    -- Left/Right rails and Popup are official alternative Tool Select positions.
-    local rail_x=preferences:rail_x(W)
-    if rail_x then
-        rectangle(rail_x,0,59,H-78,C.bar,0.98)
-        local top=8
-        local each=math.min(45,(H-99)/#tools)
+    -- Icon-only rail, with tool names in hover hints when enabled.
+    local rail=ui.rail
+    if rail.x then
+        soft_shadow(rail.x,rail.y,rail.w,rail.h,10,0.35)
+        rectangle(rail.x,rail.y,rail.w,rail.h,C.rail,1,10)
+        line(rail.x+(rail.x==0 and 58 or 0),rail.y+12,
+             rail.x+(rail.x==0 and 58 or 0),rail.y+rail.h-10,
+             1,C.card_border,0.13)
         for i,entry in ipairs(tools) do
-            local y=top+(i-1)*each
+            local y=rail.button_y+(i-1)*rail.each
+            local h=rail.each
             local selected=state.active_tool==entry[2]
-            if selected then rectangle(rail_x,y,58,each,C.blue,0.85) end
-            if over(rail_x,y,58,each) and not selected then
-                rectangle(rail_x,y,58,each,C.white,0.12)
+            local hovered=over(rail.x+2,y,rail.w-4,h)
+            if selected then
+                rectangle(rail.x+6,y+1,rail.w-12,h-2,C.accent,0.20,9)
+                rectangle(rail.x+3,y+h*0.23,3,h*0.54,
+                    C.accent,0.98,2)
+            elseif hovered then
+                rectangle(rail.x+6,y+1,rail.w-12,h-2,C.white,0.10,9)
             end
-            glyph(entry[2],rail_x+29,
-                y+(preferences.show_tool_labels and each*0.38 or each*0.50),
-                math.min(17,each*0.35))
-            if preferences.show_tool_labels then
-                label(entry[1],rail_x,y+each*0.70,58,"tiny","center",C.white)
-            end
+            glyph_color=selected and C.accent_light or C.white
+            glyph(entry[2],rail.x+rail.w/2,y+h/2,12)
+            glyph_color=nil
             local key=entry[2]
-            hit(rail_x,y,58,each,function()
+            hit(rail.x+2,y,rail.w-4,h,function()
                 state:set_tool(key)
                 if key=="brush" or key=="eraser" then set_panel("brush")
                 elseif key=="text" then set_panel("text")
                 else panel=nil;state.active_panel=nil end
             end,key)
+            if hovered and preferences.show_tool_labels then
+                hovered_tooltip={text=entry[1],x=rail.x,y=y+h/2,
+                    left=rail.x>W/2}
+            end
+            if i==4 or i==10 then
+                line(rail.x+16,y+h-1,rail.x+rail.w-16,y+h-1,
+                    1,C.card_border,0.20)
+            end
         end
     end
     if visual.reference then draw_reference_window() end
     draw_size_controls()
-    label(string.format("%d%%",math.floor(view.zoom*100+0.5)),
-        W-72,H-72,67,"small","right",C.ink)
     draw_editor_toolbar()
-    if panel then draw_editor_panel() end
+    if panel then
+        draw_editor_panel()
+    elseif hovered_tooltip then
+        local t=hovered_tooltip
+        local tw=math.min(205,math.max(105,
+            font.small:getWidth(t.text)+28))
+        local tx=t.left and (t.x-tw-10) or
+            (t.x+(t.x<70 and 69 or 0))
+        tx=math.max(8,math.min(W-tw-8,tx))
+        local ty=t.y
+        if t.x<70 or t.left then ty=ty-15 end
+        ty=math.max(37,math.min(H-110,ty))
+        soft_shadow(tx,ty,tw,30,8,0.45)
+        rectangle(tx,ty,tw,30,C.panel_head,0.99,8)
+        inset_border(tx,ty,tw,30,8,0.28)
+        label(t.text,tx+12,ty+7,tw-24,"small","left",C.white)
+    end
 end
 
 -- Procedural vector strokes, for brush-library thumbnails only.
