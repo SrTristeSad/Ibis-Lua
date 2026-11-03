@@ -103,8 +103,41 @@ O teste confirma assinatura RBD2, reabertura a partir do cartão,
 duas camadas pintadas, opacidade e Alpha Lock, além de execução dos
 testes anteriores do projeto.
 
+## A57 — Histórico estrutural das camadas
+
+O painel visual **Layer** agora possui ações para adicionar, excluir e
+mover a camada selecionada para cima ou para baixo. Os botões
+existentes e a posição da janela são preservados. Não é possível
+excluir a última camada nem ultrapassar o teto de oito camadas do
+RBD2 na interface integrada.
+
+`src/model.lua` recebeu `delete_layer(id)` e
+`move_layer(id, offset)`, com IDs estáveis, nova seleção válida
+após a exclusão e sem reutilizar IDs removidos.
+
+`src/raster_bridge.lua` passa a usar a **mesma pilha cronológica**
+para pinceladas, balde e operações estruturais. Ao excluir uma camada,
+a operação preserva os bytes RGBA dela para que **Desfazer**
+restaure os pixels e metadados; ao refazer a adição de uma camada,
+recupera a versão em branco do momento da adição, sem trazer de volta
+pinceladas posteriores que já foram desfeitas. Mover camadas modifica
+somente a ordem de composição. Undo e Redo do dock e atalhos
+Ctrl+Z / Ctrl+Shift+Z recebem o modelo ativo.
+
+O histórico é limitado em memória a 12 ações / 48 MiB;
+entradas antigas podem ser descartadas para caber no orçamento.
+Operações estruturais e pinturas futuras invalidam Redo.
+O histórico **não** é gravado no RBD2, mas a ordem e os pixels
+resultantes são persistidos no salvamento regular. Propriedades
+como visibilidade, opacidade, clipping, solo e Alpha Lock continuam
+editáveis, porém **ainda não participam da pilha unificada**.
+
+Testes cobrem o percurso pintar → adicionar → pintar na nova camada →
+mover → excluir → desfazer/refazer, incluindo restauração exata do
+RGBA, limites e cliques nos botões da janela real no LÖVE.
+
 ## Próximos incrementos de migração
 
-Manter a mesma ponte e isolar novos subsistemas, na ordem técnica sugerida: persistência RBD2 e galeria; integração do histórico estrutural de camadas; seleção por máscara; Windows Ink e estilos de pincel. Cada módulo precisa de testes de integração com a UI, antes de substituir controles simulados.
+Manter a mesma ponte e isolar novos subsistemas, na ordem técnica sugerida: persistência RBD2 e galeria; seleção por máscara; Windows Ink e estilos de pincel. Cada módulo precisa de testes de integração com a UI, antes de substituir controles simulados.
 
 A PR desta integração deve permanecer em **Draft**, sem merge automático para `main`.
