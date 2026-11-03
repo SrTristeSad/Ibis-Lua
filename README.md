@@ -62,7 +62,7 @@ No painel **New Canvas** os botões `-`/`+` e os sliders W/H funcionam; os contr
 - No editor, abra **View Menu** no primeiro ícone da região superior direita.
 - **Grid** alterna as linhas de referência no canvas; **Grid Settings** permite mudar os intervalos, alternar as cores demonstrativas, deslocar a origem em passos de 8 pixels e restaurar os valores da simulação.
 - **Reference Window** abre uma miniatura demonstrativa do canvas, sem importação de imagens; **Manga Manuscript** alterna guias ilustrativos, ainda não validados geometricamente.
-- A escolha **Smooth / Pixelated** é mantida no estado da interface. **Não há rasterização nem imagem importada**, portanto não há efeito de interpolação aplicado a pixels reais.
+- A escolha **Smooth / Pixelated** é mantida no estado da interface. A ponte RGBA já permite pintura real em canvases compatíveis, mas a opção Smooth / Pixelated **ainda não altera o filtro da textura**; importação de imagens permanece pendente.
 - Valores atuais (64/256 px e posições 0/0) e cores ilustrativas **não são valores padrão comprovados do ibisPaint Windows 14.1.4**.
 - As operações foram fundamentadas na documentação oficial de View Menu: https://ibispaint.com/lecture/index.jsp?no=168. As imagens desse tutorial são multiplataforma e **não devem ser apresentadas como capturas Windows 14.1.4**.
 
@@ -90,7 +90,7 @@ A My Gallery foi atualizada para contemplar o recurso oficial **Artworks Folder*
 
 Nesta etapa foram adicionados `src/gallery.lua` e `tests/test_gallery.lua`. O módulo fornece pastas aninhadas, obras demonstrativas com dimensões, seleção, renomeação, movimentação com prevenção de ciclos, hierarquia de navegação e cópias de leitura. `main.lua` agora apresenta uma grade de miniaturas e pastas, seleção múltipla, menu de destino de movimentação, formulário de pasta, retorno ao editor e rolagem vertical com recorte.
 
-**Persistência:** nenhum documento de obra, pasta ou miniatura é gravado em disco. Os itens da galeria existem **apenas durante a execução**. Reabrir uma obra inicia o estado demonstrativo do editor; não recupera pinturas, pois o projeto exclui motor de pintura.
+**Persistência:** nenhum documento de obra, pasta ou miniatura é gravado em disco. Os itens da galeria existem **apenas durante a execução**. Reabrir uma obra cria novamente o canvas do editor: a ponte de pintura real **ainda não tem persistência**, portanto os pixels não são recuperados.
 
 **Fidelidade:** geometria e ícones da galeria são desenhos de trabalho, **não** reproduções validadas da edição Windows 14.1.4. A fonte funcional é o tutorial oficial https://ibispaint.com/lecture/index.jsp?no=193; a fonte específica do produto Windows para o requisito de Pro/Premium é https://ibispaint.com/lecture/index.jsp?no=183.
 
@@ -102,7 +102,7 @@ A janela de pincéis foi refeita tomando como referência visual uma captura pú
 
 **Elementos implementados:** abas Basic/Custom/Online, campo de busca, lista rolável com nomes e tamanhos de exemplo, miniaturas de traço procedurais (desenhos vetoriais próprios), prévia ampliada do pincel selecionado, sliders interativos de espessura e opacidade e botão de restauração. A lista de 12 exemplos foi separada em `src/brush_catalog.lua`; `tests/test_brush_catalog.lua` verifica busca e integridade dos dados.
 
-**Limites:** os traços são miniaturas sintéticas feitas por LÖVE, não são texturas extraídas nem um motor de pintura. O programa não oferece os milhares de pincéis oficiais, as abas Custom/Online não carregam coleções e as configurações avançadas do editor original não foram reproduzidas. **Não há comprovação de que a imagem da Microsoft Store corresponda especificamente à versão 14.1.4.**
+**Limites:** os traços de pré-visualização são miniaturas sintéticas feitas por LÖVE, não são texturas extraídas e ainda não representam estilos distintos do novo motor raster básico. O programa não oferece os milhares de pincéis oficiais, as abas Custom/Online não carregam coleções e as configurações avançadas do editor original não foram reproduzidas. **Não há comprovação de que a imagem da Microsoft Store corresponda especificamente à versão 14.1.4.**
 
 O teste de integração passa pelos controles reais da janela (busca, seleção, espessura, opacidade e Reset), e o GitHub Actions produz uma captura adicional `brush_search.png`. A estrutura está organizada em Lua editável.
 
@@ -130,7 +130,7 @@ Também estão disponíveis `Show Label in Tool Select`, `Show Message on Undo` 
 - Capturas: `editor_settings`, `tool_popup_1`, `tool_popup_2`, `tool_popup_3`, `tool_right` e `tool_labels_off`.
 - Inspeção estrutural: `tools/check_ui_screenshots.py` confirma que a barra fica à esquerda ou direita, ou desaparece quando `Popup` é escolhido.
 
-**Fontes oficiais de funcionamento:** https://ibispaint.com/lecture/index.jsp?no=4 e https://ibispaint.com/lecture/index.jsp?no=81. Essas fontes documentam a presença e a finalidade das opções, mas não certificam a geometria **Windows 14.1.4**. Os controles são desenhados com vetores próprios. Não foi implementado um motor de pintura.
+**Fontes oficiais de funcionamento:** https://ibispaint.com/lecture/index.jsp?no=4 e https://ibispaint.com/lecture/index.jsp?no=81. Essas fontes documentam a presença e a finalidade das opções, mas não certificam a geometria **Windows 14.1.4**. Os controles são desenhados com vetores próprios. A ponte de pintura básica foi integrada posteriormente nesta branch, sem alterar os layouts aqui descritos.
 
 ## Persistência das preferências de interface
 
@@ -163,6 +163,6 @@ Esta etapa integra ao **GitHub** as correções que foram experimentadas no paco
 
 Os novos componentes de interface ficam em `src/ui_theme.lua`, `src/editor_layout.lua` e `src/icon_pack.lua`. Ícones podem ser atualizados com `python -m pip install cairosvg` e `python tools/rebuild_icons.py`; já estão armazenados como PNGs, portanto **Python não é necessário para executar o aplicativo**.
 
-A identidade de salvamento do LÖVE passou a ser `paint-lua`. Preferências anteriores de `ibis-lua-fidelity` não são migradas automaticamente. O projeto continua uma simulação sem motor de pintura e **não foi validado como cópia 1:1** de ibisPaint Windows 14.1.4.
+A identidade de salvamento do LÖVE passou a ser `paint-lua`. Preferências anteriores de `ibis-lua-fidelity` não são migradas automaticamente. O projeto agora combina UI experimental e um **motor raster básico real** nesta branch, mas **não foi validado como cópia 1:1** de ibisPaint Windows 14.1.4.
 
-Execute `testar.bat` na raiz do repositório. A suíte GitHub Actions captura **35 estados**, incluindo `editor_square` com tela 1000 × 1000, e testa navegação em duas resoluções.
+Execute `testar.bat` na raiz do repositório. A suíte GitHub Actions captura **36 estados**, incluindo `editor_square` com tela 1000 × 1000, e testa navegação em duas resoluções.
