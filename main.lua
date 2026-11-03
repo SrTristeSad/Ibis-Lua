@@ -71,6 +71,7 @@ local e2e = os.getenv("PAINT_LUA_E2E") == "1"
 local e2e_stage = 0
 local gallery_e2e = os.getenv("PAINT_LUA_GALLERY_E2E") == "1"
 local raster_e2e = os.getenv("PAINT_LUA_RASTER_E2E") == "1"
+local persistence_e2e=os.getenv('PAINT_LUA_PERSISTENCE_E2E')
 local gallery_e2e_stage = 0
 local smoke_screen = os.getenv("PAINT_LUA_SCREEN") or "title"
 local capture_requested, capture_done, capture_pending, capture_error = false, false, false, nil
@@ -2204,6 +2205,35 @@ function love.load()
         local ok=love.window.setMode(tonumber(w),tonumber(h),{resizable=true})
         assert(ok,"Não foi possível configurar resolução de teste")
     end
+    if persistence_e2e=='write' then
+        assert(projectStore,'Teste: Store RBD2 nao iniciou')
+        state:open_gallery()
+        state:open_new_canvas()
+        finish_new_canvas(64,64)
+        local engine=assert(current_raster())
+        engine:beginStroke('brush',1,32,32,8,201,31,71,1)
+        assert(engine:finishStroke(),'Teste: pincel nao alterou pixels')
+        state:add_layer()
+        engine:sync(state.layers)
+        engine:beginStroke('brush',2,12,12,6,28,60,220,1)
+        assert(engine:finishStroke(),'Teste: segunda camada nao pintou')
+        state:set_layer_opacity(2,75)
+        state:toggle_layer_alpha_lock(2)
+        assert(save_current_project(),'Teste: save RBD2 falhou')
+        assert(activeProject and activeProject.doc.format==2 and
+            activeProject.doc.revision>=2,
+            'Teste: Store nao gravou documento RBD2')
+        local id=activeProject.doc.id
+        local magic=projectStore.store.fs:readRange(
+            'projects/'..id..'.rbd',0,8,1048576)
+        assert(magic=='RBD2\r\n\26\n',
+            'Teste: arquivo nao possui cabecalho RBD2 verdadeiro')
+        assert(love.filesystem.write('rbd2-e2e-last.txt',id),
+            'Teste: nao foi possivel marcar projeto salvo')
+    elseif persistence_e2e=='read' then
+        assert(projectStore,'Teste: Store RBD2 nao iniciou')
+        state:open_gallery()
+    end
     if raster_e2e then
         state:open_gallery()
         state:open_new_canvas()
@@ -3107,6 +3137,35 @@ local function color_e2e_update()
 end
 
 function love.update()
+    if persistence_e2e=='write' then
+        love.event.quit(0)
+        return
+    elseif persistence_e2e=='read' and #controls>0 then
+        local id=assert(love.filesystem.read('rbd2-e2e-last.txt'),
+            'Teste: arquivo de controle nao encontrado apos reinicio')
+        local artwork
+        for galleryId,record in pairs(projectForArtwork) do
+            if record.doc.id==id then artwork=galleryId;break end
+        end
+        assert(artwork,'Teste: galeria nao recuperou projeto RBD2')
+        click_control('artwork_'..artwork)
+        assert(state.screen=='editor' and state.document.width==64
+            and state.document.height==64,
+            'Teste: clique da galeria nao reabriu documento salvo')
+        local engine=assert(current_raster())
+        local red=engine:buffer(1).bytes[(32*64+32)*4]
+        local blue=engine:buffer(2).bytes[(12*64+12)*4+2]
+        assert(red==201 and blue==220,
+            'Teste: raster RGBA nao sobreviveu ao reinicio do aplicativo')
+        assert(#state.layers==2 and state.layers[2].opacity==75
+            and state.layers[2].alpha_lock,
+            'Teste: propriedades de camadas foram perdidas no RBD2')
+        assert(activeProject.doc.format==2 and
+            activeProject.doc.revision>=2,
+            'Teste: documento RBD2 reaberto esta inconsistente')
+        love.event.quit(0)
+        return
+    end
     if raster_e2e and #controls>0 then
         local engine=assert(current_raster(),
             "E2E: motor RGBA nao foi inicializado")
@@ -3318,5 +3377,14 @@ function love.update()
     else
         print("PASS: UI LÖVE E2E (gallery, layers, View, brush search and sliders)")
         love.event.quit(0)
+    end
+end
+
+-- Fechar pela janela nao descarta uma pintura ainda nao publicada.
+-- Se houver erro de I/O, impedir encerramento e manter pixels em memoria.
+function love.quit()
+    if current() and projectStore and
+        not save_current_project() then
+        return true
     end
 end
