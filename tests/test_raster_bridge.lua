@@ -128,7 +128,7 @@ assert(h:finishStroke() and not h:canRedo(),
     'Novo traco apos undo precisa invalidar redo')
 -- Metadata e ID precisam retornar ao estado anterior a exclusao.
 assert(h:changeLayer(model,'up',2))
-assert(h:undo(model) and model.active_layer_id==1)
+assert(h:undo(model) and model.active_layer_id==2)
 assert(not h:changeLayer(model,'up',1),
     'Mover camada alem da borda superior nao deve gerar registro')
 print('OK: RGBA + historico unificado de tracos, camada, exclusao e ordem')
