@@ -685,19 +685,20 @@ function draw_new_canvas()
 end
 
 local function draw_editor_toolbar()
-    local bottom=H-51
-    rectangle(0,bottom,W,51,C.bar)
-    -- Main toolbar: Brush/Eraser, Tool Select, Properties, Color, Fullscreen,
-    -- Undo, Redo, Layer, Back (verified official control order).
+    -- Compact central dock, with exactly eight stable hitbox identifiers.
+    local layout=EditorLayout.compute(W,H,preferences.tool_position,#tools)
+    local dock=layout.dock
+    rectangle(0,H-66,W,66,C.topbar)
+    rectangle(0,H-66,W,1,C.card_border,0.22)
+    soft_shadow(dock.x,dock.y+4,dock.w,54,15,0.45)
+    rectangle(dock.x,dock.y+4,dock.w,54,C.rail,1,14)
+    inset_border(dock.x,dock.y+4,dock.w,54,14,0.17)
     local entries={
-        {"brush",function()
-            state:set_tool(state.active_tool=="eraser" and "brush" or "eraser")
-        end},
         {"transform",function() set_panel("tools") end},
         {"settings",function() set_panel("brush") end},
         {"color",function() set_panel("color") end},
-        {"fullscreen",function()
-            love.window.setFullscreen(not love.window.getFullscreen())
+        {"merge_down",function()
+            notice("Mesclar para baixo ainda não é simulado.")
         end},
         {"undo",function()
             if preferences.show_undo_message then
@@ -712,40 +713,124 @@ local function draw_editor_toolbar()
         {"layer",function() set_panel("layer") end},
         {"back",function() set_panel("back") end}
     }
-    local gap=math.min(128,(W-60)/9)
-    local start=(W-gap*9)/2
     for i,e in ipairs(entries) do
-        local active=(i==1 and state.active_tool=="brush")
-            or (i==8 and panel=="layer")
-        icon_button(start+(i-1)*gap+4,bottom+3,gap-8,45,
-            i==1 and (state.active_tool=="eraser" and "eraser" or "brush") or e[1],e[2],active)
+        local key=e[1]
+        local x=dock.button_x+(i-1)*dock.button_pitch
+        local y=dock.button_y
+        local cx=x+dock.button_size/2
+        local cy=y+dock.button_size/2
+        local active=(key=="transform" and panel=="tools")
+            or (key=="layer" and panel=="layer")
+            or (key=="settings" and panel=="brush")
+            or (key=="color" and panel=="color")
+            or (key=="back" and panel=="back")
+        local hovered=over(x,y,dock.button_size,dock.button_size)
+        if active then
+            rectangle(x+1,y+1,46,46,C.accent,0.18,10)
+            rectangle(x+8,y+44,32,2,C.accent,0.94,1)
+        elseif hovered then
+            rectangle(x+1,y+1,46,46,C.white,0.095,10)
+        end
+        if key=="settings" then
+            glyph_color=active and C.accent_light or C.white
+            glyph("brush",cx,cy-6,12)
+            glyph_color=nil
+            label(string.format("%g",state.brush_size),x+2,y+31,44,
+                "tiny","center",C.soft)
+        elseif key=="color" then
+            local c=state.color or {0,0,0}
+            local factor=(c[1] or 0)>1 and 255 or 1
+            rectangle(cx-13,cy-13,26,26,
+                {(c[1] or 0)/factor,(c[2] or 0)/factor,
+                (c[3] or 0)/factor},1,6)
+            stroke(cx-13,cy-13,26,26,C.white,0.82)
+        else
+            glyph_color=active and C.accent_light or C.white
+            glyph(key,cx,cy,14)
+            glyph_color=nil
+        end
+        if key=="layer" then
+            local count=#(state.layers or {})
+            rectangle(cx+8,cy-19,18,15,C.accent,0.99,5)
+            label(tostring(count),cx+8,cy-17,18,"tiny","center",C.deep)
+        end
+        hit(x,y,dock.button_size,dock.button_size,e[2],key)
+        if i==3 or i==6 then
+            line(x+54,y+11,x+54,y+38,1,C.card_border,0.18)
+        end
+    end
+    if dock.x>205 then
+        local selected_name="Ferramenta"
+        for _,tool in ipairs(tools) do
+            if tool[2]==state.active_tool then selected_name=tool[1];break end
+        end
+        rectangle(26,H-36,6,6,C.accent,1,3)
+        label(selected_name,40,H-43,math.max(110,dock.x-59),
+            "small","left",C.soft)
+    end
+    if W-dock.x-dock.w>110 then
+        label("SIMULAÇÃO",dock.x+dock.w+13,H-41,
+            math.max(65,W-dock.x-dock.w-20),"tiny","center",C.soft)
     end
 end
+
 local function draw_size_controls()
-    local y=H-78
-    rectangle(0,y,W,27,{0.70,0.70,0.70},0.93)
-    label(string.format("%.1f px",state.brush_size),15,y+7,84,"small","left",C.ink)
-    rectangle(100,y+12,math.min(W*0.25,230),3,{0.95,0.95,0.95})
-    rectangle(100,y+12,math.min(W*0.25,230)*(state.brush_size/100),3,C.deep)
-    local x=100+math.min(W*0.25,230)*math.min(state.brush_size/100,1)
-    rgba(C.white);love.graphics.circle("fill",x,y+13,8)
-    hit(100,y,math.min(W*0.25,230),27,function()
-        local mx=pointer()
-        state:set_brush_size(math.max(0.1,math.floor((mx-100)/math.min(W*0.25,230)*1000)/10))
-    end,"brush_slider")
-    local x2=W*0.48
-    label(tostring(opacity).."%",x2,y+7,49,"small","left",C.ink)
-    rectangle(x2+61,y+12,math.min(250,W*0.24),3,{0.97,0.97,0.97})
-    rectangle(x2+61,y+12,math.min(250,W*0.24)*opacity/100,3,C.dark)
-    rgba(C.white);love.graphics.circle("fill",x2+61+math.min(250,W*0.24)*opacity/100,y+13,8)
-    hit(x2+61,y,math.min(250,W*0.24),27,function()
-        local mx=pointer()
-        opacity=math.max(0,math.min(100,math.floor((mx-x2-61)/math.min(250,W*0.24)*100+0.5)))
-    end,"opacity_slider")
+    -- Compact floating controls no longer stretch across the canvas.
+    local layout=EditorLayout.compute(W,H,preferences.tool_position,#tools)
+    local l=layout.sliders
+    local function small_button(cx,cy,plus,fn)
+        local x,y=cx-11,cy-11
+        rectangle(x,y,22,22,
+            over(x,y,22,22) and C.hover or C.top_button,0.96,6)
+        glyph(plus and "plus" or "minus",cx,cy,7)
+        if fn then hit(x,y,22,22,fn) end
+    end
+    local function track(x,fraction,on_value,key)
+        local y=l.y+21
+        local tw=129
+        local fr=math.max(0,math.min(1,fraction))
+        rectangle(x,y-2,tw,4,C.soft,0.33,2)
+        rectangle(x,y-2,tw*fr,4,C.accent,0.95,2)
+        rgba(C.white)
+        love.graphics.circle("fill",x+tw*fr,y,6.5)
+        rgba(C.deep,0.32)
+        love.graphics.setLineWidth(1)
+        love.graphics.circle("line",x+tw*fr,y,6.5)
+        hit(x,y-12,tw,24,function()
+            local mx=pointer()
+            on_value(math.max(0,math.min(1,(mx-x)/tw)))
+        end,key)
+    end
+    local function panel_box(x,icon_name,value,minus,plus,fraction,on_value,key)
+        soft_shadow(x,l.y,l.w,l.h,12,0.48)
+        rectangle(x,l.y,l.w,l.h,C.panel_head,0.98,12)
+        inset_border(x,l.y,l.w,l.h,12,0.25)
+        glyph_color=C.accent_light
+        glyph(icon_name,x+21,l.y+22,11)
+        glyph_color=nil
+        label(value,x+40,l.y+14,57,"small","left",C.white)
+        small_button(x+108,l.y+22,false,minus)
+        track(x+132,fraction,on_value,key)
+        small_button(x+282,l.y+22,true,plus)
+    end
+    panel_box(l.left_x,"brush",string.format("%g px",state.brush_size),
+        function()
+            state:set_brush_size(math.max(0.1,state.brush_size-0.5))
+        end,
+        function()
+            state:set_brush_size(math.min(100,state.brush_size+0.5))
+        end,
+        math.min(state.brush_size/100,1),function(fr)
+            state:set_brush_size(math.max(0.1,math.floor(fr*1000+0.5)/10))
+        end,"brush_slider")
+    panel_box(l.right_x,"blur",tostring(opacity).."%",
+        function() opacity=math.max(0,opacity-5) end,
+        function() opacity=math.min(100,opacity+5) end,
+        opacity/100,function(fr)
+            opacity=math.floor(fr*100+0.5)
+        end,"opacity_slider")
 end
 
--- Os guias existem apenas na visualização: nenhum pixel de obra é modificado.
--- Coordenadas em pixels do canvas; todo o conjunto herda pan/zoom/rotação.
 local function draw_view_guides(dw,dh,canvas_scale)
     if visual.grid then
         local function grid_pass(interval,shade,alpha)
