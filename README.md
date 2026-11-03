@@ -1,15 +1,15 @@
-# Ibis-Lua — reconstrução da interface Windows em Lua/LÖVE
+# Paint Lua — interface visual em Lua/LÖVE (repositório Ibis-Lua)
 
 **Objetivo:** interface visual e navegável do ibisPaint Windows 14.1.4, sem motor de pintura, escrita em Lua/LuaJIT e LÖVE 11.5.
 
-## Estado atual — 02/11/2026
+## Estado atual — 03/11/2026
 
 Esta versão **já contém telas e controles clicáveis**. A reconstrução **não está concluída nem validada como cópia 1:1**. A maior parte das capturas Windows públicas consultadas não identifica a compilação 14.1.4.
 
-- **Tela inicial** com disposição orientada por referência Windows histórica (9.4.2). Sem Collection (função removida depois).
+- **Tela inicial Paint Lua**, com identidade azul-tinta e coral, cartões de acesso à galeria e aviso de protótipo. Não utiliza o logo oficial do ibisPaint.
 - **My Gallery** com barra superior, menu New, pastas e miniaturas demonstrativas, seleção, movimentação de itens, renomeação de pastas, navegação aninhada e rolagem.
 - **New Canvas lateral direito**, incluindo edição de dimensões, lista rolável de presets e criação de documento demonstrativo; substitui o diálogo central anterior.
-- **Editor** com faixa vertical de 15 ferramentas e respectivos ícones vetoriais próprios, controles inferiores, botões superiores, painéis de pincel, cor e camadas. Visualização do canvas com **zoom pelo scroll do mouse, rotação com Shift+scroll e pan com Espaço+arrastar**.
+- **Editor** com faixa vertical compacta de 15 ferramentas, ícones Lucide licenciados, controles inferiores, botões superiores, painéis de pincel, cor e camadas. Visualização do canvas com **zoom pelo scroll do mouse, rotação com Shift+scroll e pan com Espaço+arrastar**.
 - **Comportamentos simulados**: seleção de ferramenta, brush/eraser, dimensões, espessura, opacidade, paleta e camadas. Inclui **modo Solo**: manter pressionado o ícone de visibilidade da camada e soltar; pressionar de novo restaura os estados anteriores.
 - Recursos que precisariam de processamento de imagens não são fingidos: pintura, filtros reais, importação/exportação e renderização de camadas estão fora do escopo.
 
@@ -41,7 +41,7 @@ O GitHub Actions realiza verificação sintática, testes do modelo, testes do c
 
 ## Teste de navegação real e controles New Canvas
 
-A variável `IBIS_LUA_E2E=1` executa uma sequência de cliques dentro do próprio LÖVE (sem substituir callbacks por chamadas diretas ao modelo): abre **My Gallery**, abre **New Canvas**, aumenta a largura com `+`, digita largura e altura, cria uma tela de demonstração, abre **Layer**, muda a visibilidade de uma camada, fecha a janela e amplia o canvas com a roda do mouse. O GitHub Actions executa o teste e falha se a navegação ou o estado não corresponderem às verificações.
+A variável `PAINT_LUA_E2E=1` executa uma sequência de cliques dentro do próprio LÖVE (sem substituir callbacks por chamadas diretas ao modelo): abre **My Gallery**, abre **New Canvas**, aumenta a largura com `+`, digita largura e altura, cria uma tela de demonstração, abre **Layer**, muda a visibilidade de uma camada, fecha a janela e amplia o canvas com a roda do mouse. O GitHub Actions executa o teste e falha se a navegação ou o estado não corresponderem às verificações.
 
 No painel **New Canvas** os botões `-`/`+` e os sliders W/H funcionam; os controles respondem ao arrastar. Para o slider, a faixa demonstrativa é de **1 a 8192 pixels**, enquanto os campos manuais aceitam de 1 a 16384. **Essa faixa não foi confirmada na versão oficial 14.1.4** e não representa uma afirmação sobre o comportamento exato do aplicativo proprietário.
 
@@ -82,7 +82,7 @@ Nesta etapa foram adicionados `src/gallery.lua` e `tests/test_gallery.lua`. O m�
 
 **Fidelidade:** geometria e ícones da galeria são desenhos de trabalho, **não** reproduções validadas da edição Windows 14.1.4. A fonte funcional é o tutorial oficial https://ibispaint.com/lecture/index.jsp?no=193; a fonte específica do produto Windows para o requisito de Pro/Premium é https://ibispaint.com/lecture/index.jsp?no=183.
 
-**Verificações adicionais:** `luajit tests/test_gallery.lua` e `IBIS_LUA_GALLERY_E2E=1 love .`, com o fluxo My Gallery → New → Folder → Canvas → Layer/Back → Select/Move → Rename → Scroll/Reopen. O teste de layout confirma que os sete controles do cabeçalho não possuem áreas clicáveis sobrepostas. O workflow produz **23 capturas** de estados diferentes.
+**Verificações adicionais:** `luajit tests/test_gallery.lua` e `PAINT_LUA_GALLERY_E2E=1 love .`, com o fluxo My Gallery → New → Folder → Canvas → Layer/Back → Select/Move → Rename → Scroll/Reopen. O teste de layout confirma que os sete controles do cabeçalho não possuem áreas clicáveis sobrepostas. O workflow produz **23 capturas** de estados diferentes.
 
 ## Painel Brush — reconstrução visual do Windows
 
@@ -114,7 +114,7 @@ Também estão disponíveis `Show Label in Tool Select`, `Show Message on Undo` 
 
 - Estado editável e testável: `src/editor_preferences.lua`.
 - Teste do módulo Lua: `tests/test_editor_preferences.lua`.
-- Integração por cliques reais: `IBIS_LUA_SETTINGS_E2E=1 love .` (também testada em janela 1600×900).
+- Integração por cliques reais: `PAINT_LUA_SETTINGS_E2E=1 love .` (também testada em janela 1600×900).
 - Capturas: `editor_settings`, `tool_popup_1`, `tool_popup_2`, `tool_popup_3`, `tool_right` e `tool_labels_off`.
 - Inspeção estrutural: `tools/check_ui_screenshots.py` confirma que a barra fica à esquerda ou direita, ou desaparece quando `Popup` é escolhido.
 
@@ -136,4 +136,21 @@ Na aba **Palette**, é possível criar e renomear paletas, mudar entre várias p
 
 O botão **Floating Window** alterna a janela móvel, que pode ser arrastada pela barra superior e redimensionada pelo canto inferior direito. O botão de confirmação/fechamento do painel permanece disponível. Capturas de comparação interna: `color`, `color_rgb`, `color_palette`, `color_hex`, `color_floating`.
 
-**Limitações importantes:** não há aplicação de tinta ao canvas, exportação/importação de paletas por QR Code, sincronização com o software original ou armazenamento permanente dessas paletas. As cores do histórico são cores **selecionadas no protótipo**, não cores empregadas em pinceladas reais. As geometrias, ícones e tamanhos ainda não foram validados pixel a pixel contra o Windows 14.1.4. O CI executa um E2E específico (`IBIS_LUA_COLOR_E2E=1 love .`) nas resoluções 1024×768 e 1600×900.
+**Limitações importantes:** não há aplicação de tinta ao canvas, exportação/importação de paletas por QR Code, sincronização com o software original ou armazenamento permanente dessas paletas. As cores do histórico são cores **selecionadas no protótipo**, não cores empregadas em pinceladas reais. As geometrias, ícones e tamanhos ainda não foram validados pixel a pixel contra o Windows 14.1.4. O CI executa um E2E específico (`PAINT_LUA_COLOR_E2E=1 love .`) nas resoluções 1024×768 e 1600×900.
+
+## Atualização do layout e dos ícones (03/11/2026)
+
+Esta etapa integra ao **GitHub** as correções que foram experimentadas no pacote `Paint-Lua-layout-corrigido.zip`, com foco na captura Windows que mostrava rótulos de ferramentas sobrepostos e botões grandes demais.
+
+- **Pacote visual:** 40 ícones [Lucide](https://lucide.dev/), licenciados, com SVG editáveis em `assets/icons/svg/` e PNG transparentes em `assets/icons/png/` para executar offline no LÖVE.
+- **Barra lateral:** apenas ícones, com nomes das ferramentas exibidos como dicas ao passar o mouse; sem rótulos invadindo controles vizinhos.
+- **Rodapé:** dock central com oito botões compactos, indicadores de ferramenta/camadas e realce coral de seleção.
+- **Área de trabalho:** cabeçalho discreto, grade suavizada, canvas em destaque e dois controles compactos flutuantes para espessura e opacidade.
+- **Botões superiores:** seis ações reunidas numa barra compacta, eliminando círculos exagerados.
+- **Tela inicial e galeria:** tema Paint Lua e cartões de acesso/obras com hierarquia visual mais consistente.
+
+Os novos componentes de interface ficam em `src/ui_theme.lua`, `src/editor_layout.lua` e `src/icon_pack.lua`. Ícones podem ser atualizados com `python -m pip install cairosvg` e `python tools/rebuild_icons.py`; já estão armazenados como PNGs, portanto **Python não é necessário para executar o aplicativo**.
+
+A identidade de salvamento do LÖVE passou a ser `paint-lua`. Preferências anteriores de `ibis-lua-fidelity` não são migradas automaticamente. O projeto continua uma simulação sem motor de pintura e **não foi validado como cópia 1:1** de ibisPaint Windows 14.1.4.
+
+Execute `testar.bat` na raiz do repositório. A suíte GitHub Actions captura **35 estados**, incluindo `editor_square` com tela 1000 × 1000, e testa navegação em duas resoluções.

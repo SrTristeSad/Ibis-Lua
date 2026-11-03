@@ -33,6 +33,8 @@ jobs:
           luajit tests/test_brush_catalog.lua
           luajit tests/test_editor_preferences.lua
           luajit tests/test_color_state.lua
+          luajit tests/test_icon_pack.lua
+          luajit tests/test_editor_layout.lua
       - name: Run screenshot comparator and layout checker unit tests
         run: python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Exercise real LÖVE click callbacks end-to-end
