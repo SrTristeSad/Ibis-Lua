@@ -105,11 +105,14 @@ testes anteriores do projeto.
 
 ## A57 — Histórico estrutural das camadas
 
-O painel visual **Layer** agora possui ações para adicionar, excluir e
-mover a camada selecionada para cima ou para baixo. Os botões
-existentes e a posição da janela são preservados. Não é possível
-excluir a última camada nem ultrapassar o teto de oito camadas do
-RBD2 na interface integrada.
+**Decisão de preservação visual:** o painel **Layer** permanece
+com o layout original do Ibis-Lua. Uma tentativa anterior de adicionar
+botões de excluir/mover alterou o design existente e foi revertida.
+O único botão estrutural visível segue sendo o **+** original, agora
+conectado ao motor raster e ao histórico. Não é possível exceder o
+teto de oito camadas suportado pelo RBD2. As operações de excluir e
+reordenar estão disponíveis somente no modelo/motor e em testes
+automatizados; **não foram adicionados novos botões** ao painel.
 
 `src/model.lua` recebeu `delete_layer(id)` e
 `move_layer(id, offset)`, com IDs estáveis, nova seleção válida
@@ -132,9 +135,10 @@ resultantes são persistidos no salvamento regular. Propriedades
 como visibilidade, opacidade, clipping, solo e Alpha Lock continuam
 editáveis, porém **ainda não participam da pilha unificada**.
 
-Testes cobrem o percurso pintar → adicionar → pintar na nova camada →
-mover → excluir → desfazer/refazer, incluindo restauração exata do
-RGBA, limites e cliques nos botões da janela real no LÖVE.
+Testes de motor cobrem o percurso pintar → adicionar → pintar na nova
+camada → mover → excluir → desfazer/refazer, incluindo restauração
+exata do RGBA e limites. O teste de interface LÖVE utiliza somente o
+**+ já existente** e Desfazer/Refazer no dock original.
 
 ## Próximos incrementos de migração
 
