@@ -52,22 +52,8 @@ function Bridge:sync(layers)
     for i,id in ipairs(order) do
         if self.order[i]~=id then self.dirty=true end
     end
-    -- Ao remover camadas, remover tambem historico que as referenciava.
-    local function filterHistory(stack)
-        local kept={}
-        for _,entry in ipairs(stack) do
-            if fresh[entry.id] then kept[#kept+1]=entry end
-        end
-        return kept
-    end
-    self.undoStack=filterHistory(self.undoStack)
-    self.redoStack=filterHistory(self.redoStack)
-    self.historyBytes=0
-    for _,stack in ipairs({self.undoStack,self.redoStack}) do
-        for _,entry in ipairs(stack) do
-            self.historyBytes=self.historyBytes+entry.size
-        end
-    end
+    -- A57: jamais descartar historico de um ID que desapareceu.
+    -- Um Delete pode ser desfeito, repondo o buffer RGBA removido.
     self.buffers,self.meta,self.order=fresh,meta,order
 end
 local function paint(self,x0,y0,x1,y1)
@@ -111,6 +97,28 @@ function Bridge:moveStroke(x,y)
     p.x,p.y=x,y
     return true
 end
+-- Pilha cronologica unica: pintura e alteracoes de camada.
+-- Retencao e limitada em bytes e em quantidade, inclusive redo.
+local function pushHistory(self,entry)
+    for _,old in ipairs(self.redoStack) do
+        self.historyBytes=self.historyBytes-old.size
+    end
+    self.redoStack={}
+    if entry.size>self.MAX_HISTORY_BYTES then
+        self.undoStack={}
+        self.historyBytes=0
+        return false
+    end
+    while (#self.undoStack>=self.MAX_HISTORY_ENTRIES or
+           self.historyBytes+entry.size>self.MAX_HISTORY_BYTES)
+            and #self.undoStack>0 do
+        local evicted=table.remove(self.undoStack,1)
+        self.historyBytes=self.historyBytes-evicted.size
+    end
+    self.undoStack[#self.undoStack+1]=entry
+    self.historyBytes=self.historyBytes+entry.size
+    return true
+end
 function Bridge:finishStroke()
     local p=self.pending
     if not p then return false end
@@ -121,23 +129,7 @@ function Bridge:finishStroke()
     if after==p.before then return false end
     local entry={id=p.id,before=p.before,after=after,
         size=#after+#p.before}
-    -- Um canvas de 2048² ainda cabe no orçamento por pincelada.
-    if entry.size<=self.MAX_HISTORY_BYTES then
-        for _,old in ipairs(self.redoStack) do
-            self.historyBytes=self.historyBytes-old.size
-        end
-        self.redoStack={}
-        while (#self.undoStack>=self.MAX_HISTORY_ENTRIES or
-                self.historyBytes+entry.size>self.MAX_HISTORY_BYTES)
-                and #self.undoStack>0 do
-            local oldest=table.remove(self.undoStack,1)
-            self.historyBytes=self.historyBytes-oldest.size
-        end
-        self.undoStack[#self.undoStack+1]=entry
-        self.historyBytes=self.historyBytes+entry.size
-    else
-        self.undoStack={};self.redoStack={};self.historyBytes=0
-    end
+    pushHistory(self,entry)
     self.dirty=true
     return true
 end
@@ -179,25 +171,121 @@ function Bridge:pick(x,y)
         math.floor(rgba/65536)%256,
         math.floor(rgba/256)%256
 end
+-- A57: snapshots estruturais sao pequenos; pixels sao guardados
+-- APENAS para a camada que entrou/saiu, preservando o limite de 48 MiB.
+-- IDs existentes mantem seus buffers e suas pinceladas na pilha.
+local function cloneLayers(layers)
+    local result={}
+    for i,layer in ipairs(layers) do
+        local copy={}
+        for k,v in pairs(layer) do copy[k]=v end
+        result[i]=copy
+    end
+    return result
+end
+local function layerSnapshot(model)
+    local solo={}
+    for id,v in pairs(model.solo_before or {}) do solo[id]=v end
+    return {layers=cloneLayers(model.layers),
+        active=model.active_layer_id,nextId=model.next_layer_id,
+        solo=model.solo_layer_id,soloBefore=solo}
+end
+function Bridge:changeLayer(model,action,id)
+    assert(model and model.screen=='editor' and
+        model.document.width==self.width and
+        model.document.height==self.height,
+        'Historico estrutural exige o modelo do canvas ativo')
+    assert(action=='add' or action=='delete' or
+        action=='up' or action=='down',
+        'Operacao estrutural desconhecida')
+    self:finishStroke()
+    self:sync(model.layers)
+    local before=layerSnapshot(model)
+    local removed={}
+    if action=='delete' then
+        assert(#model.layers>1,'Nao e permitido remover a ultima camada')
+        assert(self.buffers[id],'Camada inexistente')
+        removed[id]=Raster.bytes(self.buffers[id])
+    end
+    local changed
+    if action=='add' then
+        changed=model:add_layer()
+    elseif action=='delete' then
+        changed=model:delete_layer(id)
+    else
+        changed=model:move_layer(id,action=='up' and 1 or -1)
+        if not changed then return false end
+    end
+    self:sync(model.layers)
+    local added={}
+    if action=='add' then
+        added[changed]=Raster.bytes(self.buffers[changed])
+    end
+    local payload=192+#before.layers*128
+    for _,pixels in pairs(removed) do payload=payload+#pixels end
+    for _,pixels in pairs(added) do payload=payload+#pixels end
+    local entry={kind='structure',beforeState=before,
+        afterState=layerSnapshot(model),
+        beforePixels=removed,afterPixels=added,size=payload}
+    pushHistory(self,entry)
+    self.dirty=true
+    return changed
+end
+local function restoreStructure(self,model,snapshot,pixels)
+    model.layers=cloneLayers(snapshot.layers)
+    model.active_layer_id=snapshot.active
+    model.next_layer_id=snapshot.nextId
+    model.solo_layer_id=snapshot.solo
+    model.solo_before={}
+    for id,value in pairs(snapshot.soloBefore) do
+        model.solo_before[id]=value
+    end
+    self:sync(model.layers)
+    for id,raw in pairs(pixels) do
+        local buf=Raster.buffer(self.width,self.height,raw)
+        for _,layer in ipairs(model.layers) do
+            if layer.id==id then
+                buf.alphaLock=layer.alpha_lock==true
+                break
+            end
+        end
+        self.buffers[id]=buf
+    end
+    self.dirty=true
+end
 local function apply(self,entry,key)
     local b=Raster.buffer(self.width,self.height,entry[key])
     b.alphaLock=self.buffers[entry.id].alphaLock
     self.buffers[entry.id]=b
     self.dirty=true
 end
-function Bridge:undo()
+function Bridge:undo(model)
     self:finishStroke()
-    local entry=table.remove(self.undoStack)
+    local entry=self.undoStack[#self.undoStack]
     if not entry then return false end
-    apply(self,entry,'before')
+    if entry.kind=='structure' then
+        assert(model and model.screen=='editor',
+            'Desfazer camada exige modelo ativo')
+        restoreStructure(self,model,entry.beforeState,entry.beforePixels)
+    else
+        apply(self,entry,'before')
+    end
+    table.remove(self.undoStack)
     self.redoStack[#self.redoStack+1]=entry
     return true
 end
-function Bridge:redo()
+function Bridge:redo(model)
     self:finishStroke()
-    local entry=table.remove(self.redoStack)
+    local entry=self.redoStack[#self.redoStack]
     if not entry then return false end
-    apply(self,entry,'after')
+    if entry.kind=='structure' then
+        assert(model and model.screen=='editor',
+            'Refazer camada exige modelo ativo')
+        restoreStructure(self,model,entry.afterState,entry.afterPixels)
+    else
+        apply(self,entry,'after')
+    end
+    table.remove(self.redoStack)
     self.undoStack[#self.undoStack+1]=entry
     return true
 end
