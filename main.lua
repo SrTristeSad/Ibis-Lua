@@ -10,6 +10,9 @@ local Gallery = require("src.gallery")
 local BrushCatalog = require("src.brush_catalog")
 local EditorPreferences = require("src.editor_preferences")
 local ColorState = require("src.color_state")
+local Theme = require("src.ui_theme")
+local IconPack = require("src.icon_pack")
+local EditorLayout = require("src.editor_layout")
 local utf8 = require("utf8")
 local state = Model.new()
 local view = Viewport.new()
@@ -64,14 +67,7 @@ local gallery_e2e = os.getenv("IBIS_LUA_GALLERY_E2E") == "1"
 local gallery_e2e_stage = 0
 local smoke_screen = os.getenv("IBIS_LUA_SCREEN") or "title"
 local capture_requested, capture_done, capture_pending, capture_error = false, false, false, nil
-local C = {
-    background={0.75,0.76,0.76}, bar={0.365,0.365,0.365},
-    deep={0.17,0.17,0.17}, dark={0.23,0.23,0.23},
-    light={0.90,0.90,0.90}, paper={0.973,0.972,0.951},
-    blue={0.12,0.48,0.75}, title={0.145,0.295,0.46},
-    ranking={0.09,0.18,0.29}, ink={0.12,0.12,0.12},
-    white={1,1,1}, soft={0.80,0.80,0.80},
-}
+local C = Theme.colors
 local tools = {
     {"Transform","transform"},{"Magic Wand","magic_wand"},{"Lasso","lasso"},
     {"Filter","filter"},{"Brush","brush"},{"Eraser","eraser"},
@@ -99,6 +95,24 @@ local function stroke(x,y,w,h,col,alpha)
     rgba(col,alpha)
     love.graphics.setLineWidth(1)
     love.graphics.rectangle("line",x,y,w,h)
+end
+local function soft_shadow(x,y,w,h,round,intensity)
+    local alpha=intensity or 1
+    rectangle(x+1,y+9,w,h,C.deep,0.025*alpha,round+3)
+    rectangle(x+1,y+5,w,h,C.deep,0.044*alpha,round+2)
+    rectangle(x,y+2,w,h,C.deep,0.061*alpha,round+1)
+end
+local function vertical_gradient(x,y,w,h,top,bottom,steps)
+    steps=steps or 40
+    for i=0,steps-1 do
+        local t=i/(steps-1)
+        rectangle(x,y+h*i/steps,w,h/steps+1,Theme.mix(top,bottom,t))
+    end
+end
+local function inset_border(x,y,w,h,round,alpha)
+    rgba(C.card_border,alpha or 0.55)
+    love.graphics.setLineWidth(1)
+    love.graphics.rectangle("line",x+0.5,y+0.5,w-1,h-1,round,round)
 end
 local function line(x1,y1,x2,y2,width,col,alpha)
     rgba(col or C.white,alpha)
@@ -207,154 +221,36 @@ local function outline_circle(x,y,r,alpha)
     love.graphics.circle("line",x,y,r)
 end
 
--- Manually constructed icon geometry, tied to visible Windows reference imagery;
--- none of these are extracted proprietary graphic assets or certified pixel copies.
+-- Shared Lucide icon pack, with editable SVG sources and offline PNGs.
+local glyph_color=nil
 local function glyph(name,cx,cy,r)
-    local g=love.graphics
-    g.push()
-    g.translate(cx,cy)
-    local d=r/12
-    rgba(C.white,0.94)
-    g.setLineWidth(math.max(1.2,d*1.65))
-    if name=="brush" or name=="pen" then
-        g.rotate(math.pi/4)
-        g.rectangle("line",-3*d,-9*d,6*d,13*d,1.5*d,1.5*d)
-        g.line(-3*d,4*d,0,10*d,3*d,4*d)
-        g.line(-3*d,-5*d,3*d,-5*d)
-    elseif name=="eraser" then
-        g.rotate(-math.pi/4)
-        g.polygon("line",-8*d,-5*d,5*d,-5*d,8*d,4*d,-5*d,4*d)
-        g.line(-1*d,-5*d,2*d,4*d)
-    elseif name=="transform" then
-        g.line(-8*d,0,8*d,0)
-        g.line(0,-8*d,0,8*d)
-        g.polygon("fill",-10*d,0,-5*d,-3*d,-5*d,3*d)
-        g.polygon("fill",10*d,0,5*d,-3*d,5*d,3*d)
-        g.polygon("fill",0,-10*d,-3*d,-5*d,3*d,-5*d)
-        g.polygon("fill",0,10*d,-3*d,5*d,3*d,5*d)
-    elseif name=="magic_wand" or name=="special_pen" then
-        g.line(-7*d,8*d,5*d,-6*d)
-        g.line(-9*d,-7*d,-5*d,-7*d)
-        g.line(-7*d,-9*d,-7*d,-5*d)
-        g.line(4*d,-9*d,4*d,-4*d)
-        g.line(2*d,-7*d,6*d,-7*d)
-        g.line(7*d,1*d,7*d,5*d)
-        g.line(5*d,3*d,9*d,3*d)
-    elseif name=="lasso" then
-        g.ellipse("line",0,-2*d,8*d,6*d)
-        g.line(-4*d,3*d,-5*d,9*d,0,5*d)
-    elseif name=="filter" then
-        g.circle("line",0,0,9*d)
-        g.setFont(font.icon)
-        g.print("FX",-7*d,-6*d)
-    elseif name=="smudge" then
-        g.line(-5*d,7*d,-5*d,-3*d,-2*d,-8*d,1*d,-6*d,1*d,2*d)
-        g.line(1*d,0,4*d,-2*d,6*d,1*d,5*d,8*d,-5*d,8*d)
-    elseif name=="blur" then
-        g.polygon("line",0,-10*d,-7*d,2*d,-6*d,7*d,0,10*d,6*d,7*d,7*d,2*d)
-    elseif name=="bucket" then
-        g.rotate(-math.pi/4)
-        g.rectangle("line",-7*d,-4*d,12*d,10*d)
-        g.line(-7*d,-4*d,5*d,-4*d)
-    elseif name=="vector" then
-        g.polygon("line",-6*d,-10*d,8*d,3*d,1*d,4*d,-1*d,10*d)
-    elseif name=="text" then
-        g.setFont(font.big_icon)
-        g.print("T",-8*d,-13*d)
-    elseif name=="frame_divider" then
-        g.rectangle("line",-9*d,-9*d,18*d,18*d)
-        g.line(-9*d,0,9*d,0)
-        g.line(0,-9*d,0,9*d)
-    elseif name=="eyedropper" then
-        g.rotate(-math.pi/4)
-        g.rectangle("line",-2*d,-7*d,5*d,13*d)
-        g.line(-2*d,6*d,0,10*d,3*d,6*d)
-        g.line(-5*d,-7*d,6*d,-7*d)
-    elseif name=="canvas" then
-        g.rectangle("line",-9*d,-8*d,18*d,15*d)
-        g.line(-5*d,9*d,5*d,9*d)
-    elseif name=="color" then
-        g.circle("line",0,0,9*d)
-        local cols={{1,0.22,0.25},{1,0.83,0.05},{0.22,0.79,0.34},{0.15,0.65,1},{0.65,0.3,0.9}}
-        for i,col in ipairs(cols) do
-            local a=-math.pi/2+(i-1)*2*math.pi/#cols
-            g.setColor(col)
-            g.arc("fill","pie",0,0,7.7*d,a,a+2*math.pi/#cols)
-        end
-        rgba(C.white)
-        g.circle("fill",0,0,3*d)
-    elseif name=="layer" then
-        g.rectangle("line",-5*d,-7*d,12*d,11*d)
-        g.rectangle("line",-8*d,-4*d,12*d,11*d)
-    elseif name=="back" then
-        g.line(5*d,-8*d,-4*d,0,5*d,8*d)
-    elseif name=="undo" or name=="redo" then
-        if name=="redo" then g.scale(-1,1) end
-        g.arc("line","open",0,2*d,8*d,-math.pi*0.9,math.pi*0.55)
-        g.line(-8*d,-2*d,-8*d,5*d,-2*d,2*d)
-    elseif name=="plus" then
-        g.line(-9*d,0,9*d,0)
-        g.line(0,-9*d,0,9*d)
-    elseif name=="fullscreen" then
-        g.line(-8*d,-3*d,-8*d,-8*d,-3*d,-8*d)
-        g.line(8*d,3*d,8*d,8*d,3*d,8*d)
-        g.line(-8*d,3*d,-8*d,8*d,-3*d,8*d)
-        g.line(8*d,-3*d,8*d,-8*d,3*d,-8*d)
-    elseif name=="view" then
-        g.rectangle("line",-9*d,-7*d,18*d,14*d)
-        g.line(-6*d,-3*d,6*d,-3*d)
-        g.line(-6*d,1*d,5*d,1*d)
-        g.line(-6*d,5*d,2*d,5*d)
-    elseif name=="settings" then
-        g.circle("line",0,0,8*d)
-        g.circle("line",0,0,3*d)
-    elseif name=="selection" then
-        g.setLineStyle("rough")
-        g.rectangle("line",-8*d,-8*d,16*d,16*d)
-        g.setLineStyle("smooth")
-    elseif name=="stabilizer" then
-        g.line(-9*d,5*d,9*d,-5*d)
-        g.circle("line",-5*d,-2*d,3*d)
-    elseif name=="shape" then
-        g.circle("line",-3*d,-3*d,6*d)
-        g.rectangle("line",-2*d,-2*d,11*d,11*d)
-    elseif name=="ruler" then
-        g.rotate(-math.pi/4)
-        g.rectangle("line",-9*d,-4*d,18*d,8*d)
-        for i=-6,6,4 do g.line(i*d,-4*d,i*d,0) end
-    elseif name=="material" then
-        g.rectangle("line",-9*d,-8*d,18*d,16*d)
-        g.polygon("line",-8*d,6*d,-2*d,-1*d,2*d,4*d,5*d,0,9*d,6*d)
-    elseif name=="globe" then
-        g.circle("line",0,0,9*d)
-        g.ellipse("line",0,0,4*d,9*d)
-        g.line(-9*d,0,9*d,0)
-        g.arc("line","open",0,0,6*d,0.7,2.45)
-        g.arc("line","open",0,0,6*d,3.85,5.6)
-    elseif name=="more" then
-        g.circle("fill",-6*d,0,1.5*d)
-        g.circle("fill",0,0,1.5*d)
-        g.circle("fill",6*d,0,1.5*d)
-    elseif name=="play" then
-        g.polygon("fill",-5*d,-8*d,8*d,0,-5*d,8*d)
-    elseif name=="check" then
-        g.line(-8*d,-1*d,-2*d,6*d,9*d,-7*d)
-    elseif name=="eye" then
-        g.ellipse("line",0,0,9*d,5*d)
-        g.circle("fill",0,0,2.3*d)
-    end
-    g.pop()
+    IconPack.draw(name,cx,cy,r,glyph_color or C.white,0.96)
 end
+
 local function icon_button(x,y,w,h,name,fn,active,disabled)
-    if active then rectangle(x,y,w,h,C.blue,0.7,3)
-    elseif over(x,y,w,h) and not disabled then rectangle(x,y,w,h,C.white,0.14,3) end
-    glyph(name,x+w/2,y+h/2,math.min(w,h)*0.33)
+    local hovered=over(x,y,w,h) and not disabled
+    local round=Theme.radius.button
+    if active then
+        rectangle(x,y,w,h,C.accent,0.93,round)
+        inset_border(x,y,w,h,round,0.30)
+    elseif hovered then
+        rectangle(x,y,w,h,C.white,0.16,round)
+        inset_border(x,y,w,h,round,0.20)
+    end
+    glyph(name,x+w/2,y+h/2,math.min(w,h)*0.32)
     if fn and not disabled then hit(x,y,w,h,fn,name) end
 end
-local function plain_button(x,y,w,h,name,fn,accent)
-    rectangle(x,y,w,h,accent and C.blue or C.deep,over(x,y,w,h) and 0.94 or 0.80,3)
-    label(name,x,y+(h-17)/2,w,"normal","center",C.white)
-    hit(x,y,w,h,fn,name)
+local function plain_button(x,y,w,h,name,fn,accent,key)
+    local round=Theme.radius.button
+    local hovered=over(x,y,w,h)
+    if accent then soft_shadow(x,y,w,h,round,0.70) end
+    rectangle(x,y,w,h,
+        accent and (hovered and C.accent_light or C.accent) or
+        (hovered and C.hover or C.dark),1,round)
+    if not accent then inset_border(x,y,w,h,round,0.15) end
+    label(name,x,y+(h-17)/2,w,"normal","center",
+        accent and C.deep or C.white)
+    hit(x,y,w,h,fn,key or name)
 end
 local function title_screen()
     rectangle(0,0,W,H*0.66,C.title)
@@ -1957,6 +1853,7 @@ function love.load()
     font.logo=love.graphics.newFont(65)
     font.icon=love.graphics.newFont(14)
     font.big_icon=love.graphics.newFont(26)
+    IconPack.load()
     if not (smoke or e2e or settings_e2e or gallery_e2e) then
         local content=love.filesystem.read("editor-preferences.txt")
         if content then
