@@ -16,6 +16,8 @@ REQUIRED = (
     "editor", "layer", "layer_floating", "layer_properties", "layer_blend",
     "transparent", "brush", "brush_search", "color", "zoom", "solo",
     "view", "grid_settings", "grid", "reference",
+    "editor_settings", "tool_popup_1", "tool_popup_2", "tool_popup_3",
+    "tool_right", "tool_labels_off",
 )
 
 
