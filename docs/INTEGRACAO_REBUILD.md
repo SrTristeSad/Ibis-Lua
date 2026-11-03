@@ -26,7 +26,7 @@ A integração é feita por `src/raster_bridge.lua`. O modelo `src/model.lua` co
 ## Fluxo de desenho
 
 1. O `main.lua` do Ibis-Lua mantém as transformações do canvas, inclusive zoom, rotação e pan.
-2. Para Pincel/Borracha, mouse down/move/up converte coordenadas de janela para pixels do documento e envia o traço ao motor LuaJIT.
+2. Para Pincel/Borracha, mouse down/move/up converte coordenadas de janela para pixels do documento e envia o traço ao motor LuaJIT. O Balde aplica flood-fill contíguo com tolerância inicial 0; o Conta-gotas amostra pixels opacos da composição visível.
 3. `Raster.accumulatedStroke` impede acúmulo artificial de opacidade ao repetir a ponta durante o mesmo gesto.
 4. A textura RGBA é enviada ao LÖVE via `ImageData:getFFIPointer` e `Image:replacePixels`, usando a mesma técnica empregada no projeto Rebuild.
 5. O dock original do Ibis-Lua oferece Desfazer/Refazer de pinceladas; Ctrl+Z e Ctrl+Shift+Z também atuam nesse histórico. Mudanças de visibilidade, opacidade e Alpha Lock da interface afetam a composição e o raster.
@@ -36,8 +36,8 @@ A integração é feita por `src/raster_bridge.lua`. O modelo `src/model.lua` co
 - Dimensões raster reais: **1..2048** pixels por eixo. A interface visual ainda oferece tamanhos maiores, mas a pintura não é habilitada neles. Não cortar imagens silenciosamente.
 - A espessura visual do Ibis-Lua pode exceder o limite do motor; no raster, é limitada a **256 px**.
 - Composição real **Normal**; opções Multiply/Screen/Overlay continuam estados de UI, sem algoritmo equivalente.
-- Histórico é **somente de pinceladas** e fica em memória, até 12 ações e 48 MiB.
-- Ainda não foram conectados o armazenamento de projetos RBD2, galeria persistente, exportação/importação, balde, seleção por máscara, filtros, transformação, Windows Ink e demais funcionalidades avançadas do Rebuild.
+- Histórico cobre **pinceladas e preenchimentos** e fica em memória, até 12 ações e 48 MiB.
+- Ainda não foram conectados o armazenamento de projetos RBD2, galeria persistente, exportação/importação, seleção por máscara, filtros, transformação, Windows Ink e demais funcionalidades avançadas do Rebuild.
 - O modo `Solo` visual e a alteração de propriedades de camadas são preservados. O modo Solo atua na visibilidade usada pelo compositor quando renderizado.
 - O layout e os arquivos de ícones do Ibis-Lua permanecem como estavam. O conteúdo de exemplo nas capturas dos estados anteriores permanece demonstrativo.
 
@@ -45,7 +45,7 @@ A integração é feita por `src/raster_bridge.lua`. O modelo `src/model.lua` co
 
 ## Testes
 
-- `luajit tests/test_raster_bridge.lua`: escrita real de pixels RGBA, borracha, undo/redo, camadas, opacidade, visibilidade, Alpha Lock e limites.
+- `luajit tests/test_raster_bridge.lua`: escrita real de pixels RGBA, borracha, balde, conta-gotas, undo/redo, camadas, opacidade, visibilidade, Alpha Lock e limites.
 - `PAINT_LUA_RASTER_E2E=1 love .`: eventos de mouse reais no canvas e cliques de Undo/Redo no dock visual; teste do fluxo de borracha.
 - `PAINT_LUA_SMOKE=1 PAINT_LUA_SCREEN=raster_painted love .`: captura `raster_painted.png` na CI.
 - Workflows do GitHub continuam testando sintaxe LuaJIT, os módulos visuais, 35+ estados de screenshot e regressões de navegação.
@@ -54,6 +54,6 @@ Esses testes demonstram comportamento do nosso código, **não** semelhança pix
 
 ## Próximos incrementos de migração
 
-Manter a mesma ponte e isolar novos subsistemas, na ordem técnica sugerida: persistência RBD2 e galeria; ferramenta Balde e Conta-gotas; integração do histórico estrutural de camadas; seleção por máscara; Windows Ink e estilos de pincel. Cada módulo precisa de testes de integração com a UI, antes de substituir controles simulados.
+Manter a mesma ponte e isolar novos subsistemas, na ordem técnica sugerida: persistência RBD2 e galeria; integração do histórico estrutural de camadas; seleção por máscara; Windows Ink e estilos de pincel. Cada módulo precisa de testes de integração com a UI, antes de substituir controles simulados.
 
 A PR desta integração deve permanecer em **Draft**, sem merge automático para `main`.
