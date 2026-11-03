@@ -95,7 +95,7 @@ function Preferences.decode(content)
         show_tool_labels=true,invert_wheel=true,show_undo_message=true
     }
     for line in content:gmatch("[^\r\n]+") do
-        local key,value=line:match("^(%w+)=(%w+)$")
+        local key,value=line:match("^([%w_]+)=([%w_]+)$")
         assert(key and recognized[key] and values[key]==nil,
             "Entrada inválida na configuração de interface")
         values[key]=value
