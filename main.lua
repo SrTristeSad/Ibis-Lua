@@ -1460,10 +1460,25 @@ function draw_editor_panel()
         end
         -- Controles pequenos junto do "+" original, sem alterar
         -- painel, dock ou posicionamento de suas areas principais.
-        plain_button(x+w-135,y+46,29,27,"▼",
-            function() layer_action('down') end,false,"layer_move_down")
-        plain_button(x+w-103,y+46,29,27,"▲",
-            function() layer_action('up') end,false,"layer_move_up")
+        -- A57: usar PNG Lucide existente em vez de glifos Unicode
+        -- (a fonte do LÖVE mostra setas Unicode como quadradinhos).
+        local function arrow_button(xx,up,fn,key)
+            local yy=y+46
+            local hovered=over(xx,yy,29,27)
+            rectangle(xx,yy,29,27,
+                hovered and C.hover or C.dark,1,Theme.radius.button)
+            inset_border(xx,yy,29,27,Theme.radius.button,0.15)
+            love.graphics.push()
+            love.graphics.translate(xx+14.5,yy+13.5)
+            love.graphics.rotate(up and -math.pi/2 or math.pi/2)
+            glyph("arrow_right",0,0,8.3)
+            love.graphics.pop()
+            hit(xx,yy,29,27,fn,key)
+        end
+        arrow_button(x+w-135,false,
+            function() layer_action('down') end,"layer_move_down")
+        arrow_button(x+w-103,true,
+            function() layer_action('up') end,"layer_move_up")
         icon_button(x+w-71,y+44,29,31,"minus",
             function() layer_action('delete') end)
         hit(x+w-71,y+44,29,31,
