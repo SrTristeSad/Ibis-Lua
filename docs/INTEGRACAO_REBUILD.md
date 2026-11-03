@@ -52,6 +52,57 @@ A integração é feita por `src/raster_bridge.lua`. O modelo `src/model.lua` co
 
 Esses testes demonstram comportamento do nosso código, **não** semelhança pixel-a-pixel com o ibisPaint Windows original.
 
+## A56 — Persistência RBD2 inicial, sem trocar o visual
+
+Esta branch passou a reutilizar o **Store RBD2 original** do Rebuild,
+em `src/engine/store.lua`, junto de seu codec JSON limitado e
+metadados de retenção. O arquivo resultante usa o mesmo cabeçalho
+`RBD2\\r\\n\\x1A\\n`, cabeçalho JSON e bytes RGBA por camada.
+Não é JSON proprietário paralelo e não é formato `.ipv`.
+
+O sistema de arquivos `src/engine/love_fs.lua` implementa a
+interface necessária ao Store dentro do diretório de dados do LÖVE.
+Seu `writeAtomic` grava primeiro num arquivo temporário e utiliza
+rename atômico no Linux ou `MoveFileExW` no Windows, sem apagar a
+versão anterior se a substituição falhar. Nenhuma pasta fora da área
+de dados do aplicativo é gerenciada. Os dados residem sob
+`<LOVE save directory>/rbd2-projects/projects/*.rbd`.
+
+O adaptador `src/project_persistence.lua` converte os IDs numéricos
+da UI para IDs persistentes de projeto e camada do Store. Salva
+nome, dimensões, ordem, seleção, visibilidade, opacidade, Alpha Lock
+e bytes RGBA. Abre projetos antigos RBD1 em memória sem alterar seu
+arquivo até um salvamento posterior. Rejeita salvar camadas com
+blending não Normal, impedindo perda silenciosa de dados não suportados.
+
+**Fluxo da UI:** um novo desenho no canvas de até 2048x2048 px é
+salvo ao usar **Back to My Gallery**, `Ctrl+S` ou fechamento normal
+com o editor aberto. Se ocorrer falha de I/O, o retorno à galeria ou
+o encerramento são cancelados para preservar os pixels em memória.
+Ao iniciar, os RBD2 existentes na raiz reaparecem como cartões
+da galeria visual; ao clicar, recuperam a obra, suas camadas e pixels.
+
+**Limites deliberados nesta fase:**
+- Pastas, ordem, miniaturas e movimentos da galeria visual continuam
+  demonstrativos e **não são persistidos** pelo modelo atual; projetos
+  salvos reaparecem na raiz após reinício.
+- Undo/redo permanece um histórico de sessão; não é persistido em RBD2.
+- Projetos acima do limite do motor (2048 por eixo) seguem
+  visuais, sem salvamento de pixels reais.
+- O Store original limita a escrita individual a 64 MiB; arquivos
+  acima desse tamanho causam erro visível de salvamento, não
+  truncamento silencioso.
+- Não há importação/exportação do formato oficial do ibisPaint,
+  sincronização em nuvem ou persistência de modo Solo/Clipping.
+- O modelo visual ainda pode habilitar operações de mesclagem
+  simuladas; o salvamento recusa modos diferentes de Normal.
+
+**Verificação:** `PAINT_LUA_PERSISTENCE_E2E=write love .` seguido de
+`PAINT_LUA_PERSISTENCE_E2E=read love .` em **processos separados**.
+O teste confirma assinatura RBD2, reabertura a partir do cartão,
+duas camadas pintadas, opacidade e Alpha Lock, além de execução dos
+testes anteriores do projeto.
+
 ## Próximos incrementos de migração
 
 Manter a mesma ponte e isolar novos subsistemas, na ordem técnica sugerida: persistência RBD2 e galeria; integração do histórico estrutural de camadas; seleção por máscara; Windows Ink e estilos de pincel. Cada módulo precisa de testes de integração com a UI, antes de substituir controles simulados.
