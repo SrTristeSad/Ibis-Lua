@@ -1,7 +1,9 @@
 -- Ibis-Lua. Windows reference-based UI reconstruction, not the official application.
 -- Layout evidence: Windows gallery/new canvas (Uptodown), Windows tool editor
 -- (Microsoft Store, independent Windows screenshots), official tool manual.
--- Fidelity to version 14.1.4 is NOT yet certified. No paint/image engine.
+-- Fidelity to version 14.1.4 is NOT yet certified. Basic RGBA paint now
+-- uses the Rebuild LuaJIT engine; other visual tools remain simulated.
+local RasterBridge = require("src.raster_bridge")
 local Model = require("src.model")
 local Viewport = require("src.viewport")
 local ViewState = require("src.view_state")
@@ -149,6 +151,41 @@ local function save_preferences()
 end
 local function current()
     return state.screen=="editor"
+end
+-- Documento de pixels em memoria; estado e aparencia da interface
+-- continuam pertencendo ao Ibis-Lua. Nenhum dado e salvo ainda.
+local raster, raster_doc = nil,nil
+local function current_raster()
+    if not current() or not state.document then return nil end
+    local d=state.document
+    if d.width>RasterBridge.MAX_AXIS or
+        d.height>RasterBridge.MAX_AXIS then return nil end
+    if raster_doc~=d then
+        raster=RasterBridge.new(d.width,d.height)
+        raster_doc=d
+    end
+    raster:sync(state.layers)
+    return raster
+end
+-- Inversa exata do transform aplicado ao canvas no editor_screen.
+-- Recebe coordenadas logicas (apos normalizacao pelo DPI/escala).
+local function canvas_point(x,y)
+    if not current() or not state.document then return nil end
+    local dw,dh=state.document.width,state.document.height
+    local left=preferences.tool_position=="left" and 62 or 0
+    local right=preferences.tool_position=="right" and 75 or 34
+    local aw,ah=W-left-right,H-160
+    local factor=math.min(aw/dw,ah/dh,1.1)*view.zoom
+    if factor<=0 then return nil end
+    local cx=left+aw/2+view.pan_x
+    local cy=62+ah/2+view.pan_y
+    local dx,dy=x-cx,y-cy
+    local c,s=math.cos(view.rotation),math.sin(view.rotation)
+    local px=(dx*c+dy*s)/factor+dw/2
+    local py=(-dx*s+dy*c)/factor+dh/2
+    if px>=0 and py>=0 and px<dw and py<dh and
+        y>=35 and y<=H-66 then return px,py end
+    return nil
 end
 local picker_hue=0
 local function set_panel(name)
@@ -770,13 +807,19 @@ local function draw_editor_toolbar()
             notice("Mesclar para baixo ainda não é simulado.")
         end},
         {"undo",function()
-            if preferences.show_undo_message then
-                notice("Nenhuma alteração de pintura para desfazer.")
+            local engine=current_raster()
+            if not engine or not engine:undo() then
+                if preferences.show_undo_message then
+                    notice("Nenhuma pincelada para desfazer.")
+                end
             end
         end},
         {"redo",function()
-            if preferences.show_undo_message then
-                notice("Nenhuma alteração de pintura para refazer.")
+            local engine=current_raster()
+            if not engine or not engine:redo() then
+                if preferences.show_undo_message then
+                    notice("Nenhuma pincelada para refazer.")
+                end
             end
         end},
         {"layer",function() set_panel("layer") end},
@@ -996,6 +1039,12 @@ local function editor_screen()
             rectangle(-dw/2+i*tw,-dh/2+j*th,tw+0.1,th+0.1,
                 {level,level,level})
         end end
+    end
+    -- Camada RGBA real sobre a superficie visual existente.
+    local engine=current_raster()
+    if engine then
+        love.graphics.setColor(1,1,1,1)
+        love.graphics.draw(engine:image(),-dw/2,-dh/2)
     end
     draw_view_guides(dw,dh,actual_scale)
     rgba(C.deep,0.22)
@@ -2258,9 +2307,44 @@ function love.mousepressed(rx,ry,button)
     end
     if state.screen=="editor" and not panel and love.keyboard.isDown("space") then
         view:begin_pan(x,y)
+    elseif state.screen=="editor" and not panel and
+        (state.active_tool=="brush" or state.active_tool=="eraser") then
+        local px,py=canvas_point(x,y)
+        if px then
+            local engine=current_raster()
+            if engine then
+                local rgb=state.color
+                engine:beginStroke(state.active_tool,state.active_layer_id,
+                    px,py,state.brush_size,
+                    rgb[1],rgb[2],rgb[3],opacity/100)
+            else
+                notice("Motor RGBA: limite atual de 2048 px por eixo.")
+            end
+            return
+        end
     elseif panel then panel=nil;state.active_panel=nil;layer_blend_open=false end
 end
 function love.mousemoved(rx,ry,dx,dy)
+    if raster and raster.pending and state.screen=="editor" then
+        local x,y=canvas_point(rx/scale,ry/scale)
+        if not x then
+            -- Manter o segmento dentro dos limites do documento.
+            x,y=rx/scale,ry/scale
+            local dw,dh=state.document.width,state.document.height
+            local left=preferences.tool_position=="left" and 62 or 0
+            local right=preferences.tool_position=="right" and 75 or 34
+            local aw,ah=W-left-right,H-160
+            local factor=math.min(aw/dw,ah/dh,1.1)*view.zoom
+            local dx=x-(left+aw/2+view.pan_x)
+            local dy=y-(62+ah/2+view.pan_y)
+            local c,s=math.cos(view.rotation),math.sin(view.rotation)
+            x=math.max(0,math.min(dw-.001,
+                (dx*c+dy*s)/factor+dw/2))
+            y=math.max(0,math.min(dh-.001,
+                (-dx*s+dy*c)/factor+dh/2))
+        end
+        raster:moveStroke(x,y)
+    end
     if color_drag and panel=="color" and color_float then
         color_position={
             x=rx/scale-color_drag.dx,
@@ -2319,6 +2403,10 @@ function love.mousemoved(rx,ry,dx,dy)
 end
 function love.mousereleased(rx,ry,button)
     if button~=1 then return end
+    if raster and raster.pending then
+        raster:finishStroke()
+        return
+    end
     if color_swatch_drag and panel=="color" and colors.palette_mode then
         local d=color_swatch_drag
         local xx,yy=rx/scale,ry/scale
@@ -2513,6 +2601,7 @@ function love.keypressed(key)
         end
     end
     if key=="escape" then
+        if raster and raster.pending then raster:finishStroke() end
         view:end_pan()
         if layer_blend_open then layer_blend_open=false
         elseif panel then panel=nil;state.active_panel=nil
@@ -2525,6 +2614,14 @@ function love.keypressed(key)
             else gallery_item_scroll=0 end
         else love.event.quit() end
     elseif state.screen=="editor" then
+        if key=="z" and love.keyboard.isDown("lctrl","rctrl") then
+            local engine=current_raster()
+            if engine then
+                if love.keyboard.isDown("lshift","rshift") then engine:redo()
+                else engine:undo() end
+            end
+            return
+        end
         if key=="b" then state:set_tool("brush")
         elseif key=="e" then state:set_tool("eraser")
         elseif key=="l" then set_panel("layer")
