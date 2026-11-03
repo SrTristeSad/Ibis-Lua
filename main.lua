@@ -1570,6 +1570,18 @@ function draw_editor_panel()
             local wheel_y=y+265
             local radius=104
             draw_hue_wheel(wheel_x,wheel_y,radius)
+            local _,saturation,brightness=colors:hsb()
+            local diamond_r=radius-23
+            local u=saturation/100
+            local v=1-brightness/100
+            local pick_x=wheel_x+(u-v)*diamond_r
+            local pick_y=wheel_y+(u+v-1)*diamond_r
+            rgba(C.deep)
+            love.graphics.setLineWidth(3)
+            love.graphics.circle("line",pick_x,pick_y,7)
+            rgba(C.white)
+            love.graphics.setLineWidth(1.8)
+            love.graphics.circle("line",pick_x,pick_y,7)
             hit(wheel_x-radius,wheel_y-radius,radius*2,radius*2,function()
                 local mx,my=pointer()
                 from_pointer(mx,my,wheel_x,wheel_y,radius)
@@ -1580,13 +1592,14 @@ function draw_editor_panel()
             end,"color_wheel")
             local sx=x+264
             local track_w=math.max(60,w-306)
-            local h,s,b=colors:hsb()
+            local hue,saturation,brightness=colors:hsb()
             local channels=colors.rgb_mode and {
                 {"R",current[1],255},{"G",current[2],255},
                 {"B",current[3],255},{"Opacity",colors.opacity,100}
             } or {
-                {"H",math.floor(h+0.5),360},{"S",math.floor(s+0.5),100},
-                {"B",math.floor(b+0.5),100},
+                {"H",math.floor(hue+0.5),360},
+                {"S",math.floor(saturation+0.5),100},
+                {"B",math.floor(brightness+0.5),100},
                 {"Opacity",colors.opacity,100}
             }
             for index,entry in ipairs(channels) do
@@ -1968,6 +1981,8 @@ function love.load()
             set_panel("color")
             colors:set_hex("#337BCC")
             state:set_color(51,123,204)
+            local current_hue=colors:hsb()
+            picker_hue=(current_hue%360)/360
             if smoke_screen=="color_palette" then
                 colors.palette_mode=true
                 colors:create_palette("Character")
@@ -1975,6 +1990,8 @@ function love.load()
                 colors:set_hex("#FF8D53")
                 colors:add_current()
                 state:set_color(255,141,83)
+                local current_hue=colors:hsb()
+                picker_hue=(current_hue%360)/360
             elseif smoke_screen=="color_hex" then
                 color_dialog="hex"
                 color_input="#337BCC"
